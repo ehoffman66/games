@@ -1,0 +1,19 @@
+<!doctype html><html><head><link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@700&display=swap" rel="stylesheet"><style>
+/* Source for killhouse/apple-touch-icon.png, icon-192.png and icon-512.png: screenshot #ic at 1024x1024, then downscale. Matches the main menu title (Chakra Petch 700, solid KILL, outlined HOUSE). */
+html,body{margin:0;background:#07080a}
+#ic{position:relative;width:1024px;height:1024px;overflow:hidden;
+  background:
+    radial-gradient(70% 55% at 50% 0%, rgba(150,28,16,.55), rgba(60,12,8,.25) 45%, rgba(0,0,0,0) 75%),
+    radial-gradient(90% 70% at 50% 110%, rgba(242,169,59,.10), rgba(0,0,0,0) 60%),
+    #07080a;
+  display:flex;flex-direction:column;align-items:center;justify-content:center}
+h1{font-family:"Chakra Petch";font-weight:700;margin:0;line-height:.84;letter-spacing:-.01em;text-align:center;color:#e9e7e1;font-size:300px}
+h1 em{font-style:normal;color:transparent;-webkit-text-stroke:14px #e9e7e1;paint-order:stroke}
+.bar{width:520px;height:22px;margin-top:62px;background:#1b1d21;position:relative}
+.bar i{position:absolute;inset:0;width:68%;background:#f2a93b}
+</style></head><body><div id="ic"><h1 id="t">KILL<br><em>HOUSE</em></h1><div class="bar"><i></i></div></div>
+<script>
+// fit HOUSE to ~86% of the width
+const t=document.getElementById('t'), em=t.querySelector('em');
+let fs=300; t.style.fontSize=fs+'px'; const w=em.getBoundingClientRect().width; fs=fs*870/w; t.style.fontSize=fs+'px';
+</script></body></html>
