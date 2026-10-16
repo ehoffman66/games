@@ -608,7 +608,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 43;
+const KH_VERSION = 44;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -3516,7 +3516,7 @@ function reloadEvents() {
 const camPos = new V3(), camDir = new V3(), muzzleW = new V3();
 function fire() {
   const wp = wep();
-  makeNoise(P.pos, 1);
+  makeNoise(P.pos);
   W.ammo--; W.fireCd += fireInterval(); stats.shots++;
   const scatter = wp.pellets === 1 && U('multi') > 0, pellets = wp.pellets + 2 * U('multi');
   camera.getWorldPosition(camPos); camera.getWorldDirection(camDir); muzzlePt.getWorldPosition(muzzleW);
@@ -3780,7 +3780,7 @@ function updateNades(dt) {
   } else nw.style.opacity = 0;
 }
 function detonateFrag(p, owner) {
-  makeNoise(p, 1.4);
+  makeNoise(p);
   const R = 6.2, pl = owner === 'player', boost = 1 + .3 * U('nades');
   nA.copy(p); nA.y = Math.max(p.y, .25);
   blastProps(nA, 3.2, 260);
@@ -3808,7 +3808,7 @@ function detonateFrag(p, owner) {
   for (const e of enemies) if (!e.dead && e.g.position.distanceTo(p) < 16) e.alerted = true;
 }
 function detonateFlash(p) {
-  makeNoise(p, 1.2);
+  makeNoise(p);
   const boost = 1 + .3 * U('nades');
   nA.copy(p); nA.y = Math.max(p.y, .3);
   for (const e of enemies) {
@@ -3844,7 +3844,7 @@ function enemyThrow(e) {
   SFX.throw();
 }
 function explodeAt(p, n, host) {
-  makeNoise(p, 1.2);
+  makeNoise(p);
   const l = U('explode'), R = 1.4 + .7 * l;
   blastProps(p, R, 22 * l);
   areaDamage(p, R, 22 * l * (1 + .2 * U('dmg')), 2, 'ability');
@@ -4670,29 +4670,28 @@ function initIdle(e) {
   e.idle = { k, base, yaw: base, t: rand(1, 4), pts: k === 'patrol' ? [e.g.position.clone(), freeSpot(r, .25)] : null, i: 1, wait: 0, back: false };
   e.yaw = base; e.g.rotation.y = base;
 }
-const entryOf = r => tmpV3.set(r.entryDoor ? r.entryDoor.x : 0, 0, r.z0);
 // sight builds suspicion (faster up close, in the open, on the move); a crouch-walk is quiet, running is not
 function perceive(e, dt, dist, dx, dz) {
   const RM = e.room;
   if (e.boss || RM.hasBoss) { if (RM.active) alertEnemy(e); return; }
   if (state !== 'playing') return;
-  const wary = !!RM.wary, crouch = P.ch > .5, pv = Math.hypot(P.vel.x, P.vel.z), dog = !!e.dog;
+  const crouch = P.ch > .5, pv = Math.hypot(P.vel.x, P.vel.z), dog = !!e.dog;
   let rate = 0;
   if (e.los) {
     const ang = Math.acos(clamp((Math.sin(e.yaw) * dx + Math.cos(e.yaw) * dz) / (dist || 1), -1, 1));
-    const half = dog ? 1.9 : wary ? 1.35 : 1.05;
-    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (wary ? 1.25 : 1);
+    const half = dog ? 1.9 : 1.05;
+    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1);
     if (dist < range && ang < half + .45) {
       rate = 1 / (.2 + dist * .11);
       if (ang > half) rate *= pv > 1 ? .3 : 0; // the corner of the eye only catches movement
-      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (wary ? 1.6 : 1) * (e.elite ? 1.25 : 1);
+      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1);
       rate *= 1 - .6 * smooth(range * .55, range, dist);
       if (dist < 2.2 && ang < half) rate = Math.max(rate, 4);
     }
   }
   if (!crouch && P.onGround && pv > 2.6 && dist < (P.dashT > 0 ? 9 : pv > 5 ? 6.5 : 4)) rate += dist < 2 ? 2 : .8;
   if (rate > 0) { e.sus = Math.min(1, e.sus + rate * dt); e.susP.set(P.pos.x, 0, P.pos.z); }
-  else e.sus = Math.max(0, e.sus - dt * (wary ? .1 : .18));
+  else e.sus = Math.max(0, e.sus - dt * .18);
   if (e.sus >= 1) { alertEnemy(e, 'seen'); return; }
   // a dead squadmate in view raises the alarm
   if (dog || (e.bodyT -= dt) > 0) return;
@@ -4707,15 +4706,10 @@ function perceive(e, dt, dist, dx, dz) {
     o.found = true; alertEnemy(e, 'body'); return;
   }
 }
-// gunfire and blasts: the room it happens in comes running; rooms behind a closed door hear it and get ready for you
-function makeNoise(p, loud) {
-  const pr = roomAt(p.z);
-  for (const e of enemies) {
-    if (e.dead || e.alerted || e.sus === undefined) continue;
-    const r = e.room, open = !r.entryDoor || r.entryDoor.open, d = e.g.position.distanceTo(p);
-    if (open && (r === pr || d < 30 * loud)) alertEnemy(e, 'heard', p);
-    else if (d < 55 * loud) { r.wary = true; e.sus = Math.max(e.sus, .45); e.susP.copy(entryOf(r)); }
-  }
+// gunfire and blasts alert only the room they happen in; the next room stays unaware until the fight comes through its door
+function makeNoise(p) {
+  const pr = rooms.find(r => p.z >= r.z0 && p.z < r.z1);
+  if (pr) for (const e of pr.enemies) if (!e.dead && !e.alerted && e.sus !== undefined) alertEnemy(e, 'heard', p);
 }
 const aliveIn = r => r.enemies.reduce((n, o) => n + (o.dead ? 0 : 1), 0);
 function findCover(e) {
@@ -5195,11 +5189,8 @@ function updateEnemy(e, dt) {
     const I = e.idle; let turn = 2.2;
     if (e.sus > .3) {
       faceX = e.susP.x - g.position.x; faceZ = e.susP.z - g.position.z; turn = 4; e.holding = e.sus > .5;
-      if (!e.susSaid) { e.susSaid = true; I.back = true; if (!e.room.wary) say(e, pick(['Huh?', "Who's there?", 'Did you hear that?', 'Something moved.'])); }
+      if (!e.susSaid) { e.susSaid = true; I.back = true; say(e, pick(['Huh?', "Who's there?", 'Did you hear that?', 'Something moved.'])); }
       if (e.sus > .55 && Math.hypot(faceX, faceZ) > 2.5) { [mx, mz] = steer(e, e.susP.x, e.susP.z); spMul = .4; }
-    } else if (e.room.wary) {
-      // they heard the fight: guns up on the door they expect you through
-      const ep = entryOf(e.room); faceX = ep.x - g.position.x; faceZ = ep.z - g.position.z; e.holding = true; turn = 3;
     } else if (I.k === 'patrol') {
       const tp = I.pts[I.i], tdx = tp.x - g.position.x, tdz = tp.z - g.position.z;
       if (I.wait > 0) { I.wait -= dt; faceX = Math.sin(I.yaw); faceZ = Math.cos(I.yaw); }
@@ -5210,7 +5201,7 @@ function updateEnemy(e, dt) {
       I.t -= dt; if (I.t <= 0) { I.t = rand(2.5, 6); I.yaw = I.base + (I.k === 'post' ? rand(-1.6, 1.6) : rand(-.7, .7)); }
       faceX = Math.sin(I.yaw); faceZ = Math.cos(I.yaw);
     }
-    if (I.back && e.sus < .05) { I.back = false; e.susSaid = false; if (!e.room.wary && Math.random() < .7) say(e, pick(['Must be nothing.', 'Hm. Nothing.', 'Just the wind.'])); }
+    if (I.back && e.sus < .05) { I.back = false; e.susSaid = false; if (Math.random() < .7) say(e, pick(['Must be nothing.', 'Hm. Nothing.', 'Just the wind.'])); }
     let dy = Math.atan2(faceX, faceZ) - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * turn);
   }
   if (stunned || dodge) { const targetYaw = Math.atan2(faceX, faceZ); let dy = targetYaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * (dodge ? 9 : 2)); }
@@ -5348,6 +5339,7 @@ function enemyShoot(e, dist) {
     return;
   }
   if (!e.los) return;
+  makeNoise(e.g.position);
   e.recoilT = 0;
   e.muzzle.getWorldPosition(tmpV);
   const pellets = e.type === 'heavy' ? 6 : 1, dmr = e.gunModel === 'dmr';
