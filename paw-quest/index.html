@@ -59,7 +59,7 @@ p{margin:0;font-size:18px;line-height:1.4}
 .board{width:100%;max-width:360px;margin:0 auto;border-collapse:collapse;font-family:var(--font-d);font-size:17px;font-variant-numeric:tabular-nums}
 .board caption{font-weight:700;font-size:18px;margin-bottom:4px}
 .board td{padding:4px 8px;border-bottom:2px solid #e3e8f4;text-align:left}.board td:last-child{text-align:right;font-weight:700}
-.board tr.me td{background:#fff3c4}.board .medal{width:28px;text-align:center}.tally .tot{border-top:3px solid var(--ink);padding-top:4px;font-size:24px}
+.board td.empty{text-align:center;font-weight:600;opacity:.75;border-bottom:0}.board tr.me td{background:#fff3c4}.board .medal{width:28px;text-align:center}.tally .tot{border-top:3px solid var(--ink);padding-top:4px;font-size:24px}
 .namepill{font-family:var(--font-d);font-weight:600;font-size:19px;background:linear-gradient(#fff,#eef4ff);border:3px solid var(--ink);border-radius:999px;padding:5px 14px;box-shadow:0 4px 0 var(--ink)}
 .levels{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px}
 .lvl{border:3px solid var(--ink);border-radius:18px;padding:0;overflow:hidden;cursor:pointer;background:var(--paper);box-shadow:0 5px 0 var(--ink);text-align:left;display:flex;flex-direction:column}
@@ -231,7 +231,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 34</p>
+    <p class="ver" id="tVer">Version 35</p>
   </div>
 </section>
 
@@ -1300,7 +1300,7 @@ function addScore(n, x, y, label){ L.score += n; if (x != null) parts.push({type
 const CHAIN = [100, 200, 400, 500, 800, 1000, 2000, 4000, 5000, 8000];
 function stompScore(x, y){ if (L.chain >= 4) award('chain5'); if (L.chain >= CHAIN.length){ if (L.hearts < HEARTS_MAX){ L.hearts++; sfx.oneup(); parts.push({type:'heart', x, y:y - 10, vy:-60, life:1}); addScore(0, x, y, '+1 heart!'); } else addScore(8000, x, y); } else addScore(CHAIN[L.chain], x, y); L.chain++; }
 const MEDALS = ['🥇', '🥈', '🥉', '4', '5'];
-function boardHTML(li, hi){ const rows = ((save.board || {})[li] || []); if (!rows.length) return `<table class="board"><caption>Standings</caption><tr><td>No scores yet. Be the first!</td></tr></table>`;
+function boardHTML(li, hi){ const rows = ((save.board || {})[li] || []); if (!rows.length) return `<table class="board"><caption>Standings</caption><tr><td class="empty" colspan="3">No scores yet. Be the first!</td></tr></table>`;
   return `<table class="board"><caption>Standings</caption>` + rows.map((r, i) => `<tr class="${i === hi ? 'me' : ''}"><td class="medal">${MEDALS[i]}</td><td>${esc(r.name)}</td><td>${r.score}</td></tr>`).join('') + `</table>`; }
 function recordScore(li, ki, score){ save.board = save.board || {}; const rows = save.board[li] = save.board[li] || []; const e = {name: save.kids[ki].name, kid: ki, score, at: Date.now()};
   rows.push(e); rows.sort((a, b) => b.score - a.score || a.at - b.at); rows.length = Math.min(rows.length, 5); return rows.indexOf(e); }
@@ -2140,7 +2140,10 @@ function openLevels(){
 const portraitCache = new Map();
 function portrait(cvs, ki, w = 110, h = 120){
   cvs.width = w*2; cvs.height = h*2; const c = cvs.getContext('2d'); c.scale(2, 2);
-  if (R3 && R3.kidsReady && !R3.failed && R3.kidShot){ const key = ki + JSON.stringify(save.kids[ki].look3d) + w + 'x' + h; let shot = portraitCache.get(key); if (!shot){ try { shot = R3.kidShot(ki, w, h); } catch (e) { console.warn(e); } if (shot) portraitCache.set(key, shot); } if (shot){ c.drawImage(shot, 0, 0, w, h); return; } }
+  if (R3 && R3.kidsReady && !R3.failed && R3.kidShot){ const key = ki + JSON.stringify(save.kids[ki].look3d) + w + 'x' + h; let shot = portraitCache.get(key); if (!shot){ try { shot = R3.kidShot(ki, w, h); } catch (e) { console.warn(e); } if (shot) portraitCache.set(key, shot); }
+    if (shot){ c.drawImage(shot, 0, 0, w, h); return; }
+    // the 3D snapshot came back empty: try again shortly, a couple of times, before settling for the drawn kid
+    const tries = +(cvs.dataset.tries || 0); if (tries < 4 && cvs.isConnected !== false){ cvs.dataset.tries = tries + 1; setTimeout(() => { if (cvs.isConnected) portrait(cvs, ki, w, h); }, 400); } }
   const S = SPR[ki % 2];
   if (!S.ready){ c.save(); c.translate(w/2 - 22*1.05, h/2 - 42*1.12); c.scale(2.1, 2.1); drawKid(c, save.kids[ki], 0, 4, 1, 0, false, false); c.restore(); return; }
   const k = (h - 6) / (S.footY * 0.62); const dw = S.fw*k, dh = S.fh*k;
