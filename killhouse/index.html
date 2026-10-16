@@ -50,6 +50,12 @@ body.playing .hud, body.paused .hud { opacity: 1; }
 .floorline b { color: var(--amber); font-weight: 700; }
 .hostiles { font-family: var(--mono); font-size: 13px; color: var(--fg); }
 .hostiles span { color: var(--blood); font-weight: 600; }
+.hostiles .stealth { font-weight: 600; margin-left: 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
+.stealth.hid { color: #7ee0a0; } .stealth.sus { color: var(--amber); } .stealth.det { color: var(--blood); }
+.det { position: absolute; left: 0; top: 0; width: 30px; text-align: center; font-family: var(--mono); font-weight: 700; font-size: 17px; color: var(--amber); text-shadow: 0 0 6px rgba(0,0,0,.8); opacity: 0; will-change: transform; pointer-events: none; }
+.det i { display: block; height: 3px; margin: 1px 3px 0; background: rgba(255,255,255,.18); }
+.det i b { display: block; height: 100%; width: 0; background: currentColor; }
+.det.alert { color: var(--blood); font-size: 21px; }
 
 .hp { width: min(300px, 42vw); }
 .hpbar { height: 10px; background: rgba(233,231,225,.1); position: relative; overflow: hidden; clip-path: polygon(0 0, 100% 0, calc(100% - 8px) 100%, 0 100%); }
@@ -432,7 +438,7 @@ html.touch .slots { display: none; }
   <div class="corner tl">
     <div class="label">Killhouse</div>
     <div class="floorline">Floor <b id="floorNum">01</b> · Room <span id="roomNum">1/2</span></div>
-    <div class="hostiles"><span id="hostiles">0</span> hostiles remaining</div>
+    <div class="hostiles"><span id="hostiles">0</span> hostiles remaining <span class="stealth" id="stealth"></span></div>
     <div class="objline" id="objLine"></div>
     <div class="runbm">+<span id="bmRun">0</span> biomass this run</div>
   </div>
@@ -1870,7 +1876,7 @@ function breach() {
   if (!stage || stage.breached) return;
   stage.breached = true; const d = stage.door;
   d.open = true; d.col.on = false; NAV.dirty = true; d.lamp.material.emissive.setHex(0x30ff70); SFX.door(); shake = Math.max(shake, .15);
-  for (const e of rooms[0].enemies) e.fireCd = Math.max(e.fireCd, rand(.6, 1.2));
+  for (const e of rooms[0].enemies) { e.fireCd = Math.max(e.fireCd, rand(.6, 1.2)); if (!e.alerted && e.g.position.distanceTo(P.pos) < 9) { e.sus = Math.max(e.sus, .5); e.susP.set(d.x, 0, rooms[0].z0); } }
   $('breachHint').classList.remove('on');
 }
 function buildLevel(L) {
@@ -2263,6 +2269,7 @@ function spawnEnemy(room, L, force) {
   if (dog) { e.radius = .3 * s; e.leapCd = rand(.5, 1.5); }
   for (const p of prox) p.userData.enemy = e;
   enemies.push(e); room.enemies.push(e);
+  initIdle(e);
   // dogs are handled in pairs
   if (dog && !force && Math.random() < .6) { const o = spawnEnemy(room, L, 'dog'); o.g.position.copy(freeSpot(room, .3)); o.strafe = -e.strafe; }
   return e;
@@ -3506,6 +3513,7 @@ function reloadEvents() {
 const camPos = new V3(), camDir = new V3(), muzzleW = new V3();
 function fire() {
   const wp = wep();
+  makeNoise(P.pos, 1);
   W.ammo--; W.fireCd += fireInterval(); stats.shots++;
   const scatter = wp.pellets === 1 && U('multi') > 0, pellets = wp.pellets + 2 * U('multi');
   camera.getWorldPosition(camPos); camera.getWorldDirection(camDir); muzzlePt.getWorldPosition(muzzleW);
@@ -3769,6 +3777,7 @@ function updateNades(dt) {
   } else nw.style.opacity = 0;
 }
 function detonateFrag(p, owner) {
+  makeNoise(p, 1.4);
   const R = 6.2, pl = owner === 'player', boost = 1 + .3 * U('nades');
   nA.copy(p); nA.y = Math.max(p.y, .25);
   blastProps(nA, 3.2, 260);
@@ -3796,6 +3805,7 @@ function detonateFrag(p, owner) {
   for (const e of enemies) if (!e.dead && e.g.position.distanceTo(p) < 16) e.alerted = true;
 }
 function detonateFlash(p) {
+  makeNoise(p, 1.2);
   const boost = 1 + .3 * U('nades');
   nA.copy(p); nA.y = Math.max(p.y, .3);
   for (const e of enemies) {
@@ -3831,6 +3841,7 @@ function enemyThrow(e) {
   SFX.throw();
 }
 function explodeAt(p, n, host) {
+  makeNoise(p, 1.2);
   const l = U('explode'), R = 1.4 + .7 * l;
   blastProps(p, R, 22 * l);
   areaDamage(p, R, 22 * l * (1 + .2 * U('dmg')), 2, 'ability');
@@ -3903,7 +3914,7 @@ function damageEnemy(e, amt, point, head, kind) {
   if (e.T.armor && !head && kind !== 'stab') amt *= e.T.armor;
   if (e.recoverT > 0 || e.crashT > 0) amt *= 1.5;
   stats.dmg += Math.min(amt, Math.max(0, e.hp));
-  e.hp -= amt; e.flash = .07; alertEnemy(e); e.lastHead = head; e.lastStab = kind === 'stab'; e.lastKind = kind;
+  e.hp -= amt; e.flash = .07; if (!(kind === 'stab' && e.hp <= 0)) alertEnemy(e); e.lastHead = head; e.lastStab = kind === 'stab'; e.lastKind = kind;
   // hit reaction: flinch away from the hit, stagger, sometimes lose the shot they were lining up
   const big = amt / e.maxHp;
   e.flinch = Math.min(1.2, e.flinch + .3 + big * 3); e.hitHead = head; e.hitSide = Math.random() < .5 ? -1 : 1; e.hurtT = .7;
@@ -3967,6 +3978,7 @@ function roomCleared(r) {
   const allClear = rooms.every(x => x.cleared);
   if (r.exitDoor) { r.exitDoor.open = true; r.exitDoor.col.on = false; NAV.dirty = true; r.exitDoor.lamp.material.emissive.setHex(0x30ff70); SFX.door(); }
   if (allClear) { extraction.g.visible = true; extraction.on = true; callout('Floor clear', 'Reach extraction', 3); }
+  else if (!r.contact && !r.hasBoss) { const b = 4 + floorN; gain(b); callout('Room clear · unseen', `+${b} biomass. Door open.`, 2.2); }
   else callout('Room clear', r.exitDoor ? 'Door open. Push forward.' : '', 2);
 }
 function damagePlayer(amt, from, who) {
@@ -4195,7 +4207,7 @@ function updateObjective(dt, wdt) {
   if (obj.state === 'live') {
     if (obj.k === 'hostage') {
       const n = obj.npc, r = obj.room;
-      if (r.active && !r.cleared) {
+      if (r.contact && !r.cleared) {
         obj.timer -= dt;
         if (obj.timer < 5 && !obj.warned) { obj.warned = true; const ex = r.enemies.find(e => !e.dead && !e.dog); if (ex) say(ex, 'Kill the hostage!', true); }
         if (obj.timer <= 0) {
@@ -4210,7 +4222,7 @@ function updateObjective(dt, wdt) {
         objPrompt(d < 1.7 && `Cutting them loose ${Math.round(Math.min(1, obj.free) * 100)}%`);
         if (obj.free >= 1) { n.free = true; objPrompt(false); rebuildTargets(); say(n, 'Thank you!', true); objDone('Hostage rescued'); }
         txt = 'Hostage · walk up and cut them loose';
-      } else txt = 'Hostage · held in the last room';
+      } else txt = r.active ? 'Hostage · stay unseen, the clock starts when they spot you' : 'Hostage · held in the last room';
     } else if (obj.k === 'bomb') {
       const Bm = obj.bomb, d = Math.hypot(Bm.g.position.x - P.pos.x, Bm.g.position.z - P.pos.z);
       obj.timer -= dt;
@@ -4630,14 +4642,76 @@ function applyPose(e) {
     if (e.pivot) e.pivot.rotation.x -= .3 * f;
   }
 }
-function alertEnemy(e) {
+// why: 'seen' (default), 'heard' a shot or blast at `at`, or found a 'body'
+function alertEnemy(e, why, at) {
   if (e.alerted) return;
-  e.alerted = true;
+  e.alerted = true; e.sus = 1; e.alertT = time;
+  const RM = e.room;
+  (RM.seenP || (RM.seenP = new V3())).set(why === 'heard' && at ? at.x : P.pos.x, 0, why === 'heard' && at ? at.z : P.pos.z); RM.seenT = time;
   if (e.boss) { callout(e.boss, BOSS_TIP[e.type], 2.4); SFX.roar(e.g.position.distanceTo(P.pos)); return; }
-  if (!e.room.contact) {
-    e.room.contact = true;
-    if (e.dog) SFX.bark(e.g.position.distanceTo(P.pos)); else say(e, pick(['Contact!', 'Contact front!', 'Hostile!', 'There he is!']));
-    for (const o of e.room.enemies) if (!o.dead) o.alerted = true;
+  if (!RM.contact) {
+    RM.contact = true;
+    if (e.dog) SFX.bark(e.g.position.distanceTo(P.pos));
+    else say(e, pick(why === 'heard' ? ['Shots fired!', 'Gunfire! Get ready!', 'Contact, contact!'] : why === 'body' ? ['Man down! We have company!', 'Body here! Find him!'] : ['Contact!', 'Contact front!', 'Hostile!', 'There he is!']), true);
+    // the rest of the squad needs a beat to turn and bring their guns up
+    for (const o of RM.enemies) if (!o.dead && !o.alerted) { o.alerted = true; o.sus = 1; o.alertT = time; o.fireCd = Math.max(o.fireCd, rand(.5, 1.1)); }
+  }
+}
+// ---------- stealth: nobody knows you are in the room until they see you, hear a shot or find a body ----------
+function initIdle(e) {
+  const r = e.room; e.sus = 0; e.susP = new V3(); e.bodyT = rand(0, .4);
+  if (e.T.boss) { r.hasBoss = true; return; }
+  const k = e.dog ? 'post' : e.type === 'sniper' ? 'scan' : !r.sentry && Math.random() < .45 ? 'sentry' : Math.random() < .5 ? 'patrol' : 'post';
+  if (k === 'sentry') r.sentry = e;
+  const base = k === 'sentry' || k === 'scan' ? Math.PI + rand(-.35, .35) : rand(0, Math.PI * 2);
+  e.idle = { k, base, yaw: base, t: rand(1, 4), pts: k === 'patrol' ? [e.g.position.clone(), freeSpot(r, .25)] : null, i: 1, wait: 0, back: false };
+  e.yaw = base; e.g.rotation.y = base;
+}
+const entryOf = r => tmpV3.set(r.entryDoor ? r.entryDoor.x : 0, 0, r.z0);
+// sight builds suspicion (faster up close, in the open, on the move); a crouch-walk is quiet, running is not
+function perceive(e, dt, dist, dx, dz) {
+  const RM = e.room;
+  if (e.boss || RM.hasBoss) { if (RM.active) alertEnemy(e); return; }
+  if (state !== 'playing') return;
+  const wary = !!RM.wary, crouch = P.ch > .5, pv = Math.hypot(P.vel.x, P.vel.z), dog = !!e.dog;
+  let rate = 0;
+  if (e.los) {
+    const ang = Math.acos(clamp((Math.sin(e.yaw) * dx + Math.cos(e.yaw) * dz) / (dist || 1), -1, 1));
+    const half = dog ? 1.9 : wary ? 1.35 : 1.05;
+    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (wary ? 1.25 : 1);
+    if (dist < range && ang < half + .45) {
+      rate = 1 / (.2 + dist * .11);
+      if (ang > half) rate *= pv > 1 ? .3 : 0; // the corner of the eye only catches movement
+      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (wary ? 1.6 : 1) * (e.elite ? 1.25 : 1);
+      rate *= 1 - .6 * smooth(range * .55, range, dist);
+      if (dist < 2.2 && ang < half) rate = Math.max(rate, 4);
+    }
+  }
+  if (!crouch && P.onGround && pv > 2.6 && dist < (P.dashT > 0 ? 9 : pv > 5 ? 6.5 : 4)) rate += dist < 2 ? 2 : .8;
+  if (rate > 0) { e.sus = Math.min(1, e.sus + rate * dt); e.susP.set(P.pos.x, 0, P.pos.z); }
+  else e.sus = Math.max(0, e.sus - dt * (wary ? .1 : .18));
+  if (e.sus >= 1) { alertEnemy(e, 'seen'); return; }
+  // a dead squadmate in view raises the alarm
+  if (dog || (e.bodyT -= dt) > 0) return;
+  e.bodyT = .4;
+  const fx = Math.sin(e.yaw), fz = Math.cos(e.yaw);
+  for (const o of RM.enemies) {
+    if (!o.dead || o.gone || o.found || o.deathT < .4) continue;
+    const bx = o.g.position.x - e.g.position.x, bz = o.g.position.z - e.g.position.z, bd = Math.hypot(bx, bz);
+    if (bd > 16 || (fx * bx + fz * bz) / (bd || 1) < .45) continue;
+    eEye.copy(e.g.position); eEye.y += 1.5; tmpV2.set(o.g.position.x, .35, o.g.position.z);
+    if (!lineOfSight(eEye, tmpV2)) continue;
+    o.found = true; alertEnemy(e, 'body'); return;
+  }
+}
+// gunfire and blasts: the room it happens in comes running; rooms behind a closed door hear it and get ready for you
+function makeNoise(p, loud) {
+  const pr = roomAt(p.z);
+  for (const e of enemies) {
+    if (e.dead || e.alerted || e.sus === undefined) continue;
+    const r = e.room, open = !r.entryDoor || r.entryDoor.open, d = e.g.position.distanceTo(p);
+    if (open && (r === pr || d < 30 * loud)) alertEnemy(e, 'heard', p);
+    else if (d < 55 * loud) { r.wary = true; e.sus = Math.max(e.sus, .45); e.susP.copy(entryOf(r)); }
   }
 }
 const aliveIn = r => r.enemies.reduce((n, o) => n + (o.dead ? 0 : 1), 0);
@@ -4826,7 +4900,7 @@ function updateDog(e, dt) {
   e.losT -= dt;
   if (e.losT <= 0) { e.losT = .2; eEye.copy(g.position); eEye.y += .45; e.los = lineOfSight(eEye, eye); }
   const doorOpen = !e.room.entryDoor || e.room.entryDoor.open;
-  if (!e.alerted && (e.room.active || (e.los && doorOpen && dist < 30))) alertEnemy(e);
+  if (!e.alerted && doorOpen) perceive(e, dt, dist, dx, dz);
   const fl = e.flash > 0; if (fl) e.flash -= dt;
   if (fl !== e.flashOn) { e.flashOn = fl; for (const m of e.mats) m.emissive.setRGB(fl ? .5 : 0, fl ? .06 : 0, fl ? .03 : 0); }
   e.flinch *= Math.exp(-dt * 7); e.staggerT -= dt; e.repathT -= dt; e.meleeCd -= dt; e.leapCd -= dt; e.recoverT -= dt; e.barkT -= dt;
@@ -4847,8 +4921,8 @@ function updateDog(e, dt) {
     if (e.barkT <= 0) { e.barkT = rand(1.8, 4); SFX.bark(dist); }
   }
   const vs0 = Math.hypot(e.vel.x, e.vel.z);
-  const lx = e.leap ? e.leap.to.x - e.leap.from.x : vs0 > 1 ? e.vel.x : e.alerted ? dx : Math.sin(e.yaw);
-  const lz = e.leap ? e.leap.to.z - e.leap.from.z : vs0 > 1 ? e.vel.z : e.alerted ? dz : Math.cos(e.yaw);
+  const lx = e.leap ? e.leap.to.x - e.leap.from.x : vs0 > 1 ? e.vel.x : e.alerted ? dx : e.sus > .3 ? e.susP.x - g.position.x : Math.sin(e.yaw);
+  const lz = e.leap ? e.leap.to.z - e.leap.from.z : vs0 > 1 ? e.vel.z : e.alerted ? dz : e.sus > .3 ? e.susP.z - g.position.z : Math.cos(e.yaw);
   let dy = Math.atan2(lx, lz) - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * (stunned ? 3 : 9)); g.rotation.y = e.yaw;
   const ml = Math.hypot(mx, mz);
   let sp = e.speed * spMul * Math.min(1, ml);
@@ -4879,7 +4953,7 @@ function updateDog(e, dt) {
     if (want > 1.2 && got < want * .3) e.stuckT += dt; else e.stuckT = Math.max(0, e.stuckT - dt * 2);
     if (e.stuckT > .4) { e.stuckT = 0; e.strafe *= -1; e.path = null; e.repathT = 0; const sg = Math.random() < .5 ? -1 : 1, il = ml || 1; e.unstick = { x: -mz / il * sg - mx / il * .5, z: mx / il * sg - mz / il * .5, t: .35 }; }
   }
-  D.sit += ((e.alerted ? 0 : 1) - D.sit) * Math.min(1, dt * 5);
+  D.sit += ((e.alerted ? 0 : e.sus > .3 ? .45 : 1) - D.sit) * Math.min(1, dt * 5);
   poseDog(e, dt, e.leap ? 0 : Math.hypot(e.vel.x, e.vel.z), stunned);
   dogProxies(e);
   if (!e.alerted || stunned || e.leap || e.recoverT > 0) return;
@@ -4964,7 +5038,7 @@ function updateEnemy(e, dt) {
   e.losT -= dt;
   if (e.losT <= 0) { e.losT = .2; eEye.copy(g.position); eEye.y += (1.6 - .55 * e.crouchK) * g.scale.y; e.los = lineOfSight(eEye, eye); }
   const doorOpen = !e.room.entryDoor || e.room.entryDoor.open;
-  if (!e.alerted && (e.room.active || (e.los && doorOpen && dist < 30))) alertEnemy(e);
+  if (!e.alerted && doorOpen) perceive(e, dt, dist, dx, dz);
   // the squad shares where you were last seen
   const RM = e.room;
   if (e.los && e.alerted) { (RM.seenP || (RM.seenP = new V3())).set(P.pos.x, 0, P.pos.z); RM.seenT = time; if (RM.holder === e) { RM.holder = null; e.fireCd = Math.min(e.fireCd, 0); } }
@@ -5113,6 +5187,28 @@ function updateEnemy(e, dt) {
     }
     const targetYaw = Math.atan2(faceX, faceZ);
     let dy = targetYaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * (e.type === 'rusher' || e.type === 'mutant' ? 10 : 6));
+  } else if (e.idle) {
+    // unaware: walk a beat, stand post or look around; something odd makes them turn, then come and check
+    const I = e.idle; let turn = 2.2;
+    if (e.sus > .3) {
+      faceX = e.susP.x - g.position.x; faceZ = e.susP.z - g.position.z; turn = 4; e.holding = e.sus > .5;
+      if (!e.susSaid) { e.susSaid = true; I.back = true; if (!e.room.wary) say(e, pick(['Huh?', "Who's there?", 'Did you hear that?', 'Something moved.'])); }
+      if (e.sus > .55 && Math.hypot(faceX, faceZ) > 2.5) { [mx, mz] = steer(e, e.susP.x, e.susP.z); spMul = .4; }
+    } else if (e.room.wary) {
+      // they heard the fight: guns up on the door they expect you through
+      const ep = entryOf(e.room); faceX = ep.x - g.position.x; faceZ = ep.z - g.position.z; e.holding = true; turn = 3;
+    } else if (I.k === 'patrol') {
+      const tp = I.pts[I.i], tdx = tp.x - g.position.x, tdz = tp.z - g.position.z;
+      if (I.wait > 0) { I.wait -= dt; faceX = Math.sin(I.yaw); faceZ = Math.cos(I.yaw); }
+      else if (Math.hypot(tdx, tdz) < .6) { I.i = 1 - I.i; I.wait = rand(2, 5); I.yaw = rand(0, Math.PI * 2); faceX = Math.sin(e.yaw); faceZ = Math.cos(e.yaw); }
+      else { [mx, mz] = steer(e, tp.x, tp.z); spMul = .32; faceX = mx; faceZ = mz; }
+    } else {
+      // posted: now and then look somewhere else; a sentry keeps an eye on the door, a sniper sweeps its lane
+      I.t -= dt; if (I.t <= 0) { I.t = rand(2.5, 6); I.yaw = I.base + (I.k === 'post' ? rand(-1.6, 1.6) : rand(-.7, .7)); }
+      faceX = Math.sin(I.yaw); faceZ = Math.cos(I.yaw);
+    }
+    if (I.back && e.sus < .05) { I.back = false; e.susSaid = false; if (!e.room.wary && Math.random() < .7) say(e, pick(['Must be nothing.', 'Hm. Nothing.', 'Just the wind.'])); }
+    let dy = Math.atan2(faceX, faceZ) - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * turn);
   }
   if (stunned || dodge) { const targetYaw = Math.atan2(faceX, faceZ); let dy = targetYaw - e.yaw; dy = Math.atan2(Math.sin(dy), Math.cos(dy)); e.yaw += dy * Math.min(1, dt * (dodge ? 9 : 2)); }
   e.crouchK += (crouchT - e.crouchK) * Math.min(1, dt * 7);
@@ -5282,6 +5378,30 @@ function updateDoors(dt) {
 const projV = new V3(), hudCache = {};
 // enemy radio chatter: a speech bubble over their head, and a spoken line if the browser can talk
 const sayPool = []; for (let i = 0; i < 6; i++) { const d = document.createElement('div'); d.className = 'say'; $('says').appendChild(d); sayPool.push({ el: d, life: 0, e: null }); }
+// detection markers: a filling "?" over anyone getting suspicious, a red "!" when they raise the alarm; pinned to the screen edge when they're off screen
+const detPool = []; for (let i = 0; i < 8; i++) { const d = document.createElement('div'); d.className = 'det'; d.innerHTML = '<span>?</span><i><b></b></i>'; $('says').appendChild(d); detPool.push({ el: d, g: d.firstChild, b: d.querySelector('b'), k: '' }); }
+function updateDetMarks() {
+  const list = [];
+  for (const e of enemies) if (!e.dead && !e.boss && !(e.room.sealed) && (e.alerted ? time - (e.alertT || -9) < 1.3 : e.sus > .04)) list.push(e);
+  list.sort((a, b) => (b.alerted ? 2 : b.sus) - (a.alerted ? 2 : a.sus));
+  const st = $('stealth'), rm = roomAt(P.pos.z), live = rm && aliveIn(rm) > 0 && state === 'playing';
+  const sk = !live ? '' : rm.contact ? 'det' : rm.enemies.some(o => !o.dead && o.sus > .3) ? 'sus' : 'hid';
+  if (sk !== hudCache.stealth) { hudCache.stealth = sk; st.className = 'stealth ' + sk; st.textContent = sk === 'det' ? '· detected' : sk === 'sus' ? '· suspicious' : sk === 'hid' ? '· undetected' : ''; }
+  for (let i = 0; i < detPool.length; i++) {
+    const D = detPool[i], e = list[i];
+    if (!e) { if (D.on) { D.on = false; D.el.style.opacity = 0; } continue; }
+    const k = e.alerted ? 'alert' : 'sus';
+    if (k !== D.k) { D.k = k; D.el.className = 'det' + (k === 'alert' ? ' alert' : ''); D.g.textContent = k === 'alert' ? '!' : '?'; }
+    D.b.style.width = (e.alerted ? 100 : e.sus * 100).toFixed(0) + '%';
+    projV.copy(e.g.position); projV.y += (e.dog ? .95 : 2.45) * e.g.scale.y; projV.project(camera);
+    let x = projV.x, y = projV.y;
+    if (projV.z > 1) { x = -x; y = -1; }
+    const off = projV.z > 1 || Math.abs(x) > .95 || Math.abs(y) > .92;
+    x = clamp(x, -.95, .95); y = clamp(y, -.88, .92);
+    D.on = true; D.el.style.opacity = off ? .75 : 1;
+    D.el.style.transform = `translate(${(x * .5 + .5) * innerWidth}px, ${(-y * .5 + .5) * innerHeight}px) translate(-50%,-100%)`;
+  }
+}
 function say(e, text, force) {
   if (!e || (!force && time - sayLast < 1.5)) return;
   sayLast = time;
@@ -5315,6 +5435,7 @@ function updateHUD(dt) {
   const boss = enemies.find(e => e.boss && !e.dead && e.alerted);
   $('bossBar').hidden = !boss;
   if (boss) { $('bossName').textContent = boss.boss; $('bossFill').style.width = Math.max(0, boss.hp / boss.maxHp * 100) + '%'; }
+  updateDetMarks();
   for (const sy of sayPool) {
     if (sy.life <= 0) { sy.el.style.opacity = 0; continue; }
     sy.life -= dt;
@@ -5327,7 +5448,8 @@ function updateHUD(dt) {
   $('dashPips').innerHTML = Array.from({ length: maxDash() }, (_, i) => `<i class="${i < P.dashCharges ? '' : 'off'}"></i>`).join('');
   $('abDash').classList.toggle('ready', P.dashCharges >= 1);
   $('bmRun').textContent = stats.bm;
-  const st = W.stabT <= 0 && P.stabCd <= 0 ? stabTarget(4.5, .7) : null, hint = !!(st && st.e.alerted);
+  const st = W.stabT <= 0 && P.stabCd <= 0 ? stabTarget(4.5, .7) : null, hint = !!st, tdn = !!(st && !st.e.alerted);
+  if (tdn !== hudCache.tdn) { hudCache.tdn = tdn; $('stabHint').textContent = $('stabHint').textContent.replace(/STAB|TAKEDOWN/, tdn ? 'TAKEDOWN' : 'STAB'); }
   $('stabHint').classList.toggle('on', hint);
   if (IS_TOUCH) {
     // stab only shows when someone is in knife range, and lingers briefly so a late tap still lands
@@ -5520,6 +5642,7 @@ const BOOT = {
     'Wooden crates and cardboard splinter under fire. Pillars, sandbags and concrete stay put.',
     'Headshots hit far harder. Soldiers with amber visors are elites: tougher, and they hit harder too.',
     'Get close and stab. It drops a regular soldier in one hit, and from behind it does triple damage.',
+    'Soldiers do not know you are there until they spot you, find a body or hear a shot. Crouch to stay hidden; a takedown on someone who never saw you is silent.',
     'Hide too long and they will cook a frag. Keep moving between cover.',
     'Every fifth floor ends in a boss room. Restock at the crate before you go in.',
     'Biomass from every run buys permanent upgrades in the Evolution Lab.',
