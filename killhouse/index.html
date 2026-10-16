@@ -51,7 +51,7 @@ body.playing .hud, body.paused .hud { opacity: 1; }
 .hostiles { font-family: var(--mono); font-size: 13px; color: var(--fg); }
 .hostiles span { color: var(--blood); font-weight: 600; }
 .hostiles .stealth { font-weight: 600; margin-left: 6px; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; }
-.stealth.hid { color: #7ee0a0; } .stealth.sus { color: var(--amber); } .stealth.det { color: var(--blood); }
+.stealth.hid { color: #7ee0a0; } .stealth.shd { color: #8fb4ff; } .stealth.sus { color: var(--amber); } .stealth.det { color: var(--blood); }
 .det { position: absolute; left: 0; top: 0; width: 30px; text-align: center; font-family: var(--mono); font-weight: 700; font-size: 17px; color: var(--amber); text-shadow: 0 0 6px rgba(0,0,0,.8); opacity: 0; will-change: transform; pointer-events: none; }
 .det i { display: block; height: 3px; margin: 1px 3px 0; background: rgba(255,255,255,.18); }
 .det i b { display: block; height: 100%; width: 0; background: currentColor; }
@@ -608,7 +608,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 46;
+const KH_VERSION = 47;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1524,7 +1524,9 @@ const TALL = ['tallCrate', 'boxes', 'sandbags', 'halfWall'];
 // props that splinter apart under fire: hit points per type
 const DESTR = { crate: 90, tallCrate: 125, boxes: 50, pallets: 70 };
 let props = [], debris = [];
-const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6] };
+const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6], crateStack: [1.4, 1.4], lockers: [2.0, .55], partition: [2.6, .5] };
+// full-height pieces: a standing man can hide behind these
+const FULL = { warehouse: ['crateStack', 'crateStack', 'lockers', 'shelfFull'], office: ['partition', 'partition', 'lockers', 'serverRack'], jungle: ['trunk', 'crateStack'], woods: ['crateStack', 'crateStack'] };
 function buildProp(type, x, z, rot, r) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot ? Math.PI / 2 : 0; level.add(g);
   let [w, d] = FOOT[type]; let h = 1;
@@ -1676,6 +1678,23 @@ function buildProp(type, x, z, rot, r) {
     for (const m of B.flush({ parent: g })) worldMeshes.push(m);
     for (const sx of [-1.05, 1.05]) cyl(g, .05, 1.5, JNG.bark, sx, .75, 0, { seg: 6, ray: false });
     h = 1.4;
+  } else if (type === 'crateStack') {
+    // a tall crate with another one dumped on top
+    part(g, 1.22, 1.42, 1.22, M.wood, 0, .71, 0);
+    for (const sx of [-.61, .61]) for (const sz of [-.61, .61]) part(g, .08, 1.46, .08, M.wood, sx, .73, sz, { ray: false });
+    const top = part(g, 1.02, 1.02, 1.02, M.wood, rand(-.08, .08), 1.93, rand(-.08, .08)); top.rotation.y = rand(-.4, .4);
+    h = 2.44;
+  } else if (type === 'lockers') {
+    // a bank of steel lockers
+    part(g, 1.96, 1.95, .5, M.metal, 0, .975, 0);
+    for (let i = 0; i < 5; i++) part(g, .02, 1.8, .01, M.trim || M.metal, -.78 + i * .39, .98, .255, { ray: false, cast: false });
+    h = 1.95;
+  } else if (type === 'partition') {
+    // a freestanding office partition wall on two feet
+    part(g, 2.6, 2.05, .08, OFF.fabric, 0, 1.08, 0);
+    part(g, 2.64, .05, .1, OFF.grey, 0, 2.12, 0, { ray: false });
+    for (const sx of [-1.15, 1.15]) part(g, .08, .05, .5, OFF.grey, sx, .03, 0, { ray: false });
+    h = 2.1;
   }
   if (rot) [w, d] = [d, w];
   propCol(x, z, w * .96, d * .96, h);
@@ -1942,10 +1961,10 @@ function buildLevel(L) {
   // cover
   for (const r of rooms) {
     const placed = [];
-    const n = office ? randi(8, 12) : randi(6, 10);
+    const n = office ? randi(11, 15) : randi(9, 13), full = FULL[THEME] || FULL.warehouse;
     for (let k = 0, tries = 0; k < n && tries < 100; tries++) {
       // the first two pieces in every room are tall enough to duck behind; the rest is a mix
-      const type = woods ? (k < 2 ? pick(['boulder', 'woodpile', 'woodpile', 'sandbags', 'tallCrate']) : pick(['log', 'log', 'rocks', 'stump', 'stump', 'boulder', 'woodpile', 'crate', 'barrels', 'pallets', 'tallCrate']))
+      const type = k >= 2 && k < 4 || k >= 4 && Math.random() < .2 ? pick(full).replace('shelfFull', 'shelf') : woods ? (k < 2 ? pick(['boulder', 'woodpile', 'woodpile', 'sandbags', 'tallCrate']) : pick(['log', 'log', 'rocks', 'stump', 'stump', 'boulder', 'woodpile', 'crate', 'barrels', 'pallets', 'tallCrate']))
         : jungle ? (k < 2 ? pick(['boulder', 'boulder', 'sandbags', 'tallCrate', 'trunk']) : pick(['log', 'log', 'boulder', 'rocks', 'stump', 'trunk', 'crate', 'crate', 'barrels', 'pallets', 'sandbags', 'tallCrate', 'boxes']))
         : office ? (k < 2 ? pick(['cubicle', 'cubicle', 'tableFlip', 'vending', 'serverRack', 'boxes']) : pick(['workDesk', 'workDesk', 'workDesk', 'cubicle', 'cubicle', 'cabinet', 'cabinet', 'cabinetDown', 'copier', 'conference', 'tableFlip', 'boxes', 'pillar', 'serverRack', 'vending', 'deskOver']))
         : k < 2 ? pick(TALL) : pick(['desk', 'deskOver', 'cabinet', 'cabinetDown', 'barrels', 'pallets', 'crate', 'crate', 'rubble', 'barrier', 'pillar', 'shelf', ...TALL]);
@@ -1973,6 +1992,7 @@ function buildLevel(L) {
     const pt = new THREE.SpotLight(m.light, 210 * m.intensity, 24, Math.PI / 2.6, 0.85, 1.6);
     pt.position.set(rand(-r.w / 4, r.w / 4), r.h - .15, r.z0 + r.d * (sz < cz ? .78 : .22));
     pt.target.position.set(pt.position.x, 0, pt.position.z); level.add(pt, pt.target);
+    r.pools = [{ x: sx, z: sz }, { x: pt.position.x, z: pt.position.z }];
     r.lights.push({ l: spot, base: spot.intensity }, { l: pt, base: pt.intensity });
     r.flicker = Math.random() < (m.flicker || 0);
     const tubeMat = MAT.lamp(m.tube); r.tubeMat = tubeMat;
@@ -2171,7 +2191,7 @@ function spawnEnemy(room, L, force) {
     else if (L >= 2 && type === 'rusher' && Math.random() < .5) type = 'dog';
   }
   if (force) type = force;
-  const T = ETYPES[type], elite = !T.boss && (H() >= 3 ? L >= 2 && Math.random() < Math.min(.55, (L - 1) * .1) : L >= 3 && Math.random() < Math.min(.45, (L - 2) * .08));
+  const T = ETYPES[type], elite = !T.boss && (H() >= 3 ? L >= 2 && Math.random() < Math.min(.55, (L - 1) * .1) : L >= 2 && Math.random() < Math.min(.45, (L - 1) * .08));
   const gunModel = type === 'grunt' && L >= 3 && Math.random() < .22 ? 'dmr' : T.gun;
   const g = new THREE.Group(); g.rotation.order = 'YXZ';
   const dog = type === 'dog' ? buildDog(elite ? [.07, .065, .06] : T.tint, elite ? 0xff9a20 : 0xff2a18) : null; // elite crawlers are black with an amber eye
@@ -2259,7 +2279,7 @@ function spawnEnemy(room, L, force) {
   const e = {
     type, T, g, model, mixer, act, B, pivot, gun, gripR, gripL, muzzle, lens, mats, marker, room, elite, parts: prox,
     hp: T.hp * hpScale, maxHp: T.hp * hpScale, dmg: T.dmg * (T.boss ? 1.15 : 1.2) * (1 + (T.boss ? .06 : .13) * (L - 1)) * (elite ? 1.3 : 1),
-    acc: T.boss ? .36 : Math.min(.84, .44 + .045 * L), speed: T.speed * (1 + Math.min(type === 'rusher' ? .15 : .3, L * .02)) * (elite ? 1.05 : 1),
+    acc: T.boss ? .36 : Math.min(.86, .48 + .045 * L), speed: T.speed * (1 + Math.min(type === 'rusher' ? .15 : .3, L * .02)) * (elite ? 1.05 : 1),
     vel: new V3(), knock: new V3(), yaw: Math.PI, alerted: false, los: false, losT: Math.random() * .2,
     fireCd: rand(1, 2.2), windup: 0, burst: 0, burstT: 0, strafe: Math.random() < .5 ? 1 : -1, strafeT: rand(1, 3),
     flash: 0, flashOn: false, dead: false, deathT: 0, fallDir: 1, meleeCd: 0, radius: .36 * s, dashHit: false, aim: 0, drop: null,
@@ -3288,7 +3308,7 @@ function resetRun() {
   LO.slots[0] = { k: CLASSES[cls()].gun, ammo: magFor(WEAPONS[CLASSES[cls()].gun]) }; LO.slots[1] = { k: 'sidearm', ammo: magFor(WEAPONS.sidearm) }; LO.cur = 0;
   startFloor();
 }
-function hostileCount(L, boss) { const n = boss ? 4 + L : 4 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
+function hostileCount(L, boss) { const n = boss ? 4 + L : 5 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
 function startFloor() {
   if (daily) seeded(hashStr(daily.date + ':floor:' + floorN), () => buildLevel(floorN)); else buildLevel(floorN);
   P.pos.set(0, 0, -4.6); P.vel.set(0, 0, 0); yaw = Math.PI; pitch = 0; $('prompt').classList.remove('on');
@@ -3516,7 +3536,7 @@ function reloadEvents() {
 const camPos = new V3(), camDir = new V3(), muzzleW = new V3();
 function fire() {
   const wp = wep();
-  makeNoise(P.pos);
+  makeNoise(P.pos); P.firedAt = time;
   W.ammo--; W.fireCd += fireInterval(); stats.shots++;
   const scatter = wp.pellets === 1 && U('multi') > 0, pellets = wp.pellets + 2 * U('multi');
   camera.getWorldPosition(camPos); camera.getWorldDirection(camDir); muzzlePt.getWorldPosition(muzzleW);
@@ -4671,21 +4691,28 @@ function initIdle(e) {
   e.idle = { k, base, yaw: base, t: rand(1, 4), pts: k === 'patrol' ? [e.g.position.clone(), freeSpot(r, .25)] : null, home: k === 'patrol' ? null : e.g.position.clone(), i: 1, wait: 0, back: false };
   e.yaw = base; e.g.rotation.y = base;
 }
+// how lit a spot is: 1 under a light, falling to 0 in the dark between the pools; daylight outdoors; a muzzle flash lights you up
+function lightAt(x, z) {
+  if (THEME === 'jungle' || THEME === 'woods' || time - (P.firedAt || -9) < .35) return 1;
+  const r = rooms.find(o => z >= o.z0 && z < o.z1); if (!r || !r.pools) return 1;
+  let l = 0; for (const p of r.pools) l = Math.max(l, 1 - smooth(3, 8, Math.hypot(x - p.x, z - p.z)));
+  return l;
+}
 // sight builds suspicion (faster up close, in the open, on the move); a crouch-walk is quiet, running is not
 function perceive(e, dt, dist, dx, dz) {
   const RM = e.room;
   if (e.boss || RM.hasBoss) { if (RM.active) alertEnemy(e); return; }
   if (state !== 'playing') return;
-  const crouch = P.ch > .5, pv = Math.hypot(P.vel.x, P.vel.z), dog = !!e.dog;
+  const crouch = P.ch > .5, pv = Math.hypot(P.vel.x, P.vel.z), dog = !!e.dog, lit = dog ? 1 : lightAt(P.pos.x, P.pos.z); // crawler sensors see in the dark
   let rate = 0;
   if (e.los) {
     const ang = Math.acos(clamp((Math.sin(e.yaw) * dx + Math.cos(e.yaw) * dz) / (dist || 1), -1, 1));
     const half = dog ? 1.9 : e.chkNoise ? 1.35 : 1.05;
-    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1);
+    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (.5 + .5 * lit);
     if (dist < range && ang < half + .45) {
       rate = 1 / (.2 + dist * .11);
       if (ang > half) rate *= pv > 1 ? .3 : 0; // the corner of the eye only catches movement
-      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (e.chkNoise ? 1.6 : 1);
+      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (e.chkNoise ? 1.6 : 1) * (.35 + .8 * lit);
       rate *= 1 - .6 * smooth(range * .55, range, dist);
       if (dist < 2.2 && ang < half) rate = Math.max(rate, 4);
     }
@@ -5418,8 +5445,8 @@ function updateDetMarks() {
   for (const e of enemies) if (!e.dead && !e.boss && !(e.room.sealed) && (e.alerted ? time - (e.alertT || -9) < 1.3 : e.sus > .04)) list.push(e);
   list.sort((a, b) => (b.alerted ? 2 : b.sus) - (a.alerted ? 2 : a.sus));
   const st = $('stealth'), rm = roomAt(P.pos.z), live = rm && aliveIn(rm) > 0 && state === 'playing';
-  const sk = !live ? '' : rm.contact ? 'det' : rm.enemies.some(o => !o.dead && o.sus > .3) ? 'sus' : 'hid';
-  if (sk !== hudCache.stealth) { hudCache.stealth = sk; st.className = 'stealth ' + sk; st.textContent = sk === 'det' ? '· detected' : sk === 'sus' ? '· suspicious' : sk === 'hid' ? '· undetected' : ''; }
+  const sk = !live ? '' : rm.contact ? 'det' : rm.enemies.some(o => !o.dead && o.sus > .3) ? 'sus' : lightAt(P.pos.x, P.pos.z) < .35 ? 'shd' : 'hid';
+  if (sk !== hudCache.stealth) { hudCache.stealth = sk; st.className = 'stealth ' + sk; st.textContent = sk === 'det' ? '· detected' : sk === 'sus' ? '· suspicious' : sk === 'hid' ? '· undetected' : sk === 'shd' ? '· hidden in shadow' : ''; }
   for (let i = 0; i < detPool.length; i++) {
     const D = detPool[i], e = list[i];
     if (!e) { if (D.on) { D.on = false; D.el.style.opacity = 0; } continue; }
@@ -5675,7 +5702,7 @@ const BOOT = {
     'Wooden crates and cardboard splinter under fire. Pillars, sandbags and concrete stay put.',
     'Headshots hit far harder. Soldiers with amber visors are elites: tougher, and they hit harder too.',
     'Get close and stab. It drops a regular soldier in one hit, and from behind it does triple damage.',
-    'Soldiers do not know you are there until they spot you or find a body. A shot brings the nearest one over to check, so move after you fire. Crouch to stay hidden; a takedown on someone who never saw you is silent.',
+    'Soldiers do not know you are there until they spot you or find a body. A shot brings the nearest one over to check, so move after you fire. Crouch and keep to the dark between the lights to stay hidden (crawler drones see in the dark); a takedown on someone who never saw you is silent.',
     'Hide too long and they will cook a frag. Keep moving between cover.',
     'Every fifth floor ends in a boss room. Restock at the crate before you go in.',
     'Biomass from every run buys permanent upgrades in the Evolution Lab.',
