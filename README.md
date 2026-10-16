@@ -8,3 +8,4 @@ To add a game: put its files in a new folder with an `index.html`, add a card fo
 - `breakaway-checkers/` — Three.js AHL hockey shootout with seasons, online play and a recorded announcer (single `index.html` plus the rigs, textures and announcer calls it loads from `models/`; `tools/announcer` rebuilds the calls).
 - `plaza-midwood-runner/` — Canvas endless runner down Central Ave, Charlotte (single self-contained `index.html`; the friends leaderboard only works inside Claude and hides itself here).
 - `plaza-midwood-quest-3d/` — Three.js first-person open-world quest game in Plaza Midwood (single `index.html`, three.js loaded from jsDelivr).
+- `paw-quest/` — Three.js kids' platformer (`index.html` plus `world3d.js`, the bundled three.js world; `kid1.js`/`kid2.js`/`dog3d.js`/`bakery.js`, models as base64 JS; and textures in `tex/`). Built and published as a Claude artifact; copy the files here to update.
