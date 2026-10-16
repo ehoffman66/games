@@ -189,7 +189,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     <button class="btn green" id="vPlay">Adventure</button>
     <button class="btn" id="vShop">Shop</button>
     <button class="btn" id="vWard">Dress up</button>
-    <button class="btn" id="vPet">Buddy</button>
+    <button class="btn" id="vPet">Apollo</button>
     <button class="btn" id="vStick">Stickers</button>
     <button class="btn white" id="vMake">Make it yours</button>
   </div>
@@ -223,7 +223,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 33</p>
+    <p class="ver" id="tVer">Version 34</p>
   </div>
 </section>
 
@@ -237,7 +237,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 
 <section class="screen pet" id="sPet" hidden>
   <div class="card">
-    <div class="wtop"><h2 id="petName">Buddy</h2><div class="coinpill"><span class="coin-ico"></span><span id="petCoins">0</span></div></div>
+    <div class="wtop"><h2 id="petName">Apollo</h2><div class="coinpill"><span class="coin-ico"></span><span id="petCoins">0</span></div></div>
     <div class="happy"><span id="petMood">😊</span><span class="track"><i id="petBar"></i></span><b id="petPct">50%</b></div>
     <p class="msg" id="petMsg"></p>
     <div class="petgrid" id="petList"></div>
@@ -353,7 +353,7 @@ const defaults = {
     {name:'Ciaran', hair:'#5a3a22', style:'short', skin:'#f1c7a1', shirt:'#e5484d'},
     {name:'Caelan', hair:'#2b1d14', style:'pony',  skin:'#f1c7a1', shirt:'#8b5cf6'}
   ],
-  dog: {name:'Buddy', fur:'#211c20', ears:'floppy', coat:'doodle'},
+  dog: {name:'Apollo', fur:'#211c20', ears:'floppy', coat:'doodle'},
   coins: 0, owned: [], done: [], lv: {}, hats: [], lv45: 1, bones: {}
 };
 function clone(o){ return JSON.parse(JSON.stringify(o)); }
@@ -366,7 +366,7 @@ const hasProgress = s => !!(s && s.kids && ((s.done || []).length || s.coins || 
 function load(n = slot){
   try {
     const s = JSON.parse(localStorage.getItem(slotKey(n)));
-    if (s && s.kids && s.dog){ const o = Object.assign(clone(defaults), s); if (!s.lv){ o.lv = {}; (o.owned || []).forEach(id => o.lv[id] = 1); } if (!o.dog.coat){ o.dog.coat = 'doodle'; o.dog.fur = '#211c20'; } if (!o.hats) o.hats = []; if (!s.lv45){ const mp = i => Math.floor(i/4)*9 + i%4; o.done = (o.done || []).map(mp); ['best', 'board'].forEach(k => { if (o[k]){ const n = {}; Object.keys(o[k]).forEach(i => n[mp(+i)] = o[k][i]); o[k] = n; } }); o.lv45 = 1; } if (o.kids[0] && o.kids[0].name === 'Player 1') o.kids[0].name = 'Ciaran'; if (o.kids[1] && o.kids[1].name === 'Player 2') o.kids[1].name = 'Caelan'; return o; }
+    if (s && s.kids && s.dog){ const o = Object.assign(clone(defaults), s); if (!s.lv){ o.lv = {}; (o.owned || []).forEach(id => o.lv[id] = 1); } if (!o.dog.coat){ o.dog.coat = 'doodle'; o.dog.fur = '#211c20'; } if (!o.hats) o.hats = []; if (!s.lv45){ const mp = i => Math.floor(i/4)*9 + i%4; o.done = (o.done || []).map(mp); ['best', 'board'].forEach(k => { if (o[k]){ const n = {}; Object.keys(o[k]).forEach(i => n[mp(+i)] = o[k][i]); o[k] = n; } }); o.lv45 = 1; } if (o.kids[0] && o.kids[0].name === 'Player 1') o.kids[0].name = 'Ciaran'; if (o.kids[1] && o.kids[1].name === 'Player 2') o.kids[1].name = 'Caelan'; if (o.dog.name === 'Buddy') o.dog.name = 'Apollo'; return o; }
   } catch(e) {}
   return clone(defaults);
 }
@@ -2217,7 +2217,7 @@ function openMake(from){
   const cvs = document.createElement('canvas'); box.appendChild(cvs);
   const redraw = () => { cvs.width = 200; cvs.height = 220; const c = cvs.getContext('2d'); c.scale(2, 2); c.save(); c.translate(40, 84); c.scale(2, 2); drawDog(c, d, 0, 0, 0, 1, true); c.restore(); };
   redraw();
-  const inp = document.createElement('input'); inp.id = 'dogname'; inp.maxLength = 12; inp.value = d.name; inp.oninput = () => { d.name = inp.value.trim() || 'Buddy'; };
+  const inp = document.createElement('input'); inp.id = 'dogname'; inp.maxLength = 12; inp.value = d.name; inp.oninput = () => { d.name = inp.value.trim() || 'Apollo'; };
   field(box, 'Dog name', inp);
   field(box, 'Fur', swatches(FUR, d.fur, v => { d.fur = v; redraw(); }, 'Fur color'));
   field(box, 'Coat', options([['doodle','Curly'],['smooth','Smooth']], d.coat || 'smooth', v => { d.coat = v; redraw(); }));
