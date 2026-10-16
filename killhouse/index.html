@@ -1870,7 +1870,7 @@ function breach() {
   if (!stage || stage.breached) return;
   stage.breached = true; const d = stage.door;
   d.open = true; d.col.on = false; NAV.dirty = true; d.lamp.material.emissive.setHex(0x30ff70); SFX.door(); shake = Math.max(shake, .15);
-  for (const e of rooms[0].enemies) e.fireCd = Math.max(e.fireCd, rand(1.1, 1.9));
+  for (const e of rooms[0].enemies) e.fireCd = Math.max(e.fireCd, rand(.6, 1.2));
   $('breachHint').classList.remove('on');
 }
 function buildLevel(L) {
@@ -2162,7 +2162,7 @@ function spawnEnemy(room, L, force) {
     else if (L >= 2 && type === 'rusher' && Math.random() < .5) type = 'dog';
   }
   if (force) type = force;
-  const T = ETYPES[type], elite = !T.boss && (H() >= 3 ? L >= 2 && Math.random() < Math.min(.55, (L - 1) * .1) : L >= 5 && Math.random() < Math.min(.45, (L - 4) * .08));
+  const T = ETYPES[type], elite = !T.boss && (H() >= 3 ? L >= 2 && Math.random() < Math.min(.55, (L - 1) * .1) : L >= 3 && Math.random() < Math.min(.45, (L - 2) * .08));
   const gunModel = type === 'grunt' && L >= 3 && Math.random() < .22 ? 'dmr' : T.gun;
   const g = new THREE.Group(); g.rotation.order = 'YXZ';
   const dog = type === 'dog' ? buildDog(elite ? [.025, .022, .02] : T.tint) : null; // elite dogs are black
@@ -2246,11 +2246,11 @@ function spawnEnemy(room, L, force) {
     laser.m.visible = laser.glint.visible = false; laser.m.frustumCulled = false; level.add(laser.m, laser.glint);
   }
   const marker = new THREE.Sprite(markerMat); marker.scale.setScalar(.22); marker.renderOrder = 20; marker.visible = false; level.add(marker);
-  const hpScale = (T.boss ? 1 + .55 * (Math.floor(L / 5) - 1) : (1 + 0.22 * (L - 1)) * (elite ? 1.6 : 1)) * (H() >= 1 ? 1.3 : 1);
+  const hpScale = (T.boss ? 1 + .55 * (Math.floor(L / 5) - 1) : (1 + 0.26 * (L - 1)) * (elite ? 1.6 : 1)) * (H() >= 1 ? 1.3 : 1);
   const e = {
     type, T, g, model, mixer, act, B, pivot, gun, gripR, gripL, muzzle, lens, mats, marker, room, elite, parts: prox,
-    hp: T.hp * hpScale, maxHp: T.hp * hpScale, dmg: T.dmg * (1 + (T.boss ? .06 : .12) * (L - 1)) * (elite ? 1.3 : 1),
-    acc: T.boss ? .3 : Math.min(.78, .34 + .04 * L), speed: T.speed * (1 + Math.min(type === 'rusher' ? .15 : .3, L * .02)) * (elite ? 1.05 : 1),
+    hp: T.hp * hpScale, maxHp: T.hp * hpScale, dmg: T.dmg * (T.boss ? 1.15 : 1.2) * (1 + (T.boss ? .06 : .13) * (L - 1)) * (elite ? 1.3 : 1),
+    acc: T.boss ? .36 : Math.min(.84, .44 + .045 * L), speed: T.speed * (1 + Math.min(type === 'rusher' ? .15 : .3, L * .02)) * (elite ? 1.05 : 1),
     vel: new V3(), knock: new V3(), yaw: Math.PI, alerted: false, los: false, losT: Math.random() * .2,
     fireCd: rand(1, 2.2), windup: 0, burst: 0, burstT: 0, strafe: Math.random() < .5 ? 1 : -1, strafeT: rand(1, 3),
     flash: 0, flashOn: false, dead: false, deathT: 0, fallDir: 1, meleeCd: 0, radius: .36 * s, dashHit: false, aim: 0, drop: null,
@@ -3116,7 +3116,7 @@ const HEAT = [
   { d: 'Hostiles have 30% more health.', m: 1.3 },
   { d: 'Hostiles hit 25% harder.', m: 1.6 },
   { d: 'Elites turn up from floor 2, and far more often.', m: 1.9 },
-  { d: 'Clearing a floor heals 10% instead of 35%.', m: 2.2 },
+  { d: 'Clearing a floor heals 10% instead of 20%.', m: 2.2 },
   { d: '25% more hostiles on every floor.', m: 2.6 },
 ];
 let heatSel = 0;
@@ -3276,7 +3276,7 @@ function resetRun() {
   LO.slots[0] = { k: CLASSES[cls()].gun, ammo: magFor(WEAPONS[CLASSES[cls()].gun]) }; LO.slots[1] = { k: 'sidearm', ammo: magFor(WEAPONS.sidearm) }; LO.cur = 0;
   startFloor();
 }
-function hostileCount(L, boss) { const n = boss ? 3 + L : 3 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
+function hostileCount(L, boss) { const n = boss ? 4 + L : 4 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
 function startFloor() {
   if (daily) seeded(hashStr(daily.date + ':floor:' + floorN), () => buildLevel(floorN)); else buildLevel(floorN);
   P.pos.set(0, 0, -4.6); P.vel.set(0, 0, 0); yaw = Math.PI; pitch = 0; $('prompt').classList.remove('on');
@@ -3952,7 +3952,7 @@ function killEnemy(e) {
   if (EV('blitz')) { P.dashCharges = maxDash(); P.dashRe = 0; }
   if (EV('bullet') && P.odT > 0 && e.lastHead) P.odT += 1;
   if (EV('lead') && e.lastKind === 'gun') { W.ammo = Math.min(magSize(), W.ammo + 5); LO.slots[LO.cur].ammo = W.ammo; }
-  if (Math.random() < .22 + .08 * M('scav')) spawnPickup(e.g.position);
+  if (Math.random() < .15 + .08 * M('scav')) spawnPickup(e.g.position);
   gain(2 + (e.lastHead ? 1 : 0) + (e.lastStab ? 1 : 0) + (e.type === 'heavy' ? 3 : e.type === 'shield' || e.type === 'sniper' ? 2 : 0) + (e.elite ? 6 : 0));
   rebuildTargets();
   const r = e.room;
@@ -4287,7 +4287,7 @@ function applyUpgrade(k) {
   nextFloor();
 }
 function nextFloor() {
-  P.hp = Math.min(P.maxHp, P.hp + P.maxHp * (H() >= 4 ? .1 : .35));
+  P.hp = Math.min(P.maxHp, P.hp + P.maxHp * (H() >= 4 ? .1 : .2));
   $('upgrade').hidden = true;
   floorN++; startFloor();
   state = 'playing'; document.body.className = 'playing'; lockPointer();
@@ -4474,7 +4474,7 @@ function updatePlayer(dt) {
   for (let i = pickups.length - 1; i >= 0; i--) {
     const pk = pickups[i]; pk.t += dt; pk.g.rotation.y += dt * 1.5; pk.g.position.y = .4 + Math.sin(pk.t * 3) * .07;
     if (Math.hypot(pk.g.position.x - P.pos.x, pk.g.position.z - P.pos.z) < 1.3 && P.pos.y < 1.5 && P.hp < P.maxHp) {
-      level.remove(pk.g); pickups.splice(i, 1); heal((30 + 10 * floorN * .5) * (1 + .25 * M('scav')) * (cls() === 'medic' ? 1.5 : 1), true); SFX.pickup();
+      level.remove(pk.g); pickups.splice(i, 1); heal((25 + 4 * floorN) * (1 + .25 * M('scav')) * (cls() === 'medic' ? 1.5 : 1), true); SFX.pickup();
     }
   }
   // extraction
@@ -5213,7 +5213,7 @@ function updateEnemy(e, dt) {
     e.windup -= dt; if (e.windup <= 0) { e.burst = e.type === 'heavy' ? 2 : jug ? 10 : dmr ? 1 : e.shield ? randi(2, 3) : randi(2, 4); e.burstT = 0; }
   } else if (e.los && dist < e.T.range * (dmr && !sn ? 1.4 : 1) && e.aim > .8 && e.staggerT <= 0) {
     e.fireCd -= dt;
-    if (e.fireCd <= 0) { e.atVip = obj && obj.k === 'escort' && obj.state === 'live' && !sn && Math.random() < .35 && e.g.position.distanceTo(obj.npc.g.position) < e.T.range; e.windup = sn ? SNIPE_T : dmr ? .9 : jug ? .75 : .45; e.fireCd = (sn ? rand(2.4, 3.4) : dmr ? rand(2, 3) : jug ? rand(1.4, 2.2) : rand(1.1, 2.1)) * (e.type === 'heavy' ? 1.3 : 1); if (sn) SFX.lock(dist); }
+    if (e.fireCd <= 0) { e.atVip = obj && obj.k === 'escort' && obj.state === 'live' && !sn && Math.random() < .35 && e.g.position.distanceTo(obj.npc.g.position) < e.T.range; e.windup = sn ? SNIPE_T : dmr ? .75 : jug ? .65 : .3; e.fireCd = (sn ? rand(2.2, 3.1) : dmr ? rand(1.7, 2.6) : jug ? rand(1.2, 1.9) : rand(.8, 1.6)) * (e.type === 'heavy' ? 1.3 : 1); if (sn) SFX.lock(dist); }
   }
 }
 
@@ -5236,7 +5236,7 @@ function enemyShoot(e, dist) {
   const moving = Math.hypot(P.vel.x, P.vel.z) > 3, dashing = P.dashT > 0;
   let total = 0;
   for (let i = 0; i < pellets; i++) {
-    let p = e.acc * clamp(1.15 - dist / (dmr ? 70 : 35), .25, 1) * (moving ? .6 : 1) * (dashing ? 0 : 1) * (P.onGround ? 1 : .6);
+    let p = e.acc * clamp(1.15 - dist / (dmr ? 70 : 35), .25, 1) * (moving ? .72 : 1) * (dashing ? 0 : 1) * (P.onGround ? 1 : .6);
     if (e.type === 'heavy') p = clamp(1 - dist / 16, 0, .85) * (moving ? .7 : 1);
     if (e.type === 'sniper') p = .95 * (moving ? .35 : 1) * (dashing ? 0 : 1) * (P.onGround ? 1 : .5);
     p *= (1 - .3 * P.ch) * (1 - .35 * Math.min(1, e.supp));
