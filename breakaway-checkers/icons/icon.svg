@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="34%" r="78%">
+      <stop offset="0" stop-color="#22345a"/><stop offset=".6" stop-color="#0f1829"/><stop offset="1" stop-color="#070b12"/>
+    </radialGradient>
+    <pattern id="chk" width="96" height="96" patternUnits="userSpaceOnUse" x="16" y="16">
+      <rect width="48" height="48" fill="#e8352b" opacity=".13"/><rect x="48" y="48" width="48" height="48" fill="#e8352b" opacity=".13"/>
+    </pattern>
+    <radialGradient id="glow" cx="50%" cy="78%" r="40%"><stop offset="0" stop-color="#ffb21e" stop-opacity=".28"/><stop offset="1" stop-color="#ffb21e" stop-opacity="0"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd36b"/><stop offset="1" stop-color="#f29a0c"/></linearGradient>
+    <linearGradient id="silver" x1="1" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c9d3e0"/></linearGradient>
+    <linearGradient id="puckTop" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#454b56"/><stop offset="1" stop-color="#16191e"/></linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+  <rect width="512" height="512" fill="url(#chk)"/>
+  <rect width="512" height="512" fill="url(#glow)"/>
+  <g id="art">
+    <!-- white stick: top right down to a blade turned out to the left -->
+    <g>
+      <path d="M380 58 L408 74 L194 388 L166 374 Z" fill="url(#silver)"/>
+      <path d="M166 374 L194 388 Q190 414 164 418 L72 420 Q50 420 52 402 Q54 388 72 388 Z" fill="url(#silver)"/>
+      <path d="M160 384 L186 396 Q182 408 164 410 L80 411 Q64 411 66 402 Q68 396 80 396 Z" fill="#14171c"/>
+      <rect x="372" y="44" width="44" height="40" rx="8" transform="rotate(34 394 64)" fill="#14171c"/>
+    </g>
+    <!-- gold stick, crossing over it the other way -->
+    <g>
+      <path d="M132 58 L104 74 L318 388 L346 374 Z" fill="url(#gold)"/>
+      <path d="M346 374 L318 388 Q322 414 348 418 L440 420 Q462 420 460 402 Q458 388 440 388 Z" fill="url(#gold)"/>
+      <path d="M352 384 L326 396 Q330 408 348 410 L432 411 Q448 411 446 402 Q444 396 432 396 Z" fill="#14171c"/>
+      <rect x="96" y="44" width="44" height="40" rx="8" transform="rotate(-34 118 64)" fill="#f2f2f2"/>
+    </g>
+    <!-- the puck, between the blades -->
+    <g transform="translate(256 360)">
+      <ellipse cx="0" cy="62" rx="96" ry="18" fill="#000" opacity=".35"/>
+      <ellipse cx="0" cy="24" rx="82" ry="32" fill="#0b0d10"/>
+      <rect x="-82" y="0" width="164" height="24" fill="#0b0d10"/>
+      <ellipse cx="0" cy="0" rx="82" ry="32" fill="url(#puckTop)"/>
+      <ellipse cx="0" cy="0" rx="64" ry="23" fill="none" stroke="#ffb21e" stroke-width="5"/>
+      <ellipse cx="-18" cy="-9" rx="30" ry="8" fill="#fff" opacity=".16"/>
+    </g>
+    <!-- a star for the winner -->
+    <path transform="translate(256 168) scale(1.25)" d="M0 -34 L9.6 -11 L34 -10.5 L15 5 L21.5 29 L0 15.5 L-21.5 29 L-15 5 L-34 -10.5 L-9.6 -11 Z" fill="#ffb21e"/>
+  </g>
+</svg>
