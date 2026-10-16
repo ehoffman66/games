@@ -436,7 +436,7 @@ html.touch .slots { display: none; }
   <div class="lowhp" id="lowhp"></div>
   <div class="slowmo" id="slowmo"></div>
   <div class="corner tl">
-    <div class="label">Killhouse</div>
+    <div class="label">Killhouse <span class="ver"></span></div>
     <div class="floorline">Floor <b id="floorNum">01</b> · Room <span id="roomNum">1/2</span></div>
     <div class="hostiles"><span id="hostiles">0</span> hostiles remaining <span class="stealth" id="stealth"></span></div>
     <div class="objline" id="objLine"></div>
@@ -496,7 +496,7 @@ html.touch .slots { display: none; }
 <div id="fade"><div class="eyebrow" id="fadeSub">Breach and clear</div><div class="fadeN" id="fadeN"></div></div>
 <div id="boot">
   <div class="bootIn">
-    <div class="eyebrow">Abandoned building · Endless floors</div>
+    <div class="eyebrow">Abandoned building · Endless floors · <span class="ver"></span></div>
     <h1>KILL<em>HOUSE</em></h1>
     <div class="bootBar"><i id="bootFill"></i></div>
     <div class="bootRow"><span id="bootStage">Generating the building…</span><span id="bootPct">0%</span></div>
@@ -506,7 +506,7 @@ html.touch .slots { display: none; }
 
 <div class="overlay" id="menu">
   <div class="panel">
-    <div class="eyebrow">Abandoned building · Endless floors</div>
+    <div class="eyebrow">Abandoned building · Endless floors · <span class="ver"></span></div>
     <h1>KILL<em>HOUSE</em></h1>
     <p class="lede">Each floor is a new set of rooms. Clear every hostile, reach extraction, then mutate. Upgrades stack hard, and so do the people trying to stop you.</p>
     <div class="controls deskonly">
@@ -535,7 +535,7 @@ html.touch .slots { display: none; }
 
 <div class="overlay" id="pause" hidden>
   <div class="panel">
-    <div class="eyebrow">Paused</div>
+    <div class="eyebrow">Paused · <span class="ver"></span></div>
     <h2>Holding position</h2>
     <div class="slider"><label for="sens">Look sensitivity</label><input type="range" id="sens" min="0.3" max="3" step="0.05" value="1"><span id="sensVal">1.00</span></div>
     <div class="controls deskonly">
@@ -607,6 +607,9 @@ html.touch .slots { display: none; }
 } }
 </script>
 <script type="module">
+// bump on every published version: shown on the loading screen, menu, pause screen and HUD
+const KH_VERSION = 43;
+for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
