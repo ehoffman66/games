@@ -159,6 +159,9 @@ h2 { font-size: clamp(30px, 5vw, 48px); margin: 0; letter-spacing: .02em; text-w
 .card.cat-power .cat span:first-child { color: #d6a6ff; }
 
 .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 12px; }
+.intel { display: grid; grid-template-columns: auto 1fr; gap: 8px 18px; margin: 18px 0; font-size: 15px; line-height: 1.4; max-width: 70ch; }
+.intel b { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--amber); padding-top: 3px; font-weight: 600; }
+#debStats { margin: 18px 0; }
 .stat { border-top: 1px solid var(--line); padding-top: 8px; }
 .stat .v { font-family: var(--mono); font-size: 28px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .row { display: flex; gap: 16px; flex-wrap: wrap; align-items: center; }
@@ -496,7 +499,7 @@ html.touch .slots { display: none; }
 <div id="fade"><div class="eyebrow" id="fadeSub">Breach and clear</div><div class="fadeN" id="fadeN"></div></div>
 <div id="boot">
   <div class="bootIn">
-    <div class="eyebrow">Abandoned building · Endless floors · <span class="ver"></span></div>
+    <div class="eyebrow">Six operations · Thirty floors · <span class="ver"></span></div>
     <h1>KILL<em>HOUSE</em></h1>
     <div class="bootBar"><i id="bootFill"></i></div>
     <div class="bootRow"><span id="bootStage">Generating the building…</span><span id="bootPct">0%</span></div>
@@ -506,9 +509,9 @@ html.touch .slots { display: none; }
 
 <div class="overlay" id="menu">
   <div class="panel">
-    <div class="eyebrow">Abandoned building · Endless floors · <span class="ver"></span></div>
+    <div class="eyebrow">Six operations · Thirty floors · <span class="ver"></span></div>
     <h1>KILL<em>HOUSE</em></h1>
-    <p class="lede">Each floor is a new set of rooms. Clear every hostile, reach extraction, then mutate. Upgrades stack hard, and so do the people trying to stop you.</p>
+    <p class="lede">Six operations of five floors, each ending on a boss. Clear every hostile, reach extraction, then mutate. Your progress saves at the start of every operation, so you can stop and pick it up later.</p>
     <div class="controls deskonly">
       <div><b>WASD</b>Move</div><div><b>Mouse</b>Aim / fire</div><div><b>Right mouse</b>Aim down sights</div><div><b>Space</b>Jump</div><div><b>Shift</b>Dash</div>
       <div><b>R</b>Reload</div><div><b>1 / 2</b>Primary / sidearm</div><div><b>G</b>Frag grenade</div><div><b>T</b>Flashbang</div><div><b>F</b>Take a dropped gun</div>
@@ -519,7 +522,7 @@ html.touch .slots { display: none; }
     </div>
     <div class="heat"><span class="label">Class</span><div class="heatsel classsel" id="classSel"></div><span class="fine" id="classInfo"></span></div>
     <div class="heat"><span class="label">Heat</span><div class="heatsel" id="heatSel"></div><span class="fine" id="heatInfo"></span></div>
-    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
+    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="newBtn" hidden>New campaign</button><button class="btn ghost" id="endlessBtn" hidden>Endless</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
     <div class="fine deskonly" style="display:block">Mouse and keyboard, or play on a phone held sideways. Headphones recommended.</div>
   </div>
 </div>
@@ -530,6 +533,26 @@ html.touch .slots { display: none; }
     <h2>Choose a mutation</h2>
     <div class="cards" id="cards"></div>
     <div class="row"><button class="btn ghost" id="rerollBtn" hidden>Reroll</button><span class="fine"><span class="deskonly">Press a number key, or click a card. </span>Next floor: <span id="nextInfo"></span></span></div>
+  </div>
+</div>
+
+<div class="overlay" id="brief" hidden>
+  <div class="panel">
+    <div class="eyebrow" id="briefEyebrow">Operation 1 of 6</div>
+    <h2 id="briefTitle">Operation</h2>
+    <p class="lede" id="briefText"></p>
+    <div class="intel" id="briefIntel"></div>
+    <div class="row"><button class="btn" id="briefGo">Deploy</button><button class="btn ghost" id="briefQuit">Return to base</button><span class="fine" id="briefNote"></span></div>
+  </div>
+</div>
+
+<div class="overlay" id="debrief" hidden>
+  <div class="panel">
+    <div class="eyebrow" id="debEyebrow">Operation complete</div>
+    <h2 id="debTitle"></h2>
+    <p class="lede" id="debText"></p>
+    <div class="stats" id="debStats"></div>
+    <div class="row"><button class="btn" id="debGo">Choose a mutation</button><button class="btn" id="debMenu" hidden>Main menu</button></div>
   </div>
 </div>
 
@@ -569,7 +592,7 @@ html.touch .slots { display: none; }
       <div><div class="sublabel">Kills by</div><div class="bars" id="deadKills"></div></div>
       <div><div class="sublabel" id="deadMutLabel">Mutations</div><div class="chips" id="deadMuts"></div></div>
     </div>
-    <div class="row"><button class="btn" id="retryBtn">Redeploy</button><button class="btn ghost" id="boardBtn2" hidden>Leaderboard</button><button class="btn ghost" id="careerBtn2">Career</button><button class="btn ghost" id="labBtn2">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="menuBtn2">Main menu</button></div>
+    <div class="row"><button class="btn" id="cpBtn" hidden>Retry operation</button><button class="btn" id="retryBtn">Redeploy</button><button class="btn ghost" id="boardBtn2" hidden>Leaderboard</button><button class="btn ghost" id="careerBtn2">Career</button><button class="btn ghost" id="labBtn2">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="menuBtn2">Main menu</button></div>
   </div>
 </div>
 
@@ -608,7 +631,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 47;
+const KH_VERSION = 48;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1123,9 +1146,20 @@ function signMaterial(text) {
 }
 
 // ---------- level settings: each block of two floors gets its own look ----------
-const THEMES = ['warehouse', 'office', 'jungle', 'woods'];
-const THEME_NAME = { warehouse: 'Warehouse', office: 'Office tower', jungle: 'Jungle compound', woods: 'Pine woods' };
-const themeFor = L => THEMES[Math.floor((L - 1) / 2) % THEMES.length];
+const THEMES = ['warehouse', 'office', 'ship', 'jungle', 'woods', 'lab'];
+const THEME_NAME = { warehouse: 'Warehouse', office: 'Office tower', ship: 'Cargo freighter', jungle: 'Jungle compound', woods: 'Pine woods', lab: 'Research lab' };
+// ---------- campaign: six operations of five floors, each in one place and ending on a boss ----------
+const OPS = [
+  { name: 'Cold Storage', theme: 'warehouse', brief: 'A shell company is moving people and weapons through an abandoned cold-storage warehouse by the river. Get inside, clear it floor by floor and find out who they work for.', done: 'The ledgers in the warehouse office are all billed to one client: Meridian Holdings.' },
+  { name: 'Glass Ceiling', theme: 'office', brief: 'Meridian Holdings runs out of a tower downtown, locked down after hours and full of private security. Go up through the offices and pull their files.', done: 'The files show Meridian loading sealed cargo onto a freighter anchored off the docks tonight.' },
+  { name: 'Night Tide', theme: 'ship', brief: 'Board the freighter in the dark and work through the cargo holds. Whatever Meridian is shipping out must not sail.', done: 'The cargo was people. The manifest lists a jungle compound as the destination, and more of them are already there.' },
+  { name: 'Green Hell', theme: 'jungle', brief: 'Meridian cut a compound out of the jungle to hold its test subjects. Go in, take the camp apart and find the subjects.', done: 'The survivors broke out during the fight and ran for the pine woods. Meridian sent hunters after them.' },
+  { name: 'Timberline', theme: 'woods', brief: 'Meridian hunters are tracking the survivors through the pine woods. Get to the hunters before they get to them.', done: 'One hunter talked. Everything is run from a research lab cut into the mountain: the place the mutations came from.' },
+  { name: 'Patient Zero', theme: 'lab', brief: 'This is where it started. Breach the research lab, fight down through the containment levels and end the program for good.', done: '' },
+];
+const OPS_END = 'The lab is burning and the program is over. Every operation is done. Endless mode is now unlocked on the main menu if you want to keep going.';
+const OPF = 5, opOf = L => Math.floor((L - 1) / OPF);
+const themeFor = L => OPS[opOf(L) % OPS.length].theme;
 let THEME = 'warehouse', BASEMAT = null;
 const OFF = {};
 function applyTheme(t) {
@@ -1134,13 +1168,76 @@ function applyTheme(t) {
   if (t === 'office' && !OFF.floor) buildOfficeMaterials();
   if (t === 'jungle' && !JNG.floor) buildJungleMaterials();
   if (t === 'woods' && !WDS.floor) buildWoodsMaterials();
-  const s = t === 'office' ? OFF : t === 'jungle' || t === 'woods' ? { floor: t === 'woods' ? WDS.floor : JNG.floor, wall: MAT.wood, ceil: MAT.wood, door: MAT.wood } : BASEMAT;
+  if (t === 'ship' && !SHIP.floor) buildShipMaterials();
+  if (t === 'lab' && !LAB.floor) buildLabMaterials();
+  const s = t === 'office' ? OFF : t === 'ship' ? SHIP : t === 'lab' ? { floor: LAB.floor, wall: LAB.wall, ceil: OFF.ceil, door: LAB.door } : t === 'jungle' || t === 'woods' ? { floor: t === 'woods' ? WDS.floor : JNG.floor, wall: MAT.wood, ceil: MAT.wood, door: MAT.wood } : BASEMAT;
   MAT.floor = s.floor; MAT.wall = s.wall; MAT.ceil = s.ceil; MAT.door = s.door;
-  scene.fog.density = t === 'jungle' ? .034 : t === 'woods' ? .04 : .024;
+  scene.fog.density = t === 'jungle' ? .034 : t === 'woods' ? .04 : t === 'ship' ? .03 : t === 'lab' ? .02 : .024;
 }
 function canvasTex(w, h, draw, srgb = true) {
   const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
   const t = new THREE.CanvasTexture(c); if (srgb) t.colorSpace = THREE.SRGBColorSpace; t.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy()); return t;
+}
+// ---------- cargo freighter and research lab, built the first time one loads ----------
+const SHIP = {}, LAB = {};
+function buildShipMaterials() {
+  const S = TEX >> 1;
+  { // steel deck plate: worn grey-green paint over diamond tread, bare steel and rust where the boots go
+    const n1 = fbm(S, 4, 5, 401), n2 = fbm(S, 3, 4, 402), nf = fbm(S, 48, 2, 403), c = S / 32;
+    SHIP.floor = makeMaterial(S, (x, y, i, p) => {
+      const cx = (x % c) / c - .5, cy = ((y + (Math.floor(x / c) % 2) * c / 2) % c) / c - .5;
+      const dia = Math.abs(cx * 2.6) + Math.abs(cy * 1.1) < .32 ? 1 : 0, wear = smooth(.45, .7, n1[i]), rust = smooth(.6, .78, n2[i]);
+      let r = .2, g = .23, b = .21; const k = 1 + (nf[i] - .5) * .12;
+      p.rough = .7; p.metal = .2;
+      if (dia && wear > 0) { r = r * (1 - wear) + .45 * wear; g = g * (1 - wear) + .45 * wear; b = b * (1 - wear) + .44 * wear; p.metal = .2 + .7 * wear; p.rough = .7 - .3 * wear; }
+      if (rust > 0) { r = r * (1 - rust) + .28 * rust; g = g * (1 - rust) + .14 * rust; b = b * (1 - rust) + .07 * rust; p.rough = .7 * (1 - rust) + .95 * rust; }
+      p.r = r * k; p.g = g * k; p.b = b * k; p.h = dia * .7 + rust * nf[i] * .3;
+    }, { bump: 2.5, metal: true, tile: 2, env: .5 });
+  }
+  SHIP.wall = surface(rustMaterial([.36, .4, .42], 411), { macro: .5, grime: .35, detail: .35, rep: 4 });
+  SHIP.ceil = rustMaterial([.18, .2, .21], 421);
+  SHIP.door = rustMaterial([.3, .33, .3], 431);
+  SHIP.beam = rustMaterial([.4, .17, .1], 441);
+  { // container sides: corrugated steel, tinted per box
+    const T = 256, n1 = fbm(T, 3, 4, 451), n2 = fbm(T, 4, 4, 452);
+    const base = makeMaterial(T, (x, y, i, p) => {
+      const w = Math.sin(x / T * Math.PI * 24), rust = smooth(.62, .8, n2[i]) * (y > T * .8 ? 1 : .4), k = (.85 + n1[i] * .25) * (.9 + w * .1);
+      p.r = k * (1 - rust) + .3 * rust; p.g = k * (1 - rust) + .16 * rust; p.b = k * (1 - rust) + .09 * rust; p.h = w * .5; p.rough = .6 + rust * .3; p.metal = .3;
+    }, { bump: 2, metal: true, tile: 2.4, env: .5 });
+    SHIP.box = [0x9a2a1c, 0x1f4f8a, 0x2e6b3a, 0xb8661c, 0x6d7275].map(c => { const m = base.clone(); m.color = new THREE.Color(c); m.userData.tile = 2.4; return m; });
+  }
+}
+function buildLabMaterials() {
+  if (!OFF.floor) buildOfficeMaterials();
+  const S = TEX >> 1;
+  { // white vinyl tiles with a grey fleck and dark grout
+    const n1 = fbm(S, 4, 5, 501), nf = fbm(S, 96, 2, 502), tile = S / 6;
+    LAB.floor = makeMaterial(S, (x, y, i, p) => {
+      const seam = x % tile < 1.5 || y % tile < 1.5, fl = h2(x, y, 51) > .985 ? .55 : 1, dirt = smooth(.55, .8, n1[i]) * .18;
+      const b = (.56 + (nf[i] - .5) * .05) * fl * (1 - dirt) * (seam ? .55 : 1);
+      p.r = b * .97; p.g = b; p.b = b * 1.02; p.h = seam ? -.5 : 0; p.rough = seam ? .9 : .32; p.metal = 0;
+    }, { bump: 1.5, tile: 2.4, env: .6 });
+  }
+  { // white wall panels with recessed seams
+    const n1 = fbm(S, 4, 5, 511), n3 = fbm(S, 64, 2, 512);
+    LAB.wall = makeMaterial(S, (x, y, i, p) => {
+      const seam = x % (S / 2) < 2 || y % (S / 2) < 2, k = (1 + (n1[i] - .5) * .05 + (n3[i] - .5) * .03) * (seam ? .6 : 1);
+      p.r = .5 * k; p.g = .52 * k; p.b = .54 * k; p.h = seam ? -.6 : n3[i] * .1; p.rough = .5; p.metal = 0;
+    }, { bump: 1, tile: 2.4, env: .4 });
+    surface(LAB.wall, { macro: .35, grime: .2, detail: .1, rep: 4 });
+  }
+  LAB.door = new THREE.MeshStandardMaterial({ color: 0xb4bac0, roughness: .45, metalness: .6, envMapIntensity: .8 });
+  LAB.steel = new THREE.MeshStandardMaterial({ color: 0xaab0b5, roughness: .3, metalness: .9, envMapIntensity: 1 });
+  LAB.white = new THREE.MeshStandardMaterial({ color: 0x9da2a6, roughness: .5, metalness: 0, envMapIntensity: .5 });
+  LAB.glass = new THREE.MeshStandardMaterial({ color: 0x9fd8d0, roughness: .05, metalness: 0, transparent: true, opacity: .28, depthWrite: false, envMapIntensity: 1.5 });
+  LAB.fluid = new THREE.MeshStandardMaterial({ color: 0x103020, emissive: 0x40ff90, emissiveIntensity: .9, roughness: .2, transparent: true, opacity: .8 });
+  LAB.dark = new THREE.MeshStandardMaterial({ color: 0x05080a, roughness: .05, metalness: .2, envMapIntensity: 1.2 });
+  LAB.bio = new THREE.MeshStandardMaterial({ roughness: .4, map: canvasTex(256, 320, (x, W, H) => {
+    x.fillStyle = '#f2c21a'; x.fillRect(0, 0, W, H); x.strokeStyle = '#111'; x.lineWidth = 10; x.strokeRect(8, 8, W - 16, H - 16);
+    x.lineWidth = 14; for (let k = 0; k < 3; k++) { const a = k * 2.094 - 1.571; x.beginPath(); x.arc(128 + Math.cos(a) * 38, 120 + Math.sin(a) * 38, 40, 0, 6.283); x.stroke(); }
+    x.beginPath(); x.arc(128, 120, 22, 0, 6.283); x.stroke();
+    x.fillStyle = '#111'; x.textAlign = 'center'; x.font = 'bold 40px "Arial", sans-serif'; x.fillText('BIOHAZARD', 128, 262);
+  }) });
 }
 // built the first time an office floor loads, so the boot stays quick
 function buildOfficeMaterials() {
@@ -1488,6 +1585,19 @@ const OFFICE_MOODS = [
   { name: 'City glow', light: 0xa9c0ff, tube: 0x9fb6ff, fog: 0x080b12, intensity: .38, flicker: .1, windows: true },
   { name: 'Power cut', light: 0xff3a2a, tube: 0xff2a1a, fog: 0x0f0606, intensity: .55, pulse: true },
 ];
+// ship holds run on dim work lights; lab ceilings are low like the office, so the panels need little power
+const SHIP_MOODS = [
+  { name: 'Night running lights', light: 0xffd6a8, tube: 0xffd0a0, fog: 0x0a0908, intensity: .7, flicker: .25 },
+  { name: 'Sodium work lamps', light: 0xffb060, tube: 0xffa848, fog: 0x0e0a06, intensity: .85, flicker: .15, hanging: true },
+  { name: 'Moonlit hold', light: 0x9ab4ff, tube: 0x9ab0ff, fog: 0x080b10, intensity: .55, flicker: .05 },
+  { name: 'General alarm', light: 0xff3a2a, tube: 0xff2a1a, fog: 0x0f0606, intensity: .9, pulse: true },
+];
+const LAB_MOODS = [
+  { name: 'Sterile', light: 0xeaf2ff, tube: 0xe4eeff, fog: 0x090b0e, intensity: .32, flicker: .2 },
+  { name: 'Containment', light: 0xa8ffc0, tube: 0x9effb4, fog: 0x06100a, intensity: .3, flicker: .3 },
+  { name: 'Night cycle', light: 0x9fb4ff, tube: 0x9ab0ff, fog: 0x080a12, intensity: .24, flicker: .1 },
+  { name: 'Lockdown', light: 0xff3a2a, tube: 0xff2a1a, fog: 0x0f0606, intensity: .4, pulse: true },
+];
 const WOODS_MOODS = [
   { name: 'Dusk', light: 0xffc890, tube: 0xffd2a0, fog: 0x100d0c, intensity: 1.25, flicker: .1 },
   { name: 'Moonlit fog', light: 0xa8bcff, tube: 0xb8c8ff, fog: 0x0b0f14, intensity: 1.0, flicker: .05 },
@@ -1524,9 +1634,9 @@ const TALL = ['tallCrate', 'boxes', 'sandbags', 'halfWall'];
 // props that splinter apart under fire: hit points per type
 const DESTR = { crate: 90, tallCrate: 125, boxes: 50, pallets: 70 };
 let props = [], debris = [];
-const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6], crateStack: [1.4, 1.4], lockers: [2.0, .55], partition: [2.6, .5] };
+const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6], crateStack: [1.4, 1.4], lockers: [2.0, .55], partition: [2.6, .5], container: [2.44, 3.0], labBench: [2.4, .9], cryoTank: [1.2, 1.2], gurney: [2.0, .75] };
 // full-height pieces: a standing man can hide behind these
-const FULL = { warehouse: ['crateStack', 'crateStack', 'lockers', 'shelfFull'], office: ['partition', 'partition', 'lockers', 'serverRack'], jungle: ['trunk', 'crateStack'], woods: ['crateStack', 'crateStack'] };
+const FULL = { warehouse: ['crateStack', 'crateStack', 'lockers', 'shelfFull'], office: ['partition', 'partition', 'lockers', 'serverRack'], jungle: ['trunk', 'crateStack'], woods: ['crateStack', 'crateStack'], ship: ['container', 'container', 'crateStack'], lab: ['cryoTank', 'partition', 'lockers', 'serverRack'] };
 function buildProp(type, x, z, rot, r) {
   const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot ? Math.PI / 2 : 0; level.add(g);
   let [w, d] = FOOT[type]; let h = 1;
@@ -1599,8 +1709,8 @@ function buildProp(type, x, z, rot, r) {
     part(g, 2.6, 1.05, .5, M.concrete, 0, .525, 0); if (Math.random() < .4) { const gm = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1), pick(graffiti)); gm.position.set(0, .55, .252); g.add(gm); }
     h = 1.05;
   } else if (type === 'pillar') {
-    part(g, .9, r.h, .9, THEME === 'office' ? MAT.wall : M.concrete, 0, r.h / 2, 0); h = r.h;
-    if (THEME !== 'office' && Math.random() < .5) for (let i = 0; i < 4; i++) { const c = part(g, rand(.15, .35), rand(.1, .2), rand(.15, .3), M.concrete, rand(-.7, .7), .07, rand(-.7, .7), { ray: false }); c.rotation.y = rand(0, 3); }
+    part(g, .9, r.h, .9, THEME === 'office' || THEME === 'lab' ? MAT.wall : M.concrete, 0, r.h / 2, 0); h = r.h;
+    if (THEME !== 'office' && THEME !== 'lab' && Math.random() < .5) for (let i = 0; i < 4; i++) { const c = part(g, rand(.15, .35), rand(.1, .2), rand(.15, .3), M.concrete, rand(-.7, .7), .07, rand(-.7, .7), { ray: false }); c.rotation.y = rand(0, 3); }
   } else if (type === 'shelf') {
     for (const sx of [-.98, .98]) for (const sz of [-.25, .25]) part(g, .04, 2, .04, M.metal, sx, 1, sz, { ray: false });
     const broken = randi(0, 5);
@@ -1691,10 +1801,32 @@ function buildProp(type, x, z, rot, r) {
     h = 1.95;
   } else if (type === 'partition') {
     // a freestanding office partition wall on two feet
-    part(g, 2.6, 2.05, .08, OFF.fabric, 0, 1.08, 0);
+    part(g, 2.6, 2.05, .08, THEME === 'lab' ? LAB.white : OFF.fabric, 0, 1.08, 0);
     part(g, 2.64, .05, .1, OFF.grey, 0, 2.12, 0, { ray: false });
     for (const sx of [-1.15, 1.15]) part(g, .08, .05, .5, OFF.grey, sx, .03, 0, { ray: false });
     h = 2.1;
+  } else if (type === 'container') {
+    // a ten-foot shipping container with its doors on one end
+    part(g, 2.44, 2.59, 3.0, pick(SHIP.box || [M.metal]), 0, 1.295, 0);
+    part(g, 2.5, .1, 3.06, MAT.trim, 0, 2.6, 0, { ray: false });
+    for (const sx of [-1.2, 1.2]) for (const sz of [-1.48, 1.48]) part(g, .12, 2.6, .12, MAT.trim, sx, 1.3, sz, { ray: false });
+    for (const sx of [-.45, .45]) part(g, .04, 2.2, .04, M.metal, sx, 1.25, 1.52, { ray: false });
+    h = 2.6;
+  } else if (type === 'labBench') {
+    // a lab bench with a reagent shelf: duck behind it
+    part(g, 2.4, .05, .9, LAB.white, 0, .92, 0); part(g, 2.3, .86, .84, LAB.white, 0, .45, 0);
+    part(g, 2.4, .5, .05, LAB.white, 0, 1.18, -.42); part(g, 2.4, .03, .3, LAB.steel, 0, 1.45, -.3, { ray: false });
+    for (let k = 0, n = randi(3, 7); k < n; k++) { const bh = rand(.12, .28); cyl(g, rand(.03, .06), bh, pick([LAB.glass, LAB.fluid]), rand(-1.1, 1.1), .945 + bh / 2, rand(-.25, .3), { seg: 10, ray: false }); }
+    h = 1.45;
+  } else if (type === 'cryoTank') {
+    // a specimen tank: steel caps and glowing fluid behind glass
+    cyl(g, .58, .3, LAB.steel, 0, .15, 0, { seg: 20 }); cyl(g, .58, .25, LAB.steel, 0, 2.22, 0, { seg: 20 });
+    cyl(g, .5, 1.75, LAB.fluid, 0, 1.18, 0, { seg: 20 }); cyl(g, .54, 1.8, LAB.glass, 0, 1.2, 0, { seg: 20, ray: false });
+    h = 2.35;
+  } else if (type === 'gurney') {
+    part(g, 1.95, .12, .7, LAB.white, 0, .8, 0); part(g, 1.9, .04, .66, LAB.steel, 0, .72, 0, { ray: false }); part(g, 1.9, .04, .66, LAB.steel, 0, .22, 0, { ray: false });
+    for (const sx of [-.9, .9]) for (const sz of [-.3, .3]) part(g, .04, .72, .04, LAB.steel, sx, .38, sz, { ray: false });
+    h = .9;
   }
   if (rot) [w, d] = [d, w];
   propCol(x, z, w * .96, d * .96, h);
@@ -1717,6 +1849,8 @@ function decorateRoom(r, L) {
   if (THEME === 'office') return decorateOffice(r);
   if (THEME === 'jungle') return decorateJungle(r);
   if (THEME === 'woods') return decorateWoods(r);
+  if (THEME === 'ship') return decorateShip(r);
+  if (THEME === 'lab') return decorateLab(r);
   const cz = (r.z0 + r.z1) / 2, side = Math.random() < .5 ? -1 : 1;
   // ceiling pipes and a duct
   const nP = randi(1, 3);
@@ -1784,6 +1918,48 @@ function decorateRoom(r, L) {
   }
   const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .8), signMaterial(`${floorN}-${String.fromCharCode(65 + r.i)}`));
   sign.position.set(-(r.w / 2 - .36), 2.6, r.z0 + 1.6); sign.rotation.y = Math.PI / 2; level.add(sign);
+}
+
+function decorateShip(r) {
+  const cz = (r.z0 + r.z1) / 2, nc = { collide: false, cast: false, ray: false };
+  // hull frames down both sides and deck beams overhead
+  for (let z = r.z0 + 1.2; z < r.z1 - .6; z += 2.4) {
+    for (const s of [-1, 1]) addBox(s * (r.w / 2 - .12), r.h / 2, z, .24, r.h, .16, SHIP.beam, { collide: false, cast: false });
+    addBox(0, r.h - .2, z, r.w, .4, .16, SHIP.beam, nc);
+  }
+  // pipe runs along one side and a ladder up the other
+  const side = pick([-1, 1]);
+  for (let k = 0, n = randi(2, 3); k < n; k++) {
+    const rad = rand(.05, .12), pm = new THREE.Mesh(new THREE.CylinderGeometry(rad, rad, r.d, 10), k ? MAT.pipeGrey : MAT.pipeRed);
+    pm.rotation.x = Math.PI / 2; pm.position.set(side * (r.w / 2 - .45 - k * .3), r.h - .75 - k * .25, cz); level.add(pm);
+  }
+  { const x = -side * (r.w / 2 - .32), z = rand(r.z0 + 2.5, r.z1 - 2.5);
+    for (const dz of [-.22, .22]) addBox(x, r.h / 2, z + dz, .05, r.h, .05, MAT.galv, nc);
+    for (let y = .3; y < r.h - .3; y += .32) addBox(x, y, z, .04, .03, .44, MAT.galv, nc); }
+  // bilge water, rust flakes and loose paperwork
+  for (let i = 0; i < randi(2, 4); i++) { const pm = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), MAT.puddle); pm.rotation.x = -Math.PI / 2; pm.rotation.z = rand(0, 6); const s = rand(1.2, 3.2); pm.scale.set(s, s * rand(.6, 1), 1); pm.position.set(rand(-r.w / 2 + 1.5, r.w / 2 - 1.5), .004, rand(r.z0 + 1.5, r.z1 - 1.5)); level.add(pm); }
+  scatter(r, LOWFX ? 20 : 45, new THREE.DodecahedronGeometry(1, 0), MAT.debris, o => { const x = (Math.random() < .5 ? -1 : 1) * (r.w / 2 - rand(.3, 1.4)); o.position.set(x, .01, rand(r.z0 + .3, r.z1 - .3)); o.rotation.set(rand(0, 3), rand(0, 3), rand(0, 3)); o.scale.set(rand(.03, .1), rand(.02, .05), rand(.03, .1)); });
+  scatter(r, 8, new THREE.PlaneGeometry(.21, .3), MAT.paper, o => { o.position.set(rand(-r.w / 2 + .5, r.w / 2 - .5), .006, rand(r.z0 + .5, r.z1 - .5)); o.rotation.set(-Math.PI / 2 + rand(-.05, .05), 0, rand(0, 6.28)); });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.6, .8), signMaterial(`HOLD ${floorN}-${String.fromCharCode(65 + r.i)}`));
+  sign.position.set(-(r.w / 2 - .3), 2.6, r.z0 + 1.6); sign.rotation.y = Math.PI / 2; level.add(sign);
+}
+function decorateLab(r) {
+  const cz = (r.z0 + r.z1) / 2, nc = { collide: false, cast: false, ray: false };
+  for (const s of [-1, 1]) addBox(s * (r.w / 2 - .015), .08, cz, .03, .16, r.d, LAB.steel, nc);
+  // observation windows into dark rooms down one side, biohazard notices down the other
+  const s = pick([-1, 1]);
+  for (let z = r.z0 + 3; z < r.z1 - 2.5; z += rand(4, 5.5)) {
+    const x = s * (r.w / 2 - .02), pane = new THREE.Mesh(new THREE.PlaneGeometry(2.2, 1.2), LAB.dark); pane.position.set(x, 1.7, z); pane.rotation.y = -s * Math.PI / 2; level.add(pane);
+    for (const dy of [-.63, .63]) addBox(x - s * .03, 1.7 + dy, z, .06, .06, 2.3, LAB.steel, nc);
+    for (const dz of [-1.12, 1.12]) addBox(x - s * .03, 1.7, z + dz, .06, 1.32, .06, LAB.steel, nc);
+  }
+  for (let z = r.z0 + 2.5; z < r.z1 - 2; z += rand(4, 6)) { const sg = new THREE.Mesh(new THREE.PlaneGeometry(.45, .56), LAB.bio); sg.position.set(-s * (r.w / 2 - .03), 1.75, z); sg.rotation.y = s * Math.PI / 2; level.add(sg); }
+  // papers, broken glass and dropped ceiling tiles
+  scatter(r, 30, new THREE.PlaneGeometry(.21, .3), MAT.paper, o => { o.position.set(rand(-r.w / 2 + .5, r.w / 2 - .5), .006, rand(r.z0 + .5, r.z1 - .5)); o.rotation.set(-Math.PI / 2 + rand(-.05, .05), 0, rand(0, 6.28)); });
+  scatter(r, LOWFX ? 12 : 30, new THREE.PlaneGeometry(.12, .09), LAB.glass, o => { o.position.set(rand(-r.w / 2 + .5, r.w / 2 - .5), .008, rand(r.z0 + .5, r.z1 - .5)); o.rotation.set(-Math.PI / 2, 0, rand(0, 6.28)); });
+  scatter(r, 3, new THREE.BoxGeometry(.6, .02, .6), MAT.ceil, o => { o.position.set(rand(-r.w / 2 + 1, r.w / 2 - 1), .03, rand(r.z0 + 1, r.z1 - 1)); o.rotation.set(rand(-.15, .15), rand(0, 3), rand(-.15, .15)); });
+  const sign = new THREE.Mesh(new THREE.PlaneGeometry(1.1, .55), officeSign(`LAB ${floorN}${String.fromCharCode(65 + r.i)}`));
+  sign.position.set(-s * (r.w / 2 - .04), 2.1, r.z0 + 1.4); sign.rotation.y = s * Math.PI / 2; level.add(sign);
 }
 
 function decorateOffice(r) {
@@ -1903,8 +2079,8 @@ function breach() {
 }
 function buildLevel(L) {
   disposeLevel(); applyTheme(themeFor(L));
-  const office = THEME === 'office', jungle = THEME === 'jungle', woods = THEME === 'woods', outdoor = jungle || woods;
-  const moods = office ? OFFICE_MOODS : jungle ? JUNGLE_MOODS : woods ? WOODS_MOODS : MOODS;
+  const office = THEME === 'office', jungle = THEME === 'jungle', woods = THEME === 'woods', outdoor = jungle || woods, ship = THEME === 'ship', lab = THEME === 'lab', lowCeil = office || lab;
+  const moods = office ? OFFICE_MOODS : ship ? SHIP_MOODS : lab ? LAB_MOODS : jungle ? JUNGLE_MOODS : woods ? WOODS_MOODS : MOODS;
   // outdoors: collider walls stay invisible, the palisade or log barricade is what you see and shoot (up to 4.6 m; above that only the collider)
   const wallPiece = (x, y, z, w, hh, d) => {
     if (!outdoor) return addBox(x, y, z, w, hh, d, MAT.wall);
@@ -1916,10 +2092,10 @@ function buildLevel(L) {
   const nRooms = bossFloor ? 2 : Math.min(2 + Math.floor((L - 1) / 2), 4);
   let z = 0;
   for (let i = 0; i < nRooms; i++) {
-    let w = outdoor ? randi(16, 26) : randi(14, 24), d = outdoor ? randi(16, 24) : randi(14, 22), h = office ? rand(3.2, 3.6) : outdoor ? 7.5 : rand(4.6, 6.2);
+    let w = outdoor ? randi(16, 26) : randi(14, 24), d = outdoor ? randi(16, 24) : randi(14, 22), h = office ? rand(3.2, 3.6) : lab ? rand(3.5, 4) : ship ? rand(4.4, 5.4) : outdoor ? 7.5 : rand(4.6, 6.2);
     let mood = pick(moods.slice(0, 3));
     if (i === nRooms - 1 && L >= 3 && Math.random() < .5) mood = moods[3];
-    if (bossFloor && i === nRooms - 1) { w = 26; d = 25; h = office ? 4.4 : outdoor ? 7.5 : 7.2; mood = moods[3]; }
+    if (bossFloor && i === nRooms - 1) { w = 26; d = 25; h = lowCeil ? 4.4 : outdoor ? 7.5 : 7.2; mood = moods[3]; }
     rooms.push({ i, w, d, h, z0: z, z1: z + d, mood, active: false, cleared: false, enemies: [], lights: [] });
     z += d;
   }
@@ -1940,7 +2116,7 @@ function buildLevel(L) {
     const A = rooms[b - 1], B = rooms[b];
     const W = Math.max(A ? A.w : 0, B ? B.w : 0) + 1, H = Math.max(A ? A.h : 0, B ? B.h : 0) + .2;
     if (!B) { wallPiece(0, H / 2, zb + .25, W, H, .5); continue; }
-    const half = A ? Math.min(A.w, B.w) / 2 - 2.2 : 0, dx = A ? rand(-half, half) : 0, gw = 2.6, gh = office ? 2.5 : 3.1;
+    const half = A ? Math.min(A.w, B.w) / 2 - 2.2 : 0, dx = A ? rand(-half, half) : 0, gw = 2.6, gh = lowCeil ? 2.5 : 3.1;
     const lw = dx - gw / 2 + W / 2, rw = W / 2 - (dx + gw / 2);
     wallPiece(-W / 2 + lw / 2, H / 2, zb, lw, H, .5);
     wallPiece(W / 2 - rw / 2, H / 2, zb, rw, H, .5);
@@ -1961,11 +2137,13 @@ function buildLevel(L) {
   // cover
   for (const r of rooms) {
     const placed = [];
-    const n = office ? randi(11, 15) : randi(9, 13), full = FULL[THEME] || FULL.warehouse;
+    const n = lowCeil ? randi(11, 15) : randi(9, 13), full = FULL[THEME] || FULL.warehouse;
     for (let k = 0, tries = 0; k < n && tries < 100; tries++) {
       // the first two pieces in every room are tall enough to duck behind; the rest is a mix
       const type = k >= 2 && k < 4 || k >= 4 && Math.random() < .2 ? pick(full).replace('shelfFull', 'shelf') : woods ? (k < 2 ? pick(['boulder', 'woodpile', 'woodpile', 'sandbags', 'tallCrate']) : pick(['log', 'log', 'rocks', 'stump', 'stump', 'boulder', 'woodpile', 'crate', 'barrels', 'pallets', 'tallCrate']))
         : jungle ? (k < 2 ? pick(['boulder', 'boulder', 'sandbags', 'tallCrate', 'trunk']) : pick(['log', 'log', 'boulder', 'rocks', 'stump', 'trunk', 'crate', 'crate', 'barrels', 'pallets', 'sandbags', 'tallCrate', 'boxes']))
+        : ship ? (k < 2 ? pick(['container', 'crateStack', 'tallCrate', 'sandbags']) : pick(['container', 'barrels', 'barrels', 'pallets', 'crate', 'crate', 'tallCrate', 'crateStack', 'cabinetDown', 'boxes']))
+        : lab ? (k < 2 ? pick(['cryoTank', 'labBench', 'serverRack', 'boxes']) : pick(['labBench', 'labBench', 'labBench', 'gurney', 'gurney', 'cabinet', 'cabinetDown', 'serverRack', 'cryoTank', 'boxes', 'pillar']))
         : office ? (k < 2 ? pick(['cubicle', 'cubicle', 'tableFlip', 'vending', 'serverRack', 'boxes']) : pick(['workDesk', 'workDesk', 'workDesk', 'cubicle', 'cubicle', 'cabinet', 'cabinet', 'cabinetDown', 'copier', 'conference', 'tableFlip', 'boxes', 'pillar', 'serverRack', 'vending', 'deskOver']))
         : k < 2 ? pick(TALL) : pick(['desk', 'deskOver', 'cabinet', 'cabinetDown', 'barrels', 'pallets', 'crate', 'crate', 'rubble', 'barrier', 'pillar', 'shelf', ...TALL]);
       const rot = type !== 'pillar' && Math.random() < .5;
@@ -2017,12 +2195,12 @@ function buildLevel(L) {
       const broken = !outdoor && Math.random() < .3;
       // office: a recessed 2x4 diffuser panel instead of a bare tube fixture
       if (!outdoor) {
-      const fix = office ? new THREE.Mesh(new THREE.BoxGeometry(1.25, .04, .65), OFF.grey) : new THREE.Mesh(new THREE.BoxGeometry(1.4, .08, .22), MAT.trim); fix.position.set(lp[1].x, r.h - (office ? .02 : .04), lp[1].z); level.add(fix);
-      const tube = office ? new THREE.Mesh(new THREE.BoxGeometry(1.15, .02, .55), tubeMat) : new THREE.Mesh(new THREE.BoxGeometry(1.3, .05, .12), tubeMat); tube.position.set(lp[1].x, r.h - (office ? .045 : .1), lp[1].z); level.add(tube);
+      const fix = lowCeil ? new THREE.Mesh(new THREE.BoxGeometry(1.25, .04, .65), OFF.grey) : new THREE.Mesh(new THREE.BoxGeometry(1.4, .08, .22), MAT.trim); fix.position.set(lp[1].x, r.h - (lowCeil ? .02 : .04), lp[1].z); level.add(fix);
+      const tube = lowCeil ? new THREE.Mesh(new THREE.BoxGeometry(1.15, .02, .55), tubeMat) : new THREE.Mesh(new THREE.BoxGeometry(1.3, .05, .12), tubeMat); tube.position.set(lp[1].x, r.h - (lowCeil ? .045 : .1), lp[1].z); level.add(tube);
       if (broken) { fix.rotation.z = .35; fix.position.y -= .2; tube.rotation.z = .35; tube.position.y -= .2; }
       }
       if (!LOWFX) {
-        const ck = (i === 0 ? .24 : .17) * (office ? .5 : 1), cone = new THREE.Mesh(new THREE.CylinderGeometry(.55, i === 0 ? 2.6 : 2.9, r.h - .2, 32, 1, true), volMat(m.light, ck)); cone.userData.k = ck;
+        const ck = (i === 0 ? .24 : .17) * (lab ? .25 : lowCeil ? .5 : 1), cone = new THREE.Mesh(new THREE.CylinderGeometry(.55, i === 0 ? 2.6 : 2.9, r.h - .2, 32, 1, true), volMat(m.light, ck)); cone.userData.k = ck;
         cone.position.set(lp[1].x, (r.h - .2) / 2, lp[1].z); level.add(cone); (r.cones = r.cones || []).push(cone);
       }
     }
@@ -3284,7 +3462,7 @@ const MASTERY = [
   { at: 300, name: 'Speed loader', d: '20% faster reloads' },
   { at: 450, name: 'Gold finish', d: 'Gold finish', skin: 'gold' },
 ];
-const gunKills = k => (meta.car && meta.car.wk && meta.car.wk[k] || 0) + (stats.rec || state === 'menu' ? 0 : stats.wk[k] || 0);
+const gunKills = k => (meta.car && meta.car.wk && meta.car.wk[k] || 0) + (stats.rec || state === 'menu' ? 0 : (stats.wk[k] || 0) - (stats.base && stats.base.wk ? stats.base.wk[k] || 0 : 0));
 const rankOf = k => MASTERY.filter(m => gunKills(k) >= m.at).length;
 const MR = k => daily ? 0 : rankOf(k);
 const LO = { slots: [{ k: 'carbine', ammo: 30 }, { k: 'sidearm', ammo: 15 }], cur: 0 };
@@ -3298,15 +3476,83 @@ const maxDash = () => 1 + U('dash');
 let floorN = 1, state = 'menu', time = 0, timeScale = 1, sens = parseFloat(store.get('kh.sens') || '1') || 1;
 $('sens').value = sens; $('sensVal').textContent = sens.toFixed(2);
 
+let mode = 'campaign'; // 'campaign' or 'endless'; the daily challenge plays endless rules
+const inCampaign = () => mode === 'campaign' && !daily;
+// a snapshot of everything the career has been credited with, so a retried operation is not counted twice
+function snapStats() {
+  const o = {}; for (const k of ['kills', 'heads', 'shots', 'hits', 'stabs', 'bosses', 'elites', 'dmg', 'taken', 'obj', 'objN', 'floors', 'bm', 'banked']) o[k] = stats[k] || 0;
+  o.wk = { ...stats.wk }; o.mk = { ...ups }; o.el = (performance.now() - stats.t0) / 1000; return o;
+}
+function saveCheckpoint() {
+  if (!inCampaign()) return;
+  meta.cp = { floor: floorN, ups: { ...ups }, evo: { ...evo }, hp: Math.round(P.hp), gun: LO.slots[0].k, cls: classSel, heat: heatSel, seed: runSeed, revived: !!P.revived, stats: snapStats(), at: Date.now() };
+  saveMeta();
+}
+function loadCheckpoint() {
+  const c = meta.cp; if (!c) return false;
+  mode = 'campaign'; daily = null; classSel = c.cls || 'assault'; heatSel = c.heat || 0;
+  for (const k in ups) delete ups[k]; Object.assign(ups, c.ups); for (const k in evo) delete evo[k]; Object.assign(evo, c.evo);
+  floorN = c.floor; runSeed = c.seed; P.revived = !!c.revived; calloutQ.length = 0;
+  P.maxHp = baseMaxHp() + 60 * U('hp'); P.hp = Math.min(P.maxHp, c.hp || P.maxHp);
+  const cs = c.stats || {};
+  Object.assign(stats, { kills: 0, heads: 0, shots: 0, hits: 0, floors: 0, bm: 0, banked: 0, stabs: 0, bosses: 0, elites: 0, dmg: 0, taken: 0, obj: 0, objN: 0 });
+  for (const k in cs) if (typeof cs[k] === 'number' && k !== 'el') stats[k] = cs[k];
+  Object.assign(stats, { wk: { ...(cs.wk || {}) }, t0: performance.now() - (cs.el || 0) * 1000, killer: null, kt: [], fTaken: 0, unl: [], rec: false, base: JSON.parse(JSON.stringify(cs)) });
+  const g = WEAPONS[c.gun] ? c.gun : 'carbine';
+  LO.slots[0] = { k: g, ammo: magFor(WEAPONS[g]) }; LO.slots[1] = { k: 'sidearm', ammo: magFor(WEAPONS.sidearm) }; LO.cur = 0;
+  return true;
+}
+const FOE_FROM = [[1, 'Riflemen, rushers and shotgun heavies'], [2, 'crawler drones'], [3, 'shield carriers'], [4, 'snipers']];
+function showBrief() {
+  const i = opOf(floorN), op = OPS[i % OPS.length], a = i * OPF + 1, b = a + OPF - 1;
+  state = 'brief'; document.body.className = 'upgrade'; mouseDown = false; timeScale = 1;
+  if (document.pointerLockElement) document.exitPointerLock();
+  saveCheckpoint();
+  $('briefEyebrow').textContent = `Operation ${i + 1} of ${OPS.length} · Floors ${a} to ${b} · ${THEME_NAME[op.theme]}`;
+  $('briefTitle').textContent = `Operation ${op.name}`;
+  $('briefText').textContent = op.brief;
+  const foes = i === 0 ? FOE_FROM.map(([f, t]) => f > 1 ? `${t} from floor ${f}` : t).join(', ') + '.' : 'Everything you have met so far, in greater numbers, better armed and more accurate, with more elites.';
+  const objs = []; for (let n = a; n < b; n++) { const k = objFor(n); if (k) objs.push(`floor ${n}, ${OBJ[k].name.toLowerCase()}`); }
+  $('briefIntel').innerHTML = [['Hostiles', foes], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
+    ['Your kit', `${WEAPONS[LO.slots[0].k].name} · ${Math.round(P.hp)} / ${P.maxHp} hp · ${Object.keys(ups).length ? Object.keys(ups).length + (Object.keys(ups).length === 1 ? ' mutation' : ' mutations') : 'no mutations yet'}`]].map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('');
+  $('briefNote').textContent = i ? 'Progress saved. You can stop here and continue later.' : 'Progress saves at the start of every operation.';
+  $('brief').hidden = false;
+}
+function showDebrief() {
+  const i = opOf(floorN), op = OPS[i % OPS.length], last = i === OPS.length - 1, b0 = (meta.cp && meta.cp.stats) || {};
+  const d = k => Math.round((stats[k] || 0) - (b0[k] || 0)), el = (performance.now() - stats.t0) / 1000 - (b0.el || 0);
+  $('debEyebrow').textContent = last ? 'Campaign complete' : `Operation ${i + 1} of ${OPS.length} complete`;
+  $('debTitle').textContent = last ? 'Meridian is finished' : `Operation ${op.name} complete`;
+  $('debText').textContent = last ? OPS_END : op.done;
+  $('debStats').innerHTML = [['Kills', d('kills')], ['Headshots', d('heads')], ['Takedowns', d('stabs')], ['Objectives', `${d('obj')}<small> / ${d('objN')}</small>`], ['Biomass', '+' + d('bm')], ['Time', fmtT(el)]]
+    .map(([k, v]) => `<div class="stat"><div class="label">${k}</div><div class="v">${v}</div></div>`).join('');
+  $('debGo').hidden = last; $('debMenu').hidden = !last;
+  if (last) { meta.camp = true; delete meta.cp; recordRun(false); bankRun(); saveMeta(); }
+  $('debrief').hidden = false;
+}
+// back to the main menu; in the campaign the saved operation start is kept
+function toMenu() {
+  state = 'menu'; document.body.className = ''; mouseDown = false; timeScale = 1;
+  for (const id of ['pause', 'brief', 'debrief', 'upgrade']) $(id).hidden = true;
+  $('slowmo').style.opacity = 0; $('callout').classList.remove('on'); $('prompt').classList.remove('on');
+  if (document.pointerLockElement) document.exitPointerLock();
+  renderHeat(); $('menu').hidden = false;
+}
+function renderCampaignMenu() {
+  const c = meta.cp;
+  $('startBtn').textContent = c ? `Continue · Operation ${opOf(c.floor) + 1}` : 'Deploy';
+  $('newBtn').hidden = !c; $('newBtn').classList.remove('armed'); $('newBtn').textContent = 'New campaign';
+  $('endlessBtn').hidden = !(meta.camp || (meta.car && meta.car.deep >= OPS.length * OPF));
+}
 function resetRun() {
   for (const k in ups) delete ups[k]; for (const k in evo) delete evo[k]; floorN = 1; P.revived = false; calloutQ.length = 0;
   runSeed = String(nativeRandom());
   for (let i = 0; i < M('head'); i++) { const pool = Object.keys(UP).filter(k => !ups[k] && inPool(k)); if (pool.length) ups[pick(pool)] = 1; }
   if (cls() === 'medic') ups.regen = Math.max(U('regen'), 1);
   P.maxHp = baseMaxHp() + 60 * U('hp'); P.hp = P.maxHp;
-  Object.assign(stats, { kills: 0, heads: 0, shots: 0, hits: 0, t0: performance.now(), floors: 0, bm: 0, banked: 0, stabs: 0, bosses: 0, elites: 0, dmg: 0, taken: 0, wk: {}, killer: null, kt: [], fTaken: 0, unl: [], rec: false, obj: 0, objN: 0 });
+  Object.assign(stats, { kills: 0, heads: 0, shots: 0, hits: 0, t0: performance.now(), floors: 0, bm: 0, banked: 0, stabs: 0, bosses: 0, elites: 0, dmg: 0, taken: 0, wk: {}, killer: null, kt: [], fTaken: 0, unl: [], rec: false, obj: 0, objN: 0, base: null });
   LO.slots[0] = { k: CLASSES[cls()].gun, ammo: magFor(WEAPONS[CLASSES[cls()].gun]) }; LO.slots[1] = { k: 'sidearm', ammo: magFor(WEAPONS.sidearm) }; LO.cur = 0;
-  startFloor();
+  stats.base = null;
 }
 function hostileCount(L, boss) { const n = boss ? 4 + L : 5 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
 function startFloor() {
@@ -3320,7 +3566,7 @@ function startFloor() {
   const ec = enemies.length, bossE = enemies.find(e => e.boss);
   // black card with the floor number, fading out over the freshly built level
   const fd = $('fade'); $('fadeN').innerHTML = `Floor <b>${String(floorN).padStart(2, '0')}</b>`;
-  $('fadeSub').textContent = bossE ? `Boss floor · ${bossE.boss}` : `${H() ? `Heat ${H()} · ` : ''}${THEME_NAME[THEME]} · ${daily ? 'Daily challenge' : 'Breach and clear'}`;
+  $('fadeSub').textContent = bossE ? `Boss floor · ${bossE.boss}` : `${H() ? `Heat ${H()} · ` : ''}${THEME_NAME[THEME]} · ${daily ? 'Daily challenge' : inCampaign() ? `Operation ${OPS[opOf(floorN) % OPS.length].name} · floor ${(floorN - 1) % OPF + 1} of ${OPF}` : 'Breach and clear'}`;
   fd.classList.remove('go'); void fd.offsetWidth; fd.classList.add('go');
   callout(bossE ? `Floor ${String(floorN).padStart(2, '0')} · Boss` : `Floor ${String(floorN).padStart(2, '0')}`, bossE ? `${bossE.boss} is waiting in the last room · restock at the crate` : `${rooms.length} rooms · ${ec} hostiles · ${obj ? OBJ[obj.k].brief : 'breach, then toss a flashbang in'}`, 3.4);
   $('breachHint').textContent = IS_TOUCH ? 'Walk to the door to breach, then throw a FLASH' : 'Walk up to the door to breach · then T flashbang or G frag';
@@ -3375,34 +3621,45 @@ document.addEventListener('pointerlockchange', () => {
 });
 document.addEventListener('pointerlockerror', () => { fallbackLook = true; });
 function setPaused(p) {
-  if (p) { state = 'paused'; $('pause').hidden = false; document.body.className = 'paused'; mouseDown = false; }
+  if (p) { state = 'paused'; disarmQuit(); $('pause').hidden = false; document.body.className = 'paused'; mouseDown = false; }
   else { $('pause').hidden = true; state = 'playing'; document.body.className = 'playing'; lockPointer(); }
 }
 $('resumeBtn').onclick = () => { initAudio(); disarmQuit(); setPaused(false); };
 let quitTimer = 0;
-function disarmQuit() { clearTimeout(quitTimer); $('quitBtn').classList.remove('armed'); $('quitBtn').textContent = 'Abandon run'; }
+function disarmQuit() { clearTimeout(quitTimer); $('quitBtn').classList.remove('armed'); $('quitBtn').textContent = inCampaign() ? 'Return to base' : 'Abandon run'; }
 $('quitBtn').onclick = () => {
   const b = $('quitBtn');
-  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Click again to abandon'; quitTimer = setTimeout(disarmQuit, 3000); return; }
+  if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = inCampaign() ? 'Click again · you restart this operation' : 'Click again to abandon'; quitTimer = setTimeout(disarmQuit, 3000); return; }
   disarmQuit();
   recordRun(false); bankRun(); if (daily) submitDaily();
-  state = 'menu'; document.body.className = ''; mouseDown = false; timeScale = 1;
-  $('pause').hidden = true; $('slowmo').style.opacity = 0; $('callout').classList.remove('on'); $('prompt').classList.remove('on');
-  if (document.pointerLockElement) document.exitPointerLock();
-  renderHeat(); $('menu').hidden = false;
+  toMenu();
 };
 $('gfxSel').value = GFX;
 $('gfxSel').onchange = e => { GFX = e.target.value; aoOn = GFX !== 'low'; gtao.enabled = aoOn; REFL.on = GFX === 'ultra'; REFL.k.value = REFL.on ? 1 : 0; store.set('kh.gfx', GFX); };
 $('sens').oninput = e => { sens = parseFloat(e.target.value); $('sensVal').textContent = sens.toFixed(2); store.set('kh.sens', String(sens)); };
-function beginRun(isDaily) {
+function beginRun(isDaily, m = 'campaign') {
   initAudio(); goFullscreen(); if (ac && ac.state === 'suspended') ac.resume();
-  daily = isDaily ? { date: todayKey() } : null;
+  daily = isDaily ? { date: todayKey() } : null; mode = isDaily ? 'endless' : m;
   for (const id of ['menu', 'dead', 'board', 'career']) $(id).hidden = true;
-  resetRun(); state = 'playing'; document.body.className = 'playing'; lockPointer();
+  resetRun();
+  if (inCampaign()) { showBrief(); return; }
+  startFloor(); state = 'playing'; document.body.className = 'playing'; lockPointer();
   if (daily) callout('Daily challenge', `${daily.date} · same floors for everyone · lab upgrades off`, 3.4);
 }
-$('startBtn').onclick = () => beginRun(false);
-$('retryBtn').onclick = () => beginRun(!!daily);
+function continueCampaign() {
+  initAudio(); goFullscreen(); if (ac && ac.state === 'suspended') ac.resume();
+  for (const id of ['menu', 'dead', 'board', 'career']) $(id).hidden = true;
+  if (loadCheckpoint()) showBrief(); else beginRun(false);
+}
+$('startBtn').onclick = () => meta.cp ? continueCampaign() : beginRun(false);
+$('newBtn').onclick = () => { const b = $('newBtn'); if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Click again to start over'; return; } beginRun(false); };
+$('endlessBtn').onclick = () => beginRun(false, 'endless');
+$('cpBtn').onclick = () => continueCampaign();
+$('retryBtn').onclick = () => beginRun(!!daily, daily ? 'endless' : mode);
+$('briefGo').onclick = () => { initAudio(); $('brief').hidden = true; startFloor(); state = 'playing'; document.body.className = 'playing'; lockPointer(); };
+$('briefQuit').onclick = () => { recordRun(false); bankRun(); toMenu(); };
+$('debGo').onclick = () => { $('debrief').hidden = true; dealCards(); $('upgrade').hidden = false; SFX.mutate(); };
+$('debMenu').onclick = () => toMenu();
 $('dailyPlay').onclick = () => beginRun(true);
 let boardFrom = 'menu';
 function openBoard(from) { boardFrom = from; initAudio(); $(from).hidden = true; $('board').hidden = false; renderBoard(); }
@@ -4283,6 +4540,7 @@ function completeFloor() {
   if (floorN === 5 && H() >= (meta.heatMax || 0) && H() < 5) { meta.heatMax = H() + 1; calloutQ.push([`Heat ${meta.heatMax} unlocked`, 'Pick it on the main menu for more biomass', 3]); }
   bankRun();
   rerolls = M('reroll');
+  if (inCampaign() && floorN % OPF === 0) { showDebrief(); SFX.mutate(); return; }
   dealCards();
   $('upgrade').hidden = false;
   SFX.mutate();
@@ -4328,7 +4586,9 @@ function applyUpgrade(k) {
 function nextFloor() {
   P.hp = Math.min(P.maxHp, P.hp + P.maxHp * (H() >= 4 ? .1 : .2));
   $('upgrade').hidden = true;
-  floorN++; startFloor();
+  floorN++;
+  if (inCampaign() && (floorN - 1) % OPF === 0) { showBrief(); return; }
+  startFloor();
   state = 'playing'; document.body.className = 'playing'; lockPointer();
 }
 const runScore = () => stats.floors * 1000 + stats.kills * 100 + stats.heads * 50 + stats.stabs * 50 + stats.bosses * 500 + (stats.obj || 0) * 400;
@@ -4378,19 +4638,19 @@ function renderChallenges() {
 // fold this run into the career totals; returns the records it broke
 function recordRun(died) {
   checkChallenges();
-  const c = career(), secs = (performance.now() - stats.t0) / 1000, sc = runScore(), recs = [];
+  const c = career(), B = stats.base || { wk: {}, mk: {} }, secs = (performance.now() - stats.t0) / 1000 - (B.el || 0), sc = runScore(), recs = [];
   if (c.runs > 0) {
     if (floorN > c.deep) recs.push('New deepest floor');
     if (stats.kills > c.bestKills) recs.push('Most kills in a run');
     if (sc > c.bestScore) recs.push('Best score');
   }
-  c.runs++; c.time += secs; c.deep = Math.max(c.deep, floorN); c.bestKills = Math.max(c.bestKills, stats.kills); c.bestScore = Math.max(c.bestScore, sc);
-  for (const k of ['kills', 'heads', 'shots', 'hits', 'stabs', 'bosses', 'elites', 'dmg', 'obj']) c[k] += Math.round(stats[k] || 0);
-  c.floors += stats.floors;
-  for (const [k, v] of Object.entries(stats.wk)) c.wk[k] = (c.wk[k] || 0) + v;
-  for (const [k, v] of Object.entries(ups)) c.mk[k] = (c.mk[k] || 0) + v;
+  if (!stats.base) c.runs++; c.time += Math.max(0, secs); c.deep = Math.max(c.deep, floorN); c.bestKills = Math.max(c.bestKills, stats.kills); c.bestScore = Math.max(c.bestScore, sc);
+  for (const k of ['kills', 'heads', 'shots', 'hits', 'stabs', 'bosses', 'elites', 'dmg', 'obj']) c[k] += Math.max(0, Math.round((stats[k] || 0) - (B[k] || 0)));
+  c.floors += Math.max(0, stats.floors - (B.floors || 0));
+  for (const [k, v] of Object.entries(stats.wk)) c.wk[k] = (c.wk[k] || 0) + Math.max(0, v - ((B.wk || {})[k] || 0));
+  for (const [k, v] of Object.entries(ups)) c.mk[k] = (c.mk[k] || 0) + Math.max(0, v - ((B.mk || {})[k] || 0));
   if (died && stats.killer) { const k = stats.killer.type; c.kb[k] = (c.kb[k] || 0) + 1; }
-  stats.rec = true;
+  stats.rec = true; stats.base = snapStats();
   return recs.concat(stats.unl.map(k => 'Unlocked ' + UP[k].name));
 }
 function renderBars(el, wk) {
@@ -4402,6 +4662,8 @@ function gameOver() {
   meta.runs = (meta.runs || 0) + 1;
   const recs = recordRun(true); bankRun();
   $('deadScore').hidden = !daily; $('boardBtn2').hidden = !daily;
+  const cp = inCampaign() && meta.cp; $('cpBtn').hidden = !cp; if (cp) $('cpBtn').textContent = `Retry Operation ${OPS[opOf(cp.floor) % OPS.length].name}`;
+  $('retryBtn').textContent = cp ? 'New campaign' : 'Redeploy'; $('retryBtn').className = cp ? 'btn ghost' : 'btn';
   if (daily) { $('deadScore').textContent = `Daily challenge score: ${fmtN(runScore())}`; submitDaily(); }
   if (document.pointerLockElement) document.exitPointerLock();
   const secs = Math.round((performance.now() - stats.t0) / 1000);
@@ -4447,6 +4709,7 @@ function renderHeat() {
   $('heatSel').innerHTML = HEAT.map((_, i) => `<button data-h="${i}" class="${i === heatSel ? 'on' : ''}" ${i > top ? 'disabled' : ''} aria-label="Heat ${i}${i > top ? ', locked' : ''}">${i}</button>`).join('');
   const mods = HEAT.slice(1, heatSel + 1).map((h, i) => (i ? h.d[0].toLowerCase() + h.d.slice(1) : h.d).replace(/\.$/, '')).join('; ');
   $('heatInfo').innerHTML = (heatSel ? `<b>Biomass ×${HEAT[heatSel].m}</b>. ${mods}.` : 'No modifiers.') + (top < 5 ? ` Clear floor 5 on Heat ${top} to unlock Heat ${top + 1}.` : '');
+  renderCampaignMenu();
 }
 $('heatSel').onclick = e => { const b = e.target.closest('button'); if (!b || b.disabled) return; heatSel = +b.dataset.h; store.set('kh.heat', String(heatSel)); renderHeat(); };
 heatSel = +(store.get('kh.heat') || 0) || 0;
@@ -5763,7 +6026,7 @@ async function warmUp() {
   BOOT.set(.88, 'Warming up the graphics…'); await nextFrame();
   await warmUp();
   BOOT.set(1, 'Ready.');
-  $('startBtn').disabled = false; $('loading').textContent = 'Building ready.';
+  $('startBtn').disabled = false; $('loading').textContent = 'Building ready.'; renderCampaignMenu();
   last = performance.now(); requestAnimationFrame(frame);
   setTimeout(() => { $('boot').classList.add('done'); clearInterval(tipT); setTimeout(() => $('boot').hidden = true, 800); }, 350);
 })();
