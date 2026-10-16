@@ -631,7 +631,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 49;
+const KH_VERSION = 50;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1160,6 +1160,16 @@ const OPS = [
 const OPS_END = 'The lab is burning and the program is over. Every operation is done. Endless mode is now unlocked on the main menu if you want to keep going.';
 const OPF = 5, opOf = L => Math.floor((L - 1) / OPF);
 const themeFor = L => OPS[opOf(L) % OPS.length].theme;
+// how smart the enemy is: a small step every floor, a bigger one each operation; 0 on floor 1, about 1 by the last operation
+const aiIQ = L => clamp(opOf(L) * .18 + ((L - 1) % OPF) * .04, 0, 1);
+const TRAINING = [
+  'Poorly trained. Slow to react, and they lose track of you easily.',
+  'Trained. Quicker to react and better at spotting you.',
+  'Disciplined. They flank more, use cover well and throw grenades sooner.',
+  'Veterans. When they lose sight of you, they work out where you went and come for you.',
+  'Special forces. Sharp eyes, fast reactions, and two of them come to check a noise.',
+  'Elite operators. Everything they know, at its best.',
+];
 let THEME = 'warehouse', BASEMAT = null;
 const OFF = {};
 function applyTheme(t) {
@@ -2462,7 +2472,7 @@ function spawnEnemy(room, L, force) {
     fireCd: rand(1, 2.2), windup: 0, burst: 0, burstT: 0, strafe: Math.random() < .5 ? 1 : -1, strafeT: rand(1, 3),
     flash: 0, flashOn: false, dead: false, deathT: 0, fallDir: 1, meleeCd: 0, radius: .36 * s, dashHit: false, aim: 0, drop: null,
     boss: T.boss || null, gunModel, mode: 'engage', modeT: rand(2, 4), coverP: null, coverProp: null, crouchK: 0, peekT: 0,
-    mag: type === 'heavy' ? 2 : 3, reloadT: 0, nadeCd: rand(4, 9), noLosT: 0, stunT: 0, flinch: 0, hitSide: 1, hitHead: false, staggerT: 0,
+    mag: type === 'heavy' ? 2 : 3, reloadT: 0, nadeCd: rand(4, 9), iq: Math.min(1.2, aiIQ(L) + (elite ? .2 : 0)), noLosT: 0, stunT: 0, flinch: 0, hitSide: 1, hitHead: false, staggerT: 0,
     hurtT: 0, coverCd: 0, leapCd: rand(.6, 1.4), leap: null, recoverT: 0, enraged: false, hitDir: new V3(0, 0, -1), lastKind: '', my0: model.position.y, peeking: false, flankP: null, supp: 0, suppSaid: false, dodgeN: null, dodgeT: 0, dodgeOk: false, holding: false, holdT: 0, chk: -1,
     mry0: model.rotation.y, legOff: 0, recoilT: 9, w0: null, phase: Math.random(), path: null, pathGoal: null, pi: 0, repathT: 0, stuckT: 0, unstick: null, lastP: new V3(),
     dog, shield, laser, lane, sdrop: null, barkT: rand(.3, 1.5), charge: null, chargeCd: rand(2.5, 4), crashT: 0, whistleCd: 3,
@@ -3513,7 +3523,7 @@ function showBrief() {
   $('briefText').textContent = op.brief;
   const foes = i === 0 ? FOE_FROM.map(([f, t]) => f > 1 ? `${t} from floor ${f}` : t).join(', ') + '.' : 'Everything you have met so far, in greater numbers, better armed and more accurate, with more elites.';
   const objs = []; for (let n = a; n < b; n++) { const k = objFor(n); if (k) objs.push(`floor ${n}, ${OBJ[k].name.toLowerCase()}`); }
-  $('briefIntel').innerHTML = [['Hostiles', foes], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
+  $('briefIntel').innerHTML = [['Hostiles', foes], ['Training', TRAINING[Math.min(i, TRAINING.length - 1)] + ' They get sharper every floor.'], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
     ['Your kit', `${WEAPONS[LO.slots[0].k].name} · ${Math.round(P.hp)} / ${P.maxHp} hp · ${Object.keys(ups).length ? Object.keys(ups).length + (Object.keys(ups).length === 1 ? ' mutation' : ' mutations') : 'no mutations yet'}`]].map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('');
   $('briefNote').textContent = i ? 'Progress saved. You can stop here and continue later.' : 'Progress saves at the start of every operation.';
   $('brief').hidden = false;
@@ -3838,7 +3848,7 @@ function nadeThreat(e, dt) {
   let best = null, bd = 6.8;
   for (const n of nades) { if (n.owner !== 'player' || n.kind !== 'frag') continue; const d = Math.hypot(n.m.position.x - e.g.position.x, n.m.position.z - e.g.position.z); if (d < bd) { bd = d; best = n; } }
   if (!best) { e.dodgeN = null; return null; }
-  if (e.dodgeN !== best) { e.dodgeN = best; e.dodgeT = rand(.35, .75) + (e.crouchK > .5 ? .25 : 0); e.dodgeOk = Math.random() < .7; }
+  if (e.dodgeN !== best) { e.dodgeN = best; e.dodgeT = rand(.35, .75) * (1 - .4 * e.iq) + (e.crouchK > .5 ? .25 : 0); e.dodgeOk = Math.random() < .55 + .4 * e.iq; }
   e.dodgeT -= dt;
   if (e.dodgeT > 0 || !e.dodgeOk) return null;
   if (!best.called) { best.called = true; say(e, pick(['Grenade!', 'Frag! Move!', 'Grenade, get clear!']), true); }
@@ -4117,7 +4127,7 @@ function enemyThrow(e) {
   const d = Math.hypot(to.x - from.x, to.z - from.z), T = clamp(d / 11, .75, 1.5);
   const v = new V3((to.x - from.x) / T, (to.y - from.y) / T + .5 * 20 * T, (to.z - from.z) / T);
   spawnNade('frag', from, v, 'enemy'); enemyThrows++;
-  e.nadeCd = rand(10, 15); enemyNadeCd = 3.5; e.windup = 0;
+  e.nadeCd = rand(10, 15) * (1 - .4 * e.iq); enemyNadeCd = 3.5; e.windup = 0;
   say(e, pick(['Frag out!', 'Grenade!', 'Frag out!']), true);
   SFX.throw();
 }
@@ -4535,7 +4545,7 @@ function completeFloor() {
   if (document.pointerLockElement) document.exitPointerLock();
   mouseDown = false;
   $('upEyebrow').textContent = `Floor ${String(floorN).padStart(2, '0')} cleared${obj ? ` · ${OBJ[obj.k].name.toLowerCase()} ${obj.state === 'done' ? 'complete' : 'failed'}` : ''}`;
-  const nn = floorN + 1, no = objFor(nn); $('nextInfo').textContent = nn % 5 === 0 ? `Boss floor. ${BOSS_INTRO[bossFor(nn)]} in the last room.` : `${Math.min(2 + Math.floor((nn - 1) / 2), 4)} rooms, ${hostileCount(nn, false)} hostiles, tougher and more accurate.${no ? ` ${OBJ[no].name}: ${OBJ[no].d}` : ''}`;
+  const nn = floorN + 1, no = objFor(nn); $('nextInfo').textContent = nn % 5 === 0 ? `Boss floor. ${BOSS_INTRO[bossFor(nn)]} in the last room.` : `${Math.min(2 + Math.floor((nn - 1) / 2), 4)} rooms, ${hostileCount(nn, false)} hostiles, tougher, more accurate and a little smarter.${no ? ` ${OBJ[no].name}: ${OBJ[no].d}` : ''}`;
   if (stats.fTaken <= 0) markEvent('clean');
   gain(10 + 5 * floorN); checkChallenges();
   if (floorN === 5 && H() >= (meta.heatMax || 0) && H() < 5) { meta.heatMax = H() + 1; calloutQ.push([`Heat ${meta.heatMax} unlocked`, 'Pick it on the main menu for more biomass', 3]); }
@@ -4942,7 +4952,7 @@ function alertEnemy(e, why, at) {
     if (e.dog) SFX.bark(e.g.position.distanceTo(P.pos));
     else say(e, pick(why === 'heard' ? ['Shots fired!', 'Gunfire! Get ready!', 'Contact, contact!'] : why === 'body' ? ['Man down! We have company!', 'Body here! Find him!'] : ['Contact!', 'Contact front!', 'Hostile!', 'There he is!']), true);
     // the rest of the squad needs a beat to turn and bring their guns up
-    for (const o of RM.enemies) if (!o.dead && !o.alerted) { o.alerted = true; o.sus = 1; o.alertT = time; o.fireCd = Math.max(o.fireCd, rand(.5, 1.1)); }
+    for (const o of RM.enemies) if (!o.dead && !o.alerted) { o.alerted = true; o.sus = 1; o.alertT = time; o.fireCd = Math.max(o.fireCd, rand(.5, 1.1) * (1 - .45 * o.iq)); }
   }
 }
 // ---------- stealth: nobody knows you are in the room until they see you, hear a shot or find a body ----------
@@ -4952,7 +4962,7 @@ function initIdle(e) {
   const k = e.dog ? 'post' : e.type === 'sniper' ? 'scan' : !r.sentry && Math.random() < .45 ? 'sentry' : Math.random() < .5 ? 'patrol' : 'post';
   if (k === 'sentry') r.sentry = e;
   const base = k === 'sentry' || k === 'scan' ? Math.PI + rand(-.35, .35) : rand(0, Math.PI * 2);
-  e.idle = { k, base, yaw: base, t: rand(1, 4), pts: k === 'patrol' ? [e.g.position.clone(), freeSpot(r, .25)] : null, home: k === 'patrol' ? null : e.g.position.clone(), i: 1, wait: 0, back: false };
+  e.idle = { k, base, yaw: base, t: rand(1, 4), pts: k === 'patrol' ? [e.g.position.clone(), freeSpot(r, .25)] : null, home: null, i: 1, wait: 0, back: false };
   e.yaw = base; e.g.rotation.y = base;
 }
 // how lit a spot is: 1 under a light, falling to 0 in the dark between the pools; daylight outdoors; a muzzle flash lights you up
@@ -4972,16 +4982,16 @@ function perceive(e, dt, dist, dx, dz) {
   if (e.los) {
     const ang = Math.acos(clamp((Math.sin(e.yaw) * dx + Math.cos(e.yaw) * dz) / (dist || 1), -1, 1));
     const half = dog ? 1.9 : e.chkNoise ? 1.35 : 1.05;
-    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (.5 + .5 * lit);
+    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (.5 + .5 * lit) * (.9 + .2 * e.iq);
     if (dist < range && ang < half + .45) {
       rate = 1 / (.2 + dist * .11);
       if (ang > half) rate *= pv > 1 ? .3 : 0; // the corner of the eye only catches movement
-      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (e.chkNoise ? 1.6 : 1) * (.35 + .8 * lit);
+      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (.8 + .45 * e.iq) * (e.chkNoise ? 1.6 : 1) * (.35 + .8 * lit);
       rate *= 1 - .6 * smooth(range * .55, range, dist);
       if (dist < 2.2 && ang < half) rate = Math.max(rate, 4);
     }
   }
-  if (!crouch && P.onGround && !(P.lungeT > 0) && pv > 2.6 && dist < (P.dashT > 0 ? 9 : pv > 5 ? 6.5 : 4)) rate += dist < 2 ? 2 : .8;
+  if (!crouch && P.onGround && !(P.lungeT > 0) && pv > 2.6 && dist < (P.dashT > 0 ? 9 : pv > 5 ? 6.5 : 4) * (.85 + .35 * e.iq)) rate += dist < 2 ? 2 : .8;
   if (rate > 0) { e.sus = Math.min(1, e.sus + rate * dt); e.susP.set(P.pos.x, 0, P.pos.z); }
   else if (e.bodyChk) e.sus = Math.max(e.sus, .6); // walking over to check a body
   else if (e.chkNoise) e.sus = Math.max(e.sus, .6); // checking out a noise
@@ -4996,7 +5006,7 @@ function perceive(e, dt, dist, dx, dz) {
   if (e.chkNoise) {
     // walk to the noise, look around a few seconds, then shrug it off; a long detour means he gives up
     const c = e.chkNoise; c.t += dt;
-    if (!c.look && (Math.hypot(e.susP.x - e.g.position.x, e.susP.z - e.g.position.z) < 2.8 || c.t > 14)) { c.look = rand(3, 5); c.lookT = 0; }
+    if (!c.look && (Math.hypot(e.susP.x - e.g.position.x, e.susP.z - e.g.position.z) < 2.8 || c.t > 14)) { c.look = rand(3, 5) * (1 + .6 * e.iq); c.lookT = 0; }
     if (c.look && rate <= 0) {
       c.look -= dt;
       if ((c.lookT -= dt) <= 0) { c.lookT = rand(.9, 1.5); const a = rand(0, Math.PI * 2); e.susP.set(e.g.position.x + Math.sin(a) * 2.2, 0, e.g.position.z + Math.cos(a) * 2.2); }
@@ -5022,7 +5032,7 @@ function makeNoise(p, kind = 'shot') {
   const pr = rooms.find(r => p.z >= r.z0 && p.z < r.z1); if (!pr) return;
   if (kind === 'enemy') { for (const e of pr.enemies) if (!e.dead && !e.alerted && e.sus !== undefined) alertEnemy(e, 'heard', p); return; }
   if (pr.contact) { (pr.seenP || (pr.seenP = new V3())).set(p.x, 0, p.z); pr.seenT = time; return; } // already fighting: they head for the sound
-  const hear = kind === 'blast' ? 34 : 24, near = [];
+  const hear = (kind === 'blast' ? 34 : 24) * (.85 + .3 * aiIQ(floorN)), near = [];
   let inv = null, bd = 1e9;
   for (const e of pr.enemies) {
     if (e.dead || e.alerted || e.sus === undefined || e.boss) continue;
@@ -5031,10 +5041,19 @@ function makeNoise(p, kind = 'shot') {
     else if (!e.dog && !e.bodyChk && d < bd) { inv = e; bd = d; }
     if (d < 7) near.push(e);
   }
+  const send = o => {
+    if (!o.chkNoise) { o.susSaid = false; o.chkNoise = { t: 0, look: 0, lookT: 0 }; }
+    o.chkNoise.t = 0; o.chkNoise.look = 0; o.chkNoise.p = new V3(p.x, 0, p.z);
+    o.sus = Math.max(o.sus, .6); o.susP.set(p.x, 0, p.z);
+  };
   if (inv) {
-    if (!inv.chkNoise) { inv.susSaid = false; inv.chkNoise = { t: 0, look: 0, lookT: 0 }; }
-    inv.chkNoise.t = 0; inv.chkNoise.look = 0; inv.chkNoise.p = new V3(p.x, 0, p.z);
-    inv.sus = Math.max(inv.sus, .6); inv.susP.set(p.x, 0, p.z);
+    send(inv);
+    // well-drilled squads send a second man to cover him
+    if (inv.iq >= .7 && !pr.enemies.some(o => o !== inv && o.chkNoise)) {
+      let b2 = null, d2 = hear;
+      for (const o of pr.enemies) { if (o === inv || o.dead || o.alerted || o.dog || o.boss || o.bodyChk || o.sus === undefined) continue; const d = Math.hypot(o.g.position.x - p.x, o.g.position.z - p.z); if (d < d2) { b2 = o; d2 = d; } }
+      if (b2) send(b2);
+    }
   }
   // anyone right next to it turns to look, but leaves the checking to him
   for (const e of near) if (e !== inv && e.sus < .45) { e.sus = .45; e.susP.set(p.x, 0, p.z); }
@@ -5446,8 +5465,8 @@ function updateEnemy(e, dt) {
       if (e.supp > 1 && !e.suppSaid) { e.suppSaid = true; say(e, pick(["I'm pinned!", 'Taking fire!', 'Suppressed!'])); }
       // you're reloading or badly hurt: one of them rushes you while it lasts
       if (e.mode !== 'push' && time > (RM.pushAt || 0) && dist > 4 && dist < 16 && e.reloadT <= 0 && e.supp < .8 && (e.los || e.noLosT < 2) &&
-          ((W.reload > 0 && wep().model !== 'shotgun') || P.hp < P.maxHp * .3)) {
-        RM.pushAt = time + rand(7, 10);
+          ((W.reload > 0 && wep().model !== 'shotgun') || P.hp < P.maxHp * (.3 + .1 * e.iq))) {
+        RM.pushAt = time + rand(7, 10) * (1 - .35 * e.iq);
         if (e.mode === 'cover') leaveCover(e); else if (e.mode === 'flank') RM.flanker = null;
         if (RM.holder === e) RM.holder = null;
         e.mode = 'push'; e.modeT = 2.8;
@@ -5458,13 +5477,13 @@ function updateEnemy(e, dt) {
         else { [mx, mz] = steer(e, P.pos.x, P.pos.z); spMul = 1.25; }
       }
       if (e.mode === 'engage') {
-        const wantCover = e.coverCd <= 0 && (e.reloadT > 0 || e.supp > .8 || (e.hurtT > 0 && e.hp < e.maxHp * .75) || (e.modeT <= 0 && Math.random() < .45));
+        const wantCover = e.coverCd <= 0 && (e.reloadT > 0 || e.supp > .8 || (e.hurtT > 0 && e.hp < e.maxHp * .75) || (e.modeT <= 0 && Math.random() < .35 + .3 * e.iq));
         if (wantCover && findCover(e)) {
           e.mode = 'cover'; e.modeT = rand(8, 13); e.peekT = rand(1, 2); e.peeking = false;
           if (Math.random() < .3) say(e, pick(['Moving to cover!', 'Covering!', 'Get down!']));
         } else if (e.modeT <= 0) {
           e.modeT = rand(3, 6);
-          if (e.type === 'grunt' && e.gunModel !== 'dmr' && !e.room.flanker && dist > 6 && Math.random() < .4 && aliveIn(e.room) >= 2) startFlank(e, fx, fz);
+          if (e.type === 'grunt' && e.gunModel !== 'dmr' && !e.room.flanker && dist > 6 && Math.random() < .3 + .4 * e.iq && aliveIn(e.room) >= 2) startFlank(e, fx, fz);
         }
       }
       if (e.mode === 'cover') {
@@ -5489,14 +5508,19 @@ function updateEnemy(e, dt) {
           // out of sight: one of them holds the angle where you vanished, the rest check that spot, then hunt you by sound
           const fresh = RM.seenP && time - RM.seenT < 8;
           if (RM.holder && (RM.holder.dead || RM.holder.mode !== 'engage')) RM.holder = null;
-          if (!RM.holder && fresh && e.noLosT > .8 && dist > 6 && e.type !== 'rusher' && RM.flanker !== e && aliveIn(RM) >= 2) { RM.holder = e; e.holdT = rand(5, 8); }
+          if (!RM.holder && fresh && e.noLosT > .8 && dist > 6 && e.type !== 'rusher' && RM.flanker !== e && aliveIn(RM) >= 2) { RM.holder = e; e.holdT = rand(5, 8) + 3 * e.iq; }
           if (RM.holder === e) {
             e.holdT -= dt; e.holding = true; faceX = RM.seenP.x - g.position.x; faceZ = RM.seenP.z - g.position.z; tactical = true;
             if (e.holdT <= 0) { RM.holder = null; e.chk = RM.seenT; }
           } else {
-            const goLast = fresh && e.chk !== RM.seenT, tx = goLast ? RM.seenP.x : P.pos.x, tz = goLast ? RM.seenP.z : P.pos.z;
+            const goLast = fresh && e.chk !== RM.seenT, lost = !goLast && e.iq < .5 && RM.seenP;
+            if (lost && (!e.srch || (e.srchT -= dt) <= 0 || Math.hypot(e.srch.x - g.position.x, e.srch.z - g.position.z) < 1.2)) {
+              const a = rand(0, 6.283), r0 = rand(2, 6); e.srchT = rand(2.5, 4);
+              e.srch = { x: clamp(RM.seenP.x + Math.sin(a) * r0, -RM.w / 2 + 1, RM.w / 2 - 1), z: clamp(RM.seenP.z + Math.cos(a) * r0, RM.z0 + 1, RM.z1 - 1) };
+            }
+            const tx = goLast ? RM.seenP.x : lost ? e.srch.x : P.pos.x, tz = goLast ? RM.seenP.z : lost ? e.srch.z : P.pos.z;
             if (goLast && Math.hypot(tx - g.position.x, tz - g.position.z) < 1.5) e.chk = RM.seenT;
-            [mx, mz] = steer(e, tx, tz); if (!goLast) spMul = .8;
+            [mx, mz] = steer(e, tx, tz); if (!goLast) spMul = lost ? .6 : .8;
             if (dist > 6) { faceX = mx; faceZ = mz; }
           }
         }
@@ -5515,6 +5539,7 @@ function updateEnemy(e, dt) {
   } else if (e.idle) {
     // unaware: walk a beat, stand post or look around; something odd makes them turn, then come and check
     const I = e.idle; let turn = 2.2;
+    if (!I.homeSet) { I.homeSet = true; if (I.k !== 'patrol' && !I.home) I.home = g.position.clone(); } // where he stands once the floor is laid out
     if (e.sus > .3) {
       faceX = e.susP.x - g.position.x; faceZ = e.susP.z - g.position.z; turn = 4; e.holding = e.sus > .5;
       if (!e.susSaid) { e.susSaid = true; I.back = true; say(e, e.bodyChk ? pick(['What the...?', 'Hey, you okay?', 'Is he down?']) : e.chkNoise ? pick(['Was that a shot?', "I'll check it out.", 'Hold up, I heard something.', 'Going to take a look.']) : pick(['Huh?', "Who's there?", 'Did you hear that?', 'Something moved.'])); }
@@ -5639,7 +5664,7 @@ function updateEnemy(e, dt) {
     }
   }
   // lob a frag when you have been hiding from them for a while
-  if (floorN >= 2 && e.type !== 'heavy' && !e.shield && !sn && e.nadeCd <= 0 && enemyNadeCd <= 0 && e.burst <= 0 && e.windup <= 0 && dist > 5 && dist < 20 && (e.noLosT > 1.4 || (jug && dist > 7)) && e.room.active) { enemyThrow(e); return; }
+  if (floorN >= 2 && e.type !== 'heavy' && !e.shield && !sn && e.nadeCd <= 0 && enemyNadeCd <= 0 && e.burst <= 0 && e.windup <= 0 && dist > 5 && dist < 20 && (e.noLosT > 1.4 - .6 * e.iq || (jug && dist > 7)) && e.room.active) { enemyThrow(e); return; }
   if (e.reloadT > 0 || e.crouchK > .4 || (e.mode === 'flank' && dist > 6)) return;
   if (e.burst > 0) {
     e.burstT -= dt;
@@ -5651,7 +5676,7 @@ function updateEnemy(e, dt) {
     e.windup -= dt; if (e.windup <= 0) { e.burst = e.type === 'heavy' ? 2 : jug ? 10 : dmr ? 1 : e.shield ? randi(2, 3) : randi(2, 4); e.burstT = 0; }
   } else if (e.los && dist < e.T.range * (dmr && !sn ? 1.4 : 1) && e.aim > .8 && e.staggerT <= 0) {
     e.fireCd -= dt;
-    if (e.fireCd <= 0) { e.atVip = obj && obj.k === 'escort' && obj.state === 'live' && !sn && Math.random() < .35 && e.g.position.distanceTo(obj.npc.g.position) < e.T.range; e.windup = sn ? SNIPE_T : dmr ? .75 : jug ? .65 : .3; e.fireCd = (sn ? rand(2.2, 3.1) : dmr ? rand(1.7, 2.6) : jug ? rand(1.2, 1.9) : rand(.8, 1.6)) * (e.type === 'heavy' ? 1.3 : 1); if (sn) SFX.lock(dist); }
+    if (e.fireCd <= 0) { e.atVip = obj && obj.k === 'escort' && obj.state === 'live' && !sn && Math.random() < .35 && e.g.position.distanceTo(obj.npc.g.position) < e.T.range; e.windup = sn ? SNIPE_T : dmr ? .75 : jug ? .65 : .3 - .1 * e.iq; e.fireCd = (sn ? rand(2.2, 3.1) : dmr ? rand(1.7, 2.6) : jug ? rand(1.2, 1.9) : rand(.8, 1.6)) * (e.type === 'heavy' ? 1.3 : 1); if (sn) SFX.lock(dist); }
   }
 }
 
