@@ -631,7 +631,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 48;
+const KH_VERSION = 49;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -3554,7 +3554,8 @@ function resetRun() {
   LO.slots[0] = { k: CLASSES[cls()].gun, ammo: magFor(WEAPONS[CLASSES[cls()].gun]) }; LO.slots[1] = { k: 'sidearm', ammo: magFor(WEAPONS.sidearm) }; LO.cur = 0;
   stats.base = null;
 }
-function hostileCount(L, boss) { const n = boss ? 4 + L : 5 + L * 2; return H() >= 5 ? Math.round(n * 1.25) : n; }
+// capped so the late floors stay a fight, not a crowd: about 7 a room on four-room floors, 7 a room on boss floors
+function hostileCount(L, boss) { const n = boss ? Math.min(4 + L, 14) : Math.min(5 + L * 2, 28); return H() >= 5 ? Math.round(n * 1.25) : n; }
 function startFloor() {
   if (daily) seeded(hashStr(daily.date + ':floor:' + floorN), () => buildLevel(floorN)); else buildLevel(floorN);
   P.pos.set(0, 0, -4.6); P.vel.set(0, 0, 0); yaw = Math.PI; pitch = 0; $('prompt').classList.remove('on');
