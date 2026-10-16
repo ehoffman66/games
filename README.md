@@ -6,3 +6,5 @@ To add a game: put its files in a new folder with an `index.html`, add a card fo
 
 - `killhouse/` — Three.js room-clearing shooter (single `index.html` plus the models it loads from `models/`).
 - `breakaway-checkers/` — Three.js AHL hockey shootout with seasons, online play and a recorded announcer (single `index.html` plus the rigs, textures and announcer calls it loads from `models/`; `tools/announcer` rebuilds the calls).
+- `plaza-midwood-runner/` — Canvas endless runner down Central Ave, Charlotte (single self-contained `index.html`; the friends leaderboard only works inside Claude and hides itself here).
+- `plaza-midwood-quest-3d/` — Three.js first-person open-world quest game in Plaza Midwood (single `index.html`, three.js loaded from jsDelivr).
