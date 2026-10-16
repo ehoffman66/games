@@ -1,0 +1,76 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+/* Source for paw-quest/apple-touch-icon.png, icon-192.png and icon-512.png: screenshot #ic at 1024x1024, then downscale.
+   Apollo (black-and-white Bernedoodle) on the game's sunny meadow sky, with the red collar and a gold paw tag. */
+html,body{margin:0;background:#000}
+#ic{width:1024px;height:1024px;display:block}
+</style></head><body>
+<svg id="ic" viewBox="0 0 1024 1024" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f9ef0"/><stop offset=".55" stop-color="#8fd0fb"/><stop offset="1" stop-color="#d9f2ff"/></linearGradient>
+    <radialGradient id="sun" cx="0.18" cy="0.14" r="0.45"><stop offset="0" stop-color="#fff6c8" stop-opacity=".95"/><stop offset=".35" stop-color="#fff0a8" stop-opacity=".35"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+    <linearGradient id="hill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8fe06a"/><stop offset="1" stop-color="#3f9a3a"/></linearGradient>
+    <radialGradient id="fur" cx=".42" cy=".3" r=".8"><stop offset="0" stop-color="#3a3338"/><stop offset=".6" stop-color="#211c20"/><stop offset="1" stop-color="#141114"/></radialGradient>
+    <radialGradient id="white" cx=".45" cy=".3" r=".9"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e6e2ec"/></radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe98a"/><stop offset=".5" stop-color="#ffc72e"/><stop offset="1" stop-color="#e8960e"/></linearGradient>
+    <radialGradient id="eye" cx=".4" cy=".35" r=".7"><stop offset="0" stop-color="#7a4a2a"/><stop offset=".6" stop-color="#3a2214"/><stop offset="1" stop-color="#1a0f08"/></radialGradient>
+  </defs>
+  <rect width="1024" height="1024" fill="url(#sky)"/>
+  <rect width="1024" height="1024" fill="url(#sun)"/>
+  <!-- clouds -->
+  <g fill="#fff" opacity=".9"><ellipse cx="790" cy="170" rx="110" ry="46"/><ellipse cx="850" cy="140" rx="70" ry="52"/><ellipse cx="740" cy="150" rx="60" ry="44"/></g>
+  <g fill="#fff" opacity=".75"><ellipse cx="170" cy="300" rx="80" ry="30"/><ellipse cx="210" cy="280" rx="50" ry="36"/></g>
+  <!-- hills -->
+  <path d="M0 820 Q260 700 540 790 T1024 760 V1024 H0Z" fill="#6cc24f"/>
+  <path d="M0 880 Q300 800 620 870 T1024 850 V1024 H0Z" fill="url(#hill)"/>
+  <!-- sparkles -->
+  <g fill="#fff8c0"><path d="M150 560 q6 -26 12 0 q26 6 0 12 q-6 26 -12 0 q-26 -6 0 -12Z"/><path d="M880 500 q5 -20 10 0 q20 5 0 10 q-5 20 -10 0 q-20 -5 0 -10Z"/><path d="M860 640 q4 -16 8 0 q16 4 0 8 q-4 16 -8 0 q-16 -4 0 -8Z"/></g>
+
+  <g id="dog" transform="translate(512 548)">
+    <!-- ears: outline pass then fill -->
+    <g stroke="#2a2340" stroke-width="28" fill="#2a2340" stroke-linejoin="round">
+      <ellipse cx="-232" cy="40" rx="98" ry="190" transform="rotate(16 -232 40)"/><ellipse cx="232" cy="40" rx="98" ry="190" transform="rotate(-16 232 40)"/>
+    </g>
+    <g fill="url(#fur)">
+      <ellipse cx="-232" cy="40" rx="98" ry="190" transform="rotate(16 -232 40)"/><ellipse cx="232" cy="40" rx="98" ry="190" transform="rotate(-16 232 40)"/>
+    </g>
+    <!-- curly head: ink halo, then fur curls -->
+    <g id="curlsInk" fill="#2a2340"></g>
+    <circle r="236" fill="url(#fur)"/>
+    <g id="curls" fill="url(#fur)"></g>
+    <g id="curlHi" fill="none" stroke="#4a4248" stroke-width="6" stroke-linecap="round" opacity=".5"></g>
+    <!-- white blaze down the forehead into the muzzle -->
+    <path d="M-26 -236 C-40 -150 -70 -40 -120 40 C-170 120 -150 230 0 236 C150 230 170 120 120 40 C70 -40 40 -150 26 -236 Z" fill="url(#white)" stroke="#2a2340" stroke-width="12" stroke-linejoin="round"/>
+    <!-- red collar + gold paw tag -->
+    <path d="M-190 196 Q0 300 190 196 L176 248 Q0 350 -176 248 Z" fill="#e5484d" stroke="#2a2340" stroke-width="14" stroke-linejoin="round"/>
+    <circle cx="0" cy="330" r="62" fill="url(#gold)" stroke="#2a2340" stroke-width="14"/>
+    <g fill="#b86e08"><ellipse cx="0" cy="344" rx="22" ry="18"/><circle cx="-24" cy="314" r="9"/><circle cx="-8" cy="304" r="9"/><circle cx="10" cy="304" r="9"/><circle cx="26" cy="314" r="9"/></g>
+    <!-- eyes -->
+    <g stroke="#2a2340" stroke-width="10">
+      <ellipse cx="-104" cy="-34" rx="44" ry="50" fill="url(#eye)"/><ellipse cx="104" cy="-34" rx="44" ry="50" fill="url(#eye)"/>
+    </g>
+    <g fill="#fff"><circle cx="-118" cy="-54" r="16"/><circle cx="90" cy="-54" r="16"/><circle cx="-90" cy="-18" r="7"/><circle cx="118" cy="-18" r="7"/></g>
+    <!-- cheeky white brows -->
+    <g fill="none" stroke="#f4f0f6" stroke-width="12" stroke-linecap="round"><path d="M-150 -112 Q-112 -134 -70 -116"/><path d="M150 -112 Q112 -134 70 -116"/></g>
+    <!-- muzzle, nose, smile, tongue -->
+    <path d="M-34 150 Q0 196 34 150" fill="none" stroke="#2a2340" stroke-width="12" stroke-linecap="round"/>
+    <path d="M0 150 L0 120" stroke="#2a2340" stroke-width="12" stroke-linecap="round"/>
+    <path d="M-30 168 Q0 168 30 168 Q38 232 0 244 Q-38 232 -30 168Z" fill="#ff6f8a" stroke="#2a2340" stroke-width="11" stroke-linejoin="round"/>
+    <path d="M0 176 L0 222" stroke="#e0476a" stroke-width="7" stroke-linecap="round"/>
+    <path d="M-62 60 Q0 40 62 60 Q70 108 0 128 Q-70 108 -62 60Z" fill="#1a1518" stroke="#2a2340" stroke-width="10" stroke-linejoin="round"/>
+    <ellipse cx="-22" cy="72" rx="20" ry="10" fill="#fff" opacity=".55"/>
+  </g>
+</svg>
+<script>
+// ring of overlapping curls around the head so the outline reads as curly doodle fur
+const ns = 'http://www.w3.org/2000/svg', ink = document.getElementById('curlsInk'), fur = document.getElementById('curls'), hi = document.getElementById('curlHi');
+for (let i = 0; i < 26; i++){
+  const a = i/26*Math.PI*2, R = 222 + (i % 2)*10, x = Math.cos(a)*R, y = Math.sin(a)*R*0.98, r = 44 + (i % 3)*6;
+  if (y > 150) continue; // keep the chin smooth above the collar
+  const c1 = document.createElementNS(ns, 'circle'); c1.setAttribute('cx', x); c1.setAttribute('cy', y); c1.setAttribute('r', r + 13); ink.appendChild(c1);
+  const c2 = document.createElementNS(ns, 'circle'); c2.setAttribute('cx', x); c2.setAttribute('cy', y); c2.setAttribute('r', r); fur.appendChild(c2);
+  const p = document.createElementNS(ns, 'path'); const rr = r*0.55; p.setAttribute('d', `M${x - rr} ${y} a${rr} ${rr} 0 1 1 ${rr*1.2} ${rr*0.6}`); hi.appendChild(p);
+}
+// a few curls inside the black fur too
+[[-150,-170],[150,-170],[-185,-60],[185,-60],[-170,60],[170,60],[-60,-200],[60,-200]].forEach(([x, y]) => { const p = document.createElementNS(ns, 'path'); p.setAttribute('d', `M${x - 18} ${y} a18 18 0 1 1 22 11`); hi.appendChild(p); });
+</script>
+</body></html>
