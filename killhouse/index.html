@@ -2068,14 +2068,14 @@ const ETYPES = {
   mutant: { hp: 2200, speed: 5.4, dmg: 18, range: 2.8, tint: [.78, .34, .3], scale: 1.3, gun: null, boss: 'The Mutated' },
   shield: { hp: 120, speed: 2.6, dmg: 7, range: 22, tint: [.5, .54, .6], scale: 1.04, gun: 'pistol' },
   sniper: { hp: 80, speed: 2.8, dmg: 9, range: 60, tint: [.55, .6, .45], scale: .98, gun: 'dmr' },
-  dog: { hp: 45, speed: 7.2, dmg: 8, range: 1.55, tint: [.085, .05, .024], scale: 1, gun: null },
+  dog: { hp: 45, speed: 7.2, dmg: 8, range: 1.55, tint: [.42, .44, .46], scale: 1, gun: null, robot: true },
   bulwark: { hp: 2400, speed: 2, dmg: 9, range: 24, tint: [.3, .32, .36], scale: 1.32, gun: 'pistol', boss: 'The Bulwark' },
   handler: { hp: 2000, speed: 3.1, dmg: 8, range: 30, tint: [.46, .4, .26], scale: 1.22, gun: 'rifle', boss: 'The Handler' },
 };
 // boss floors alternate between two pairs; which of each pair comes first is fixed per run (or per daily)
 const BOSSES = [['juggernaut', 'bulwark'], ['mutant', 'handler']];
-const BOSS_INTRO = { juggernaut: 'A Juggernaut waits', mutant: 'The Mutated waits', bulwark: 'The Bulwark waits', handler: 'The Handler and his dogs wait' };
-const BOSS_TIP = { juggernaut: 'Armored. Aim for the head.', mutant: 'It leaps. Punish the landing.', bulwark: 'Shield up. Bait the charge into a wall, then hit it.', handler: 'Kill the Handler and the dogs stop coming.' };
+const BOSS_INTRO = { juggernaut: 'A Juggernaut waits', mutant: 'The Mutated waits', bulwark: 'The Bulwark waits', handler: 'The Handler and his crawlers wait' };
+const BOSS_TIP = { juggernaut: 'Armored. Aim for the head.', mutant: 'It leaps. Punish the landing.', bulwark: 'Shield up. Bait the charge into a wall, then hit it.', handler: 'Kill the Handler and the crawlers stop coming.' };
 function bossFor(L) {
   const k = Math.floor(L / 5) - 1, pair = BOSSES[k % 2];
   const first = mulberry32(hashStr((daily ? daily.date : runSeed) + ':boss:' + (k % 2)))() < .5 ? 0 : 1;
@@ -2165,7 +2165,7 @@ function spawnEnemy(room, L, force) {
   const T = ETYPES[type], elite = !T.boss && (H() >= 3 ? L >= 2 && Math.random() < Math.min(.55, (L - 1) * .1) : L >= 3 && Math.random() < Math.min(.45, (L - 2) * .08));
   const gunModel = type === 'grunt' && L >= 3 && Math.random() < .22 ? 'dmr' : T.gun;
   const g = new THREE.Group(); g.rotation.order = 'YXZ';
-  const dog = type === 'dog' ? buildDog(elite ? [.025, .022, .02] : T.tint) : null; // elite dogs are black
+  const dog = type === 'dog' ? buildDog(elite ? [.07, .065, .06] : T.tint, elite ? 0xff9a20 : 0xff2a18) : null; // elite crawlers are black with an amber eye
   const model = dog ? dog.root : SkeletonUtils.clone(SOLDIER.scene);
   if (!dog) { model.scale.multiplyScalar(SOLDIER.fit); if (SOLDIER.flip) model.rotation.y = Math.PI; }
   g.add(model);
@@ -2178,7 +2178,7 @@ function spawnEnemy(room, L, force) {
     else { const t = elite ? [1.1, .9, .62] : T.tint; o.material.color.setRGB(t[0], t[1], t[2]); o.material.roughness = o.material.roughnessMap ? 1 : .85; mats.push(o.material); }
   });
   const B = {}; model.traverse(o => { if (o.isBone) B[o.name.replace(/^mixamorig:?/, '')] = o; });
-  if (dog) B.Spine2 = dog.torso; // where the blood pool spreads
+  // crawlers have no Spine2, so they leave no blood pool
   const mixer = dog ? null : new THREE.AnimationMixer(model), act = {};
   // Erik's rifle clips (RifleRun, Fire, Kneel) only for gun carriers; knife rushers and the mutant keep the open-handed run
   if (!dog) for (const n of ['Idle', 'Walk', 'Run', 'RifleRun', 'Fire', 'Kneel', 'Die']) {
@@ -3037,10 +3037,12 @@ const SFX = {
   slash() { if (!ac) return; noise(ac.currentTime, .18, .35, 900, 3800, 'bandpass', 1.4, false); },
   stabHit() { if (!ac) return; const t = ac.currentTime; tone(t, .16, .7, 95, 45); noise(t, .12, .55, 700, 200, 'lowpass', 1, true); noise(t + .01, .06, .25, 2500, 900, 'bandpass', 2, false); },
   melee() { if (!ac) return; noise(ac.currentTime, .15, .4, 2000, 500, 'bandpass', 2, false); },
-  bark(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .08, .7), n = Math.random() < .5 ? 2 : 1; for (let i = 0; i < n; i++) { const s = t + i * .2, f = rand(470, 560); tone(s, .11, v * .45, f, f * .55, 'sawtooth', true); tone(s, .09, v * .3, f * 1.5, f * .8, 'square', false); noise(s, .1, v * .5, 1500, 600, 'bandpass', 2.5); } },
-  growl(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .1, .7); tone(t, .4, v * .35, 92, 78, 'sawtooth', true); noise(t, .4, v * .45, 520, 300, 'bandpass', 3); },
-  bite() { if (!ac) return; const t = ac.currentTime; noise(t, .07, .55, 2600, 900, 'bandpass', 2, false); tone(t, .06, .25, 240, 90, 'square'); },
-  yelp(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .08, .6); tone(t, .22, v * .35, 820, 1350, 'triangle', true); tone(t + .2, .25, v * .25, 1150, 600, 'triangle', true); },
+  bark(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .08, .6), n = Math.random() < .5 ? 3 : 2; for (let i = 0; i < n; i++) { const s = t + i * .085, f = rand(1300, 2100); tone(s, .06, v * .28, f, f * (Math.random() < .5 ? 1.5 : .7), 'square', false); } noise(t, .12, v * .25, 4200, 2600, 'bandpass', 3); },
+  growl(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .1, .7); tone(t, .38, v * .3, 180, 620, 'sawtooth', true); tone(t, .38, v * .18, 365, 1240, 'square', false); noise(t, .3, v * .3, 1800, 900, 'bandpass', 2); },
+  bite() { if (!ac) return; const t = ac.currentTime; noise(t, .05, .6, 3800, 1600, 'bandpass', 2, false); tone(t, .09, .22, 880, 830, 'triangle', false); tone(t, .05, .25, 210, 90, 'square'); },
+  yelp(dist = 0) { this.zap(dist, .6); },
+  zap(dist = 0, k = 1) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .06, .6) * k; noise(t, .16, v * .55, 5200, 2400, 'highpass', 1, false); tone(t, .14, v * .2, 120, 118, 'sawtooth', false); noise(t + .07, .06, v * .4, 3000, 3000, 'bandpass', 4, false); },
+  powerDown(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.3 / (1 + dist * .1), .08, .6); tone(t, .55, v * .3, 900, 60, 'sawtooth', true); tone(t, .5, v * .18, 1800, 120, 'square', false); },
   lock(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.6 / (1 + dist * .06), .12, .45) * .3; for (let i = 0; i < 3; i++) tone(t + i * .45, .09, v, 1500 + i * 250, 1500 + i * 250, 'sine'); },
   whistle(dist = 0) { if (!ac) return; const t = ac.currentTime, v = clamp(1.5 / (1 + dist * .05), .15, .5) * .4; tone(t, .18, v, 1700, 2500, 'sine', true); tone(t + .22, .35, v, 2500, 1900, 'sine', true); },
   clang() { if (!ac) return; const t = ac.currentTime; tone(t, .6, .3, 420, 395, 'triangle', true); tone(t, .45, .2, 1130, 1100, 'sine', true); noise(t, .25, .5, 3200, 700, 'bandpass', 2); },
@@ -3610,12 +3612,12 @@ function traceBullet(o, dir, mult, drawTracer) {
       const head = h.object.userData.part === 'head';
       const dmg = baseDamage() * mult * (head ? (2.2 + .9 * U('crit')) * (cls() === 'marksman' ? 1.25 : 1) : 1) * (U('crit') && Math.random() < .1 * U('crit') ? 2 : 1);
       stats.hits++; if (head) stats.heads++;
-      const armored = e.T.armor && !head;
-      if (armored) { sparks.emit(h.point, 10, { speed: 6, color: [3, 1.8, .7], size: .03, life: .3, gravity: 9, dir: tmpV.copy(dir).negate(), spread: .9 }); SFX.tink(); }
+      const armored = e.T.armor && !head, bot = e.T.robot;
+      if (armored || bot) { sparks.emit(h.point, 10, { speed: 6, color: [3, 1.8, .7], size: .03, life: .3, gravity: 9, dir: tmpV.copy(dir).negate(), spread: .9 }); SFX.tink(); }
       else smoke.emit(h.point, head ? 14 : 8, { speed: 2.4, color: [.28, .02, .02], size: .07, life: .5, gravity: 6, dir, spread: .8, alpha: .9 });
       e.knock.addScaledVector(dir, (head ? 1.4 : .8) * (wep().model === 'shotgun' ? 1.6 : 1));
       e.hitDir.copy(dir);
-      if (!armored && Math.random() < (head ? .9 : .45)) bloodSpray(h.point, dir, head);
+      if (!armored && !bot && Math.random() < (head ? .9 : .45)) bloodSpray(h.point, dir, head);
       damageEnemy(e, dmg, h.point, head, 'gun');
       if (U('chain')) chainFrom(e, dmg * .6, hitSet);
       if (pierce > 0) { pierce--; continue; }
@@ -3777,7 +3779,7 @@ function detonateFrag(p, owner) {
     const f = 1 - d / R, dmg = (pl ? 190 * boost * (1 + .25 * U('dmg')) : 110) * (.25 + .75 * f);
     tmpV.subVectors(e.g.position, p).setY(0).normalize();
     e.knock.addScaledVector(tmpV, 11 * f); e.knock.y = Math.max(e.knock.y, 4 * f); e.hitDir.copy(tmpV);
-    if (f > .35 && !e.T.armor) bloodSpray(nB.clone(), tmpV.clone(), true);
+    if (f > .35 && !e.T.armor && !e.T.robot) bloodSpray(nB.clone(), tmpV.clone(), true);
     if (e.stunT <= 0 && !e.boss) e.staggerT = .5;
     damageEnemy(e, dmg, nB.clone(), false, 'frag');
   }
@@ -3883,9 +3885,10 @@ function stabStrike() {
   const behind = !e.alerted || (efx * tx + efz * tz) / tl < -.2;
   let dmg = 150 * (1 + .2 * (floorN - 1)) * (1 + .4 * M('blade')) * (1 + .25 * U('dmg'));
   if (behind) dmg *= 3;
-  const pt = new V3(e.g.position.x, (e.dog ? .55 : 1.3) * e.g.scale.y + e.g.position.y, e.g.position.z);
+  const pt = new V3(e.g.position.x, (e.dog ? .35 : 1.3) * e.g.scale.y + e.g.position.y, e.g.position.z);
   camera.getWorldDirection(camDir);
-  smoke.emit(pt, 24, { speed: 3, color: [.3, .02, .02], size: .08, life: .6, gravity: 7, dir: camDir, spread: .9, alpha: .9 });
+  if (e.T.robot) { sparks.emit(pt, 22, { speed: 5, color: [3, 2, .9], size: .03, life: .35, gravity: 9, dir: camDir, spread: 1 }); SFX.zap(0, 1); }
+  else smoke.emit(pt, 24, { speed: 3, color: [.3, .02, .02], size: .08, life: .6, gravity: 7, dir: camDir, spread: .9, alpha: .9 });
   e.knock.addScaledVector(tmpV.set(-Math.sin(yaw), 0, -Math.cos(yaw)), 6);
   e.windup = 0; e.burst = 0;
   damageEnemy(e, dmg, pt, false, 'stab');
@@ -3937,7 +3940,7 @@ function killEnemy(e) {
   if (e.shield) dropShield(e, e.hitDir);
   if (e.laser) e.laser.m.visible = e.laser.glint.visible = false;
   if (e.lane) e.lane.visible = false;
-  if (e.dog) SFX.yelp(e.g.position.distanceTo(P.pos));
+  if (e.dog) { SFX.zap(e.g.position.distanceTo(P.pos), 1); SFX.powerDown(e.g.position.distanceTo(P.pos)); }
   if (e.gun) { level.attach(e.gun); e.drop = { v: new V3(rand(-1, 1), rand(1.5, 3), rand(-1, 1)), w: new V3(rand(-5, 5), rand(-5, 5), rand(-5, 5)), rest: false }; addGroundGun(e.gun, GUNKIND[e.gunModel], null); }
   SFX.kill();
   if (e.boss) {
@@ -4296,7 +4299,7 @@ const runScore = () => stats.floors * 1000 + stats.kills * 100 + stats.heads * 5
 const fmtN = n => Number(n || 0).toLocaleString('en-US');
 // ---------- career record (meta.car) and the run summary ----------
 const SRC_NAME = { carbine: 'Carbine', marksman: 'Marksman', shotgun: 'Shotgun', sidearm: 'Sidearm', knife: 'Knife', frag: 'Frags', mutation: 'Mutations', bomb: 'The bomb' };
-const FOE_NAME = { grunt: 'rifleman', rusher: 'rusher', heavy: 'shotgun heavy', juggernaut: 'the Juggernaut', mutant: 'the Mutated', bulwark: 'the Bulwark', handler: 'the Handler', shield: 'shield carrier', sniper: 'sniper', dog: 'attack dog', bomb: 'the bomb', nade: 'a grenade', self: 'your own frag' };
+const FOE_NAME = { grunt: 'rifleman', rusher: 'rusher', heavy: 'shotgun heavy', juggernaut: 'the Juggernaut', mutant: 'the Mutated', bulwark: 'the Bulwark', handler: 'the Handler', shield: 'shield carrier', sniper: 'sniper', dog: 'crawler drone', bomb: 'the bomb', nade: 'a grenade', self: 'your own frag' };
 const CAR0 = () => ({ runs: 0, kills: 0, heads: 0, shots: 0, hits: 0, stabs: 0, bosses: 0, elites: 0, floors: 0, time: 0, dmg: 0, deep: 0, bestKills: 0, bestScore: 0, obj: 0, wk: {}, mk: {}, kb: {} });
 const career = () => { meta.car = Object.assign(CAR0(), meta.car || {}); return meta.car; };
 const fmtT = s => { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s / 60) % 60; return h ? `${h}h ${String(m).padStart(2, '0')}m` : `${m}:${String(s % 60).padStart(2, '0')}`; };
@@ -4675,12 +4678,14 @@ function updateDead(e, dt) {
   const t = e.deathT, D = e.deathKind, sd = e.deathSide;
   let fall;
   if (e.dog) {
-    // over on its side, legs out
-    const Dg = e.dog; fall = smooth(0, .35, t);
-    const rz = e.deathSide * fall * Math.PI / 2 * .94, h = .13 * fall;
-    g.rotation.set(0, e.yaw0, rz); e.model.position.set(h * Math.sin(rz), h * Math.cos(rz), 0);
-    for (const L of Dg.legs) { L.hip.rotation.x += ((L.front ? -.5 : .45) - L.hip.rotation.x) * Math.min(1, dt * 8); L.knee.rotation.x += (.15 - L.knee.rotation.x) * Math.min(1, dt * 8); }
-    Dg.body.rotation.set(0, 0, 0); Dg.body.position.set(0, .57, 0); Dg.neck.rotation.x += (1.2 - Dg.neck.rotation.x) * Math.min(1, dt * 6); Dg.tail.rotation.x = -2.6; Dg.jaw.rotation.x = .25;
+    // legs give out, the chassis drops and the eye goes dark; it keeps shorting out for a while
+    const Dg = e.dog; fall = smooth(0, .3, t);
+    g.rotation.set(0, e.yaw0, e.deathSide * .12 * fall); e.model.position.set(0, 0, 0);
+    for (const L of Dg.legs) { L.hip.rotation.y *= Math.exp(-dt * 6); L.hip.rotation.z += (L.side * (1.55 + .2 * (L.front ? 1 : -1)) - L.hip.rotation.z) * Math.min(1, dt * 10); L.knee.rotation.z += (L.side * -.25 - L.knee.rotation.z) * Math.min(1, dt * 10); }
+    Dg.body.rotation.set(-.08 * fall, 0, 0); Dg.body.position.set(0, ROBY - (ROBY - .1) * fall, 0); Dg.neck.rotation.x += (.55 - Dg.neck.rotation.x) * Math.min(1, dt * 6); Dg.tail.rotation.x = -1.2 * fall; Dg.jaw.rotation.x = .3;
+    Dg.eyeM.emissiveIntensity = t < .5 && Math.sin(t * 70) > 0 ? 2.5 : 0;
+    if (t < 2.4 && Math.random() < dt * (t < .3 ? 30 : 4)) { Dg.body.getWorldPosition(tmpV); tmpV.y += .1; sparks.emit(tmpV, 8, { speed: 3.5, color: [3, 2.2, 1], size: .025, life: .35, gravity: 9 }); if (t > .3) SFX.zap(g.position.distanceTo(P.pos), .4); }
+    if (t < 3.5 && Math.random() < dt * 6) { Dg.body.getWorldPosition(tmpV); tmpV.y += .12; smoke.emit(tmpV, 1, { speed: .4, color: [.1, .1, .1], size: .22, life: 1.4, grow: 1, drag: 2, alpha: .3, gravity: -1.2 }); }
   } else if (D === 'run') {
     const A = e.act, die = A.Die, w = smooth(0, .15, t);
     for (const n in A) if (A[n] !== die) A[n].setEffectiveWeight((e.w0[n] || 0) * (1 - w));
@@ -4722,80 +4727,94 @@ function updateDead(e, dt) {
   if (e.deathT > 9) g.position.y -= dt * .3;
   if (e.deathT > 12) { scene.remove(g); e.gone = true; }
 }
-// ---------- attack dogs: a procedural quadruped, no skeleton ----------
-const DOGG = {}, dogDark = new THREE.MeshStandardMaterial({ color: 0x17120e, roughness: .8, envMapIntensity: .45 }), dogNose = new THREE.MeshStandardMaterial({ color: 0x050505, roughness: .25, envMapIntensity: .6 });
+// ---------- crawler drones (they took the attack dogs' place): a procedural four-legged robot, no skeleton ----------
+const DOGG = {}, dogDark = new THREE.MeshStandardMaterial({ color: 0x14161a, metalness: .6, roughness: .5, envMapIntensity: .6 }), dogNose = new THREE.MeshStandardMaterial({ color: 0x0a0b0d, metalness: .9, roughness: .2, envMapIntensity: 1 });
+const ROBY = .3, FEMUR = .24, TIBIA = .37, SPLAY = 2.05, RKNEE = -1.75;
 function dogGeo() {
   if (DOGG.torso) return DOGG;
   const k = g => (g.userData.keep = true, g);
-  DOGG.torso = k(new THREE.CapsuleGeometry(.15, .46, 4, 10).rotateX(Math.PI / 2));
-  DOGG.chest = k(new THREE.SphereGeometry(.17, 12, 8));
-  DOGG.vest = k(new RoundedBoxGeometry(.32, .2, .36, 2, .05));
-  DOGG.neck = k(new THREE.CapsuleGeometry(.075, .16, 4, 8).translate(0, .12, 0));
-  DOGG.skull = k(new THREE.SphereGeometry(.105, 12, 8));
-  DOGG.snout = k(new RoundedBoxGeometry(.08, .07, .2, 2, .025));
-  DOGG.jaw = k(new RoundedBoxGeometry(.07, .025, .14, 2, .01).translate(0, 0, .07));
-  DOGG.nose = k(new THREE.SphereGeometry(.024, 8, 6));
-  DOGG.ear = k(new THREE.ConeGeometry(.045, .15, 4).translate(0, .075, 0));
-  DOGG.upper = k(new THREE.CapsuleGeometry(.048, .2, 4, 8).translate(0, -.13, 0));
-  DOGG.lower = k(new THREE.CapsuleGeometry(.033, .21, 4, 8).translate(0, -.13, 0));
-  DOGG.paw = k(new THREE.SphereGeometry(.042, 8, 6));
-  DOGG.tail = k(new THREE.CapsuleGeometry(.032, .3, 4, 6).translate(0, .17, 0));
+  DOGG.torso = k(new RoundedBoxGeometry(.34, .13, .6, 3, .045));
+  DOGG.plate = k(new RoundedBoxGeometry(.25, .045, .4, 2, .018));
+  DOGG.belly = k(new RoundedBoxGeometry(.22, .05, .44, 2, .02));
+  DOGG.strip = k(new THREE.BoxGeometry(.012, .016, .3));
+  DOGG.mount = k(new THREE.CylinderGeometry(.045, .045, .07, 12).rotateX(Math.PI / 2));
+  DOGG.neck = k(new THREE.CylinderGeometry(.035, .04, .1, 10).rotateX(Math.PI / 2).translate(0, 0, .05));
+  DOGG.skull = k(new RoundedBoxGeometry(.17, .09, .15, 2, .025));
+  DOGG.visor = k(new RoundedBoxGeometry(.13, .026, .02, 1, .008));
+  DOGG.lens = k(new THREE.CylinderGeometry(.016, .016, .02, 12).rotateX(Math.PI / 2));
+  DOGG.claw = k(new THREE.BoxGeometry(.022, .022, .12).translate(0, 0, .06));
+  DOGG.tip = k(new THREE.ConeGeometry(.014, .04, 6).rotateX(Math.PI / 2).translate(0, 0, .14));
+  DOGG.upper = k(new RoundedBoxGeometry(.055, FEMUR + .03, .06, 2, .015).translate(0, -FEMUR / 2, 0));
+  DOGG.piston = k(new THREE.CylinderGeometry(.011, .011, FEMUR * .8, 6).translate(.03, -FEMUR / 2, 0));
+  DOGG.joint = k(new THREE.SphereGeometry(.036, 10, 8));
+  DOGG.lower = k(new THREE.CylinderGeometry(.026, .014, TIBIA, 8).translate(0, -TIBIA / 2, 0));
+  DOGG.paw = k(new THREE.ConeGeometry(.03, .05, 8).rotateX(Math.PI).translate(0, -TIBIA - .01, 0));
+  DOGG.tail = k(new THREE.CylinderGeometry(.006, .009, .34, 5).translate(0, .17, 0));
+  DOGG.bulb = k(new THREE.SphereGeometry(.017, 8, 6));
   return DOGG;
 }
-function buildDog(tint) {
-  const G = dogGeo(), fur = new THREE.MeshStandardMaterial({ color: new THREE.Color(tint[0], tint[1], tint[2]), roughness: .95, envMapIntensity: .45 }); fur.userData.perFloor = true;
+function buildDog(tint, eyeHex) {
+  const G = dogGeo();
+  const fur = new THREE.MeshStandardMaterial({ color: new THREE.Color(tint[0], tint[1], tint[2]), metalness: .75, roughness: .38, envMapIntensity: .9 }); fur.userData.perFloor = true;
+  const eyeM = new THREE.MeshStandardMaterial({ color: 0x050505, emissive: eyeHex, emissiveIntensity: 3.2 }); eyeM.userData.perFloor = true;
   const root = new THREE.Group();
   const M = (geo, mat, parent, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = !LOWFX; m.receiveShadow = true; m.frustumCulled = false; parent.add(m); return m; };
-  const body = new THREE.Group(); body.position.y = .57; root.add(body);
-  const torso = M(G.torso, fur, body, 0, .01, -.04); torso.scale.set(.78, .9, 1);
-  M(G.chest, fur, body, 0, -.03, .2).scale.set(.88, 1.15, 1.05);
-  M(G.vest, MAT.fabric, body, 0, .05, .08);
-  const neck = new THREE.Group(); neck.position.set(0, .06, .3); neck.rotation.x = .75; body.add(neck);
-  M(G.neck, fur, neck, 0, 0, 0);
-  const head = new THREE.Group(); head.position.y = .24; head.rotation.x = -.75; neck.add(head);
-  M(G.skull, fur, head, 0, 0, -.01).scale.set(.82, .8, 1.2);
-  M(G.snout, dogDark, head, 0, -.03, .15); M(G.nose, dogNose, head, 0, -.008, .255);
-  const jaw = new THREE.Group(); jaw.position.set(0, -.065, .06); head.add(jaw); M(G.jaw, dogDark, jaw, 0, 0, 0);
-  for (const sx of [-1, 1]) M(G.ear, dogDark, head, sx * .055, .07, -.03).rotation.set(-.15, 0, -sx * .25);
+  const body = new THREE.Group(); body.position.y = ROBY; root.add(body);
+  const torso = M(G.torso, fur, body, 0, 0, 0);
+  M(G.plate, dogDark, body, 0, .078, -.03); M(G.belly, dogDark, body, 0, -.075, 0);
+  for (const sx of [-1, 1]) M(G.strip, eyeM, body, sx * .171, .01, -.04);
+  const neck = new THREE.Group(); neck.position.set(0, .02, .3); body.add(neck);
+  M(G.neck, dogDark, neck, 0, 0, 0);
+  const head = new THREE.Group(); head.position.z = .12; neck.add(head);
+  M(G.skull, fur, head, 0, .01, .02); M(G.visor, eyeM, head, 0, .022, .096);
+  for (const sx of [-1, 1]) M(G.lens, eyeM, head, sx * .045, -.015, .096);
+  // the "jaw" is a pair of pincers under the sensor head
+  const jaw = new THREE.Group(); jaw.position.set(0, -.04, .06); head.add(jaw);
+  for (const sx of [-1, 1]) M(G.claw, dogNose, jaw, sx * .045, 0, 0).rotation.y = -sx * .18;
   const legs = [];
-  for (const [x, z, front] of [[-.085, .22, 1], [.085, .22, 1], [-.08, -.25, 0], [.08, -.25, 0]]) {
-    const hip = new THREE.Group(); hip.position.set(x, 0, z); body.add(hip);
-    M(G.upper, fur, hip, 0, 0, 0).scale.set(front ? 1 : 1.3, 1, front ? 1 : 1.35);
-    const knee = new THREE.Group(); knee.position.y = -.26; hip.add(knee);
-    M(G.lower, fur, knee, 0, 0, 0); M(G.paw, dogDark, knee, 0, -.27, .015);
-    legs.push({ hip, knee, front });
+  for (const [x, z, front] of [[-.17, .2, 1], [.17, .2, 1], [-.17, -.21, 0], [.17, -.21, 0]]) {
+    const side = Math.sign(x);
+    M(G.mount, dogDark, body, x, -.01, z).rotation.z = Math.PI / 2;
+    const hip = new THREE.Group(); hip.position.set(x + side * .02, -.01, z); body.add(hip);
+    M(G.upper, fur, hip, 0, 0, 0); M(G.piston, dogNose, hip, 0, 0, 0);
+    const knee = new THREE.Group(); knee.position.y = -FEMUR; hip.add(knee);
+    M(G.joint, dogDark, knee, 0, 0, 0); M(G.lower, fur, knee, 0, 0, 0); M(G.paw, dogNose, knee, 0, 0, 0);
+    legs.push({ hip, knee, front, side });
   }
-  const tailB = new THREE.Group(); tailB.position.set(0, .07, -.38); body.add(tailB);
-  const tail = new THREE.Group(); tail.rotation.x = -2.2; tailB.add(tail); M(G.tail, fur, tail, 0, 0, 0);
-  return { root, body, torso, neck, head, jaw, tailB, tail, legs, mats: [fur], phase: Math.random(), bite: 0, sit: 1 };
+  // sensor mast at the back, swaying like an antenna
+  const tailB = new THREE.Group(); tailB.position.set(.09, .08, -.25); body.add(tailB);
+  const tail = new THREE.Group(); tail.rotation.x = -.35; tailB.add(tail); M(G.tail, dogNose, tail, 0, 0, 0); M(G.bulb, eyeM, tail, 0, .34, 0);
+  return { root, body, torso, neck, head, jaw, tailB, tail, legs, mats: [fur], eyeM, eyeHex, phase: Math.random(), bite: 0, sit: 1, robot: true };
 }
-// trot when walking, gallop when running; sits until it is set loose
+// diagonal-pair crawl when walking, a faster scuttle when running; folded flat until it is switched on
 function poseDog(e, dt, vs, stunned) {
   const D = e.dog, run = smooth(3, 5.5, vs), mov = smooth(.2, 1, vs), sit = D.sit;
-  D.phase = (D.phase + vs / THREE.MathUtils.lerp(.9, 1.6, run) * dt) % 1;
+  D.phase = (D.phase + vs / THREE.MathUtils.lerp(.75, 1.15, run) * dt) % 1;
   D.bite = Math.max(0, D.bite - dt * 4);
-  const ph = D.phase * Math.PI * 2, OF = [[0, .5, .5, 0], [0, .08, .55, .63]];
+  const ph = D.phase * Math.PI * 2, OF = [0, .5, .5, 0];
   for (let i = 0; i < 4; i++) {
-    const L = D.legs[i], a = ph + (OF[0][i] * (1 - run) + OF[1][i] * run) * Math.PI * 2;
-    const sw = Math.sin(a), lift = Math.max(0, Math.cos(a)), amp = (.45 + .35 * run) * mov;
-    if (L.front) { L.hip.rotation.x = -sw * amp + .45 * sit; L.knee.rotation.x = lift * (.4 + .6 * run) * mov; }
-    else { L.hip.rotation.x = (-.18 - sw * amp) * (1 - sit) - 1.3 * sit; L.knee.rotation.x = (.28 + lift * (.3 + .4 * run) * mov) * (1 - sit) + 2.3 * sit; }
+    const L = D.legs[i], a = ph + OF[i] * Math.PI * 2;
+    const sw = Math.sin(a), lift = Math.max(0, Math.cos(a)) * mov, amp = (.32 + .18 * run) * mov;
+    L.hip.rotation.set(0, (L.front ? 1 : -1) * L.side * .35 - sw * amp, L.side * (SPLAY + .35 * lift + .5 * sit));
+    L.knee.rotation.set(0, 0, L.side * (RKNEE - .25 * lift - .55 * sit));
   }
-  D.body.rotation.x = .07 * run * Math.sin(ph) - .45 * sit;
-  D.body.rotation.z = e.flinch * .3 * e.hitSide;
-  D.body.position.y = .57 + .03 * mov * Math.cos(ph * 2) - .14 * sit; D.body.position.z = -.1 * sit;
-  D.neck.rotation.x = .75 + .1 * mov * Math.sin(ph * 2) + .35 * D.bite + .4 * sit - (e.leap ? .3 : 0);
-  D.head.rotation.y = stunned ? Math.sin(time * 14) * .4 : 0;
-  D.jaw.rotation.x = .55 * Math.sin(D.bite * Math.PI) + (e.alerted ? .12 * (1 + Math.sin(time * 13 + e.phase * 7)) * (.3 + mov) : 0);
-  D.tailB.rotation.y = Math.sin(time * (e.alerted ? 9 : 3) + e.phase * 9) * (e.alerted ? .2 : .45);
-  D.tail.rotation.x = e.alerted ? -1.35 : -2.2;
+  D.body.rotation.x = .04 * run * Math.sin(ph * 2) - .1 * D.bite;
+  D.body.rotation.z = e.flinch * .3 * e.hitSide + .03 * mov * Math.sin(ph);
+  D.body.position.y = ROBY + .025 * mov * Math.abs(Math.cos(ph)) - .2 * sit; D.body.position.z = 0;
+  D.neck.rotation.x = -.15 + .4 * D.bite - .2 * sit - (e.leap ? .25 : 0);
+  D.head.rotation.y = stunned ? Math.sin(time * 14) * .5 : e.alerted ? 0 : Math.sin(time * .9 + D.phase * 9) * .5 * (1 - sit);
+  D.jaw.rotation.x = .5 * Math.sin(D.bite * Math.PI) + (e.alerted ? .08 * (1 + Math.sin(time * 17 + e.phase * 7)) * (.3 + mov) : 0);
+  D.tailB.rotation.z = Math.sin(time * (e.alerted ? 7 : 2) + e.phase * 9) * (e.alerted ? .12 : .25);
+  D.tail.rotation.x = e.alerted ? -.15 : -.35 - .9 * sit;
+  // the eye strip powers up when it activates and flickers while stunned
+  D.eyeM.emissiveIntensity = (1 - .85 * sit) * (stunned ? (Math.sin(time * 40) > 0 ? 3.5 : .4) : 3.2 + (e.alerted ? .8 * Math.sin(time * 9) : 0));
 }
 function dogProxies(e) {
   const D = e.dog, p = e.parts, s = e.g.scale.x;
   e.g.updateMatrixWorld(true);
-  D.head.getWorldPosition(p[0].position); p[0].scale.setScalar(.14 * s); p[0].updateMatrixWorld();
-  D.body.matrixWorld.decompose(p[1].position, p[1].quaternion, tmpV3); p[1].scale.set(.32 * s, .4 * s, .95 * s); p[1].updateMatrixWorld();
-  e.marker.position.copy(p[0].position); e.marker.position.y += .4; e.marker.visible = U('crit') > 0;
+  D.head.getWorldPosition(p[0].position); p[0].scale.setScalar(.15 * s); p[0].updateMatrixWorld();
+  D.body.matrixWorld.decompose(p[1].position, p[1].quaternion, tmpV3); p[1].scale.set(.5 * s, .26 * s, .78 * s); p[1].updateMatrixWorld();
+  e.marker.position.copy(p[0].position); e.marker.position.y += .35; e.marker.visible = U('crit') > 0;
 }
 function dogBite(e, mul) {
   e.meleeCd = 1; e.dog.bite = 1; SFX.bite();
@@ -4805,7 +4824,7 @@ function updateDog(e, dt) {
   const g = e.g, D = e.dog;
   const dx = P.pos.x - g.position.x, dz = P.pos.z - g.position.z, dist = Math.hypot(dx, dz);
   e.losT -= dt;
-  if (e.losT <= 0) { e.losT = .2; eEye.copy(g.position); eEye.y += .75; e.los = lineOfSight(eEye, eye); }
+  if (e.losT <= 0) { e.losT = .2; eEye.copy(g.position); eEye.y += .45; e.los = lineOfSight(eEye, eye); }
   const doorOpen = !e.room.entryDoor || e.room.entryDoor.open;
   if (!e.alerted && (e.room.active || (e.los && doorOpen && dist < 30))) alertEnemy(e);
   const fl = e.flash > 0; if (fl) e.flash -= dt;
@@ -4879,7 +4898,7 @@ function handlerTick(e, dt, dist) {
   if (!e.enraged && e.hp < e.maxHp * .5) { e.enraged = true; e.whistleCd = 0; e.speed *= 1.2; callout('Handler enraged', 'He is releasing the whole kennel', 1.6); }
   const dogs = e.room.enemies.reduce((n, o) => n + (o.dog && !o.dead ? 1 : 0), 0);
   if (e.whistleCd > 0 || dogs >= (e.enraged ? 5 : 3)) return;
-  e.whistleCd = e.enraged ? 7 : 11; SFX.whistle(dist); say(e, pick(['Sic him!', 'Go! Get him!', 'Fass!']), true);
+  e.whistleCd = e.enraged ? 7 : 11; SFX.whistle(dist); say(e, pick(['Crawlers, go!', 'Releasing drones!', 'Sic him!']), true);
   for (let i = 0; i < 2; i++) {
     const d = spawnEnemy(e.room, floorN, 'dog'); d.g.position.set(e.g.position.x + (i ? 1 : -1) * rand(.6, 1.2), 0, e.g.position.z + rand(.3, 1));
     collideCircle(d.g.position, d.radius, 0, .9); d.alerted = true; d.dog.sit = 0; if (e.enraged) d.speed *= 1.15;
