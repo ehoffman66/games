@@ -231,7 +231,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 36</p>
+    <p class="ver" id="tVer">Version 37</p>
   </div>
 </section>
 
@@ -540,12 +540,13 @@ const cv = document.getElementById('cv'), g = cv.getContext('2d');
 let dpr = 1, scale = 1, viewW = 560, viewH = VIEW_H, offY = 0, vignette = null;
 function resize(){
   dpr = Math.min(2, window.devicePixelRatio || 1);
-  const w = window.innerWidth, h = window.innerHeight;
+  const w = window.innerWidth, h = window.innerHeight; resize.w = w; resize.h = h;
   cv.width = Math.round(w*dpr); cv.height = Math.round(h*dpr);
   scale = Math.min(h / VIEW_H, w / 560);
   viewW = w / scale; viewH = h / scale; offY = viewH - VIEW_H; vignette = null;
 }
-window.addEventListener('resize', resize); resize();
+// phones don't always send a resize after turning or when the browser bars slide, which left the world stretched; frame() also checks every frame
+window.addEventListener('resize', resize); window.addEventListener('orientationchange', () => setTimeout(resize, 200)); if (window.visualViewport) visualViewport.addEventListener('resize', resize); resize();
 
 // ---------- helpers ----------
 function rr(c, x, y, w, h, r){ const R = Array.isArray(r) ? r : [r, r, r, r]; c.beginPath(); c.moveTo(x + R[0], y); c.arcTo(x+w, y, x+w, y+h, R[1]); c.arcTo(x+w, y+h, x, y+h, R[2]); c.arcTo(x, y+h, x, y, R[3]); c.arcTo(x, y, x+w, y, R[0]); c.closePath(); }
@@ -1970,7 +1971,7 @@ function renderVillage(){
 }
 let dtLast = 0;
 function frame(now){
-  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; clock += dt; dtLast = dt; panUI(); syncMusic(); watchFps(dt);
+  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI(); syncMusic(); watchFps(dt);
   if (state === 'level'){ let s = dt; while (s > 0 && state === 'level'){ const h = Math.min(s, 1/120); step(h); s -= h; } }
   g.setTransform(dpr*scale, 0, 0, dpr*scale, 0, 0);
   const use3D = R3 && R3.kidsReady && !R3.failed;
