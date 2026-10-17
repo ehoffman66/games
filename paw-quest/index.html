@@ -249,7 +249,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 47</p>
+    <p class="ver" id="tVer">Version 48</p>
   </div>
 </section>
 
@@ -744,6 +744,12 @@ function drawCritter(c, kind, x, y, w, h, t, squish){
     c.save(); c.translate(0, -10); c.rotate(-0.5 - fl); ep(c, 1, -6, 5, 9); fs(c, 'rgba(160,225,255,.85)', 1); c.restore();
     c.beginPath(); c.moveTo(-10, -9); c.lineTo(-17, -15); c.lineTo(-15, -9); c.lineTo(-17, -3); c.closePath(); fs(c, '#4f8fe8', 1.2);
     ep(c, 0, -9, 11, 5.5); fs(c, lg(c, 0, -15, 0, -3, '#3f7fe0', '#e8f4ff'), 1.4); cp(c, 6, -10, 2.2); fs(c, '#fff', 1); circle(c, 6.6, -10, 1.1, OL);
+  } else if (kind === 'burrow'){
+    const wg = Math.sin(t*6)*0.15;
+    [[-3, -0.15], [3, 0.15]].forEach(([x, r]) => { c.save(); c.translate(x, -15); c.rotate(r + wg); ep(c, 0, -7, 2.4, 7.5); fs(c, '#fff', 1.2); ep(c, 0, -7, 1.1, 5.5); c.fillStyle = '#ffb3cf'; c.fill(); c.restore(); });
+    circle(c, 0, -10, 7, '#fff'); c.lineWidth = 1.4; c.strokeStyle = OL; c.beginPath(); c.arc(0, -10, 7, 0, 2*Math.PI); c.stroke();
+    circle(c, -2.5, -11, 1.2, OL); circle(c, 2.5, -11, 1.2, OL); circle(c, 0, -8.5, 1.1, '#ff8fb5');
+    ep(c, 0, -2, 13, 4); fs(c, '#f4f8ff', 1.3);
   } else if (kind === 'snowman'){
     const fl = Math.sin(t*10)*0.5; c.strokeStyle = '#6b4423'; c.lineWidth = 1.8;
     c.beginPath(); c.moveTo(-6, -11); c.lineTo(-15, -15 - fl*6); c.moveTo(6, -11); c.lineTo(15, -15 - fl*6); c.stroke();
@@ -1966,7 +1972,7 @@ function renderLevel(){
   if (L.dollar && !L.dollar.got){ const d = L.dollar, by = d.y + Math.sin(clock*3)*3; g.save(); g.translate(d.x, by); g.rotate(Math.sin(clock*2)*0.15); rr(g, -15, -9, 30, 18, 3); g.fillStyle = '#7ccf6a'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#2f6b2a'; g.stroke(); g.fillStyle = '#2f6b2a'; g.font = '700 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('$', 0, 1); g.restore(); }
   if (L.bone && !L.bone.got && !L.bone.hidden) drawBone(g, L.bone.x, L.bone.y + Math.sin(clock*3)*3, clock);
   L.items.forEach(it => { if (it.got) return; g.save(); g.font = '24px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(POWERS[it.kind].ico, it.x, it.y + Math.sin(clock*3)*3); g.restore(); });
-  L.critters.forEach(cr => { if (cr.alive || cr.squish > 0){ if (cr.alive) shadowAt(cr.x + 13, cr.y + cr.h, 13); drawCritter(g, th.critter, cr.x, cr.y, cr.w, cr.h, clock, cr.alive ? 0 : 1); } });
+  L.critters.forEach(cr => { if (cr.alive || cr.squish > 0){ if (cr.alive) shadowAt(cr.x + 13, cr.y + cr.h, 13); drawCritter(g, th.critter === 'penguin' ? 'burrow' : th.critter, cr.x, cr.y, cr.w, cr.h, clock, cr.alive ? 0 : 1); } });
   const B = L.boss; if (B && (B.alive || B.squish > 0) && !(B.inv > 0 && Math.floor(clock*14) % 2)){ if (B.alive) shadowAt(B.x + B.w/2, B.y + B.h, 38);
     g.save(); g.translate(B.x + B.w/2, B.y + B.h); g.scale(-B.dir*3, 3); drawCritter(g, th.critter, -13, -22, 26, 22, clock*0.7, B.alive ? 0 : 1);
     if (B.alive){ g.fillStyle = '#ffd23a'; g.strokeStyle = OL; g.lineWidth = .6; g.beginPath(); g.moveTo(-7, -23); g.lineTo(-7, -29); g.lineTo(-3.5, -26); g.lineTo(0, -31); g.lineTo(3.5, -26); g.lineTo(7, -29); g.lineTo(7, -23); g.closePath(); g.fill(); g.stroke(); }
@@ -2266,7 +2272,7 @@ function themeThumb(cvs, key){
   if (key === 'beach') palm(c, 30, 74, 46, 1);
   if (key === 'forest'){ pine(c, 25, 76, 50, '#163a38'); pine(c, 150, 76, 40, '#163a38'); }
   c.fillStyle = th.dirt; c.fillRect(0, 76, 170, 20); c.fillStyle = th.grass; rr(c, -2, 72, 174, 8, 3); c.fill(); c.fillStyle = 'rgba(255,255,255,.4)'; c.fillRect(0, 73, 170, 1.5);
-  drawCritter(c, th.critter, 52, 50, 26, 22, 0, 0);
+  drawCritter(c, th.critter === 'penguin' ? 'burrow' : th.critter, 52, 50, 26, 22, 0, 0);
   drawFruit(c, th.fruit, 98, 40, 0);
   drawDog(c, save.dog, 138, 72, 0, -1, true);
 }
