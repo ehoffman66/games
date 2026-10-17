@@ -181,6 +181,9 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 .chips{display:flex;gap:3px;height:52px;align-items:flex-end;margin:6px 0 4px}
 .chips i{display:block;width:22px;border:2.5px solid var(--ink);border-radius:7px}
 .hairsw{width:60px;height:60px;border-radius:50%;border:3px solid var(--ink);margin:4px 0}
+.home .wkids{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}.home .wkids .opt{flex:none}.home .wgrid{min-height:96px}
+@media (max-height:520px){.home .card{max-width:400px;gap:6px;padding:12px 14px}.home h2{font-size:22px}.home .tabs button,.home .wkids .opt{padding:4px 12px;font-size:14px}.home .wact .btn{padding:6px 14px;font-size:16px}.home .wt canvas{width:70px;height:58px}.home .wgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}}
+.hroom{position:relative}.hroom .lk{font-size:13px;margin-left:4px}.home .hsw{width:62px;height:52px;border-radius:12px;border:3px solid var(--ink);margin:4px 0}
 .wact{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .wact .msg{font-weight:800;font-size:15px}
 .wspin{position:fixed;bottom:max(18px,env(safe-area-inset-bottom,0px));left:max(18px,env(safe-area-inset-left,0px));display:flex;gap:12px;z-index:21}
@@ -196,6 +199,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
   <div class="row">
     <button class="btn green" id="vPlay">Adventure</button>
     <button class="btn" id="vShop">Shop</button>
+    <button class="btn" id="vHome">Our house</button>
     <button class="btn" id="vWard">Dress up</button>
     <button class="btn" id="vPet">Apollo</button>
     <button class="btn" id="vStick">Stickers</button>
@@ -231,7 +235,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 38</p>
+    <p class="ver" id="tVer">Version 39</p>
   </div>
 </section>
 
@@ -302,6 +306,17 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     <h2>Make it yours</h2>
     <div class="make" id="makeList"></div>
     <div class="row"><button class="btn green" id="makeDone">Done</button></div>
+  </div>
+</section>
+
+<section class="screen ward home" id="sHome" hidden>
+  <div class="card" id="hmCard">
+    <div class="wtop"><h2>Our house</h2><div class="coinpill"><span class="coin-ico"></span><span id="hmCoins">0</span></div></div>
+    <div class="wkids" id="hmRooms"></div>
+    <div class="tabs" id="hmTabs" role="tablist" style="margin:0"></div>
+    <p class="msg" id="hmNote" hidden></p>
+    <div class="wgrid" id="hmGrid"></div>
+    <div class="wact"><span class="msg" id="hmMsg"></span><span id="hmBuyBox"></span><button class="btn green" id="hmDone">Back to the village</button></div>
   </div>
 </section>
 
@@ -1574,6 +1589,8 @@ const STICKERS = [
   ['pstar', '🌟', 'Star power', 'Grab a star shield'],
   ['pmagnet', '🧲', 'Coin magnet', 'Grab a coin magnet'],
   ['shop5', '🛍️', 'Shopper', 'Buy 5 things in the village'],
+  ['home5', '🏠', 'Home sweet home', 'Buy 5 things for inside the house'],
+  ['room8', '🛋️', 'Room designer', 'Fill a whole room in the house'],
   ['hats5', '🎩', 'Hat collector', 'Own 5 hats'],
   ['score', '🎯', 'High scorer', 'Score 30,000 in one level'],
   ['goodboy', '🦮', 'Good dog', 'Teach your dog a trick'],
@@ -1627,6 +1644,7 @@ function checkStickers(){
   if (n >= 3) award('bones3'); if (n >= 15) award('bones15'); if (n >= 45) award('bones45');
   if (WORLDS.some((w, wi) => Array.from({length: PER_LAND}, (_, k) => b[wi*PER_LAND + k]).every(Boolean))) award('landbones');
   const full = Object.values(pc).filter(v => v >= 100).length; if (full >= 1) award('coins100'); if (full >= 10) award('coins10');
+  { const own = (save.home || {}).own || {}; if (Object.keys(own).length >= 5) award('home5'); if (ROOMS.some(r => FURNITURE.filter(f => f[1] === r[0]).every(f => own[f[0]]))) award('room8'); }
   if ((save.buys || 0) >= 5) award('shop5'); if ((save.hats || []).length >= 5) award('hats5');
   if ((save.done || []).length >= 1) award('first'); if ((save.done || []).length >= LEVELS.length) award('all45');
   LEVELS.forEach((lv, i) => { if (lv.boss && save.done.includes(i)) award('boss_' + lv.theme); });
@@ -1979,6 +1997,7 @@ function frame(now){
   try {
     if ((state === 'level' || state === 'done' || state === 'over' || state === 'paused') && L){ if (use3D) renderLevel3D(); else renderLevel(); }
     else if (state === 'wardrobe' && use3D) renderWard3D();
+    else if (state === 'home' && use3D) renderHome3D();
     else { if (use3D) renderVillage3D(); else renderVillage(); }
   } catch (e) { if (use3D){ console.error(e); R3.failed = true; } else throw e; }
   requestAnimationFrame(frame);
@@ -2048,7 +2067,7 @@ requestAnimationFrame(frame);
 
 // ---------- screens ----------
 const hud = $('hud'), pad = $('pad'), vBar = $('vBar');
-const SCREENS = ['sPet', 'sSet', 'sStick', 'sSaves', 'sTitle','sLevels','sShop','sMake','sDone','sOver','sPause','sWard'];
+const SCREENS = ['sHome', 'sPet', 'sSet', 'sStick', 'sSaves', 'sTitle','sLevels','sShop','sMake','sDone','sOver','sPause','sWard'];
 function show(id){ SCREENS.forEach(s => $(s).hidden = s !== id); if (id){ $('hBoss').hidden = true; $('hPow').hidden = true; } else if (L){ bossHud(); powHud(); } }
 function toVillage(){ petBtnName(); if (R3) R3.dogToy = (save.pet || {}).toy || null; quietAward = true; try { checkStickers(); } finally { quietAward = false; } state = 'village'; L = null; parts = []; show(null); hud.hidden = true; pad.hidden = true; vBar.hidden = false; $('vCoins').textContent = save.coins; $('vBones').textContent = boneCount(); panUI(); }
 function titleText(){ $('tSub').textContent = `${save.dog.name} keeps wandering off! Help ${save.kids[0].name} and ${save.kids[1].name} find ${save.dog.name} in five silly lands, then spend your coins fixing up the village.`; }
@@ -2282,6 +2301,68 @@ function lookOf(ki){ const k = save.kids[ki]; if (!k.look) k.look = {outfit:'ori
 function outfitLook(look){ const o = OUTFITS.find(x => x[0] === look.outfit) || OUTFITS[0]; return {hair: look.hair || null, top: o[2], bottom: o[3], shoes: o[4], pat: o[5] || 'plain', pat2: o[6] || '#ffffff', hat: look.hat || 'own'}; }
 // what the level and village use; save.kids[i].look is read by the 3D world each frame
 function syncLooks(){ save.kids.forEach((k, i) => { const l = lookOf(i); k.look3d = outfitLook(l); }); }
+// ---------- inside the house: one room per house size, furniture bought with coins ----------
+// [id, room, name, price]; the 3D pieces are in world3d (FURN). Rooms open as the house is upgraded in the shop.
+const ROOMS = [['living', 'Living room'], ['bed', 'Bedroom'], ['kitchen', 'Kitchen'], ['play', 'Playroom'], ['dog', "Dog's room"], ['fun', 'Game room']];
+const ROOM_LOOK = { living: [0, 0], bed: [3, 2], kitchen: [2, 4], play: [5, 3], dog: [1, 1], fun: [8, 1] };
+const FURNITURE = [
+  ['sofa', 'living', 'Comfy sofa', 120], ['tv', 'living', 'TV', 200], ['rug', 'living', 'Round rug', 60], ['lamp', 'living', 'Floor lamp', 80], ['plant', 'living', 'Big plant', 50], ['painting', 'living', 'Painting', 90], ['books', 'living', 'Bookshelf', 150], ['armchair', 'living', 'Armchair', 100],
+  ['bunk', 'bed', 'Bunk beds', 260], ['chest', 'bed', 'Toy chest', 90], ['dresser', 'bed', 'Dresser', 160], ['nightlight', 'bed', 'Star night light', 70], ['roundrug', 'bed', 'Cloud rug', 60], ['stars', 'bed', 'Glow stars', 80], ['teddy', 'bed', 'Giant teddy', 120], ['desk', 'bed', 'Desk', 140],
+  ['fridge', 'kitchen', 'Fridge', 180], ['counter', 'kitchen', 'Stove and sink', 220], ['table', 'kitchen', 'Table and chairs', 160], ['clock', 'kitchen', 'Clock', 60], ['cake', 'kitchen', 'Birthday cake', 100], ['lemon', 'kitchen', 'Lemon tree', 90], ['pans', 'kitchen', 'Pots and pans', 70], ['flowerbox', 'kitchen', 'Window flowers', 50],
+  ['slide', 'play', 'Slide', 240], ['ballpit', 'play', 'Ball pit', 200], ['horse', 'play', 'Rocking horse', 140], ['blocks', 'play', 'Block tower', 50], ['train', 'play', 'Toy train', 180], ['easel', 'play', 'Paint easel', 90], ['tent', 'play', 'Play tent', 150], ['bunting', 'play', 'Party flags', 40],
+  ['dogbed', 'dog', 'Dog bed', 120], ['bowls', 'dog', 'Food bowls', 40], ['toybox', 'dog', 'Toy basket', 70], ['portrait', 'dog', 'Dog portrait', 90], ['tunnel', 'dog', 'Play tunnel', 150], ['hydrant', 'dog', 'Fire hydrant', 60], ['bonerug', 'dog', 'Bone rug', 80], ['treats', 'dog', 'Treat jar', 50],
+  ['arcade', 'fun', 'Arcade game', 300], ['piano', 'fun', 'Piano', 400], ['aquarium', 'fun', 'Fish tank', 350], ['telescope', 'fun', 'Telescope', 250], ['trophies', 'fun', 'Trophy shelf', 220], ['disco', 'fun', 'Disco ball', 180], ['rocket', 'fun', 'Rocket ship', 450], ['starrug', 'fun', 'Star rug', 100]
+];
+const home = () => { const h = save.home = save.home || {}; h.own = h.own || {}; h.wall = h.wall || {}; h.floor = h.floor || {}; return h; };
+const roomsOpen = () => lvOf('house') + 1;
+const roomName = i => ROOMS[i][0] === 'dog' ? `${save.dog.name}'s room` : ROOMS[i][1];
+let homeRoom = 0, homeTab = 'Things', homePrev = null; const homePop = {}, furnThumbs = new Map();
+function openHome(){ state = 'home'; homePrev = null; vBar.hidden = true; panUI(); show('sHome'); if (homeRoom >= roomsOpen()) homeRoom = 0; drawHome(); }
+function drawHome(){
+  const h = home(), open = roomsOpen(), rid = ROOMS[homeRoom][0], locked = homeRoom >= open;
+  $('hmCoins').textContent = save.coins;
+  const rb = $('hmRooms'); rb.innerHTML = '';
+  ROOMS.forEach((r, i) => { const b = document.createElement('button'); b.className = 'opt hroom'; b.setAttribute('aria-pressed', i === homeRoom); b.innerHTML = esc(roomName(i)) + (i >= open ? '<span class="lk" aria-label="locked">🔒</span>' : ''); b.onclick = () => { homeRoom = i; homePrev = null; drawHome(); }; rb.appendChild(b); });
+  const tabs = $('hmTabs'); tabs.innerHTML = '';
+  ['Things', 'Walls', 'Floor'].forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === homeTab); b.onclick = () => { homeTab = t; homePrev = null; drawHome(); }; tabs.appendChild(b); });
+  const note = $('hmNote'); note.hidden = !locked;
+  if (locked){ const tier = CATALOG.find(c => c.id === 'house').tiers[homeRoom][0]; note.textContent = `Upgrade the house to the ${tier} in the Shop to open the ${roomName(homeRoom)}.`; }
+  const grid = $('hmGrid'); grid.innerHTML = '';
+  const tile = (pressed, onclick) => { const b = document.createElement('button'); b.className = 'wt'; b.setAttribute('aria-pressed', pressed); b.disabled = locked; b.onclick = onclick; grid.appendChild(b); return b; };
+  if (homeTab === 'Things'){
+    FURNITURE.filter(f => f[1] === rid).forEach(([id, , name, price]) => {
+      const owned = !!h.own[id];
+      const b = tile(homePrev === id, () => { if (h.own[id]){ homePop[id] = clock; sfx.tick && sfx.tick(); homePrev = null; } else { homePrev = homePrev === id ? null : id; sfx.bump && sfx.bump(); } drawHome(); });
+      if (!owned) b.classList.add('locked');
+      b.innerHTML = `<canvas width="168" height="140"></canvas><span>${esc(name)}</span>` + (owned ? '<span class="tag">In the house</span>' : `<span class="tag"><span class="coin-ico"></span>${price}</span>`);
+      const c = b.querySelector('canvas').getContext('2d'); c.scale(2, 2);
+      let t = furnThumbs.get(id); if (!t && R3 && R3.furnThumb && !R3.failed){ try { t = R3.furnThumb(id); } catch (e) { console.warn(e); } if (t) furnThumbs.set(id, t); }
+      if (t) c.drawImage(t, 0, 0, 84, 70);
+    });
+  } else {
+    const walls = homeTab === 'Walls', cols = walls ? (R3 && R3.WALL_COLS) || [] : (R3 && R3.FLOOR_COLS) || [], cur = (walls ? h.wall : h.floor)[rid] ?? ROOM_LOOK[rid][walls ? 0 : 1];
+    const pat = walls ? ['', '', '', '', '', '', 'repeating-linear-gradient(90deg,#ffc9da 0 8px,transparent 8px 18px)', 'radial-gradient(#9fd0ff 30%,transparent 34%) 0 0/14px 14px', 'radial-gradient(#ffd23a 18%,transparent 22%) 0 0/16px 16px'] : ['repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 12px)', 'repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 12px)', '', '', 'conic-gradient(#ff8f8f 25%,#fff 0 50%,#ff8f8f 0 75%,#fff 0) 0 0/20px 20px', 'conic-gradient(#7fb9ff 25%,#fff 0 50%,#7fb9ff 0 75%,#fff 0) 0 0/20px 20px'];
+    const names = walls ? ['Cream', 'Peach', 'Mint', 'Sky blue', 'Lilac', 'Pink', 'Candy stripes', 'Polka dots', 'Starry night'] : ['Light wood', 'Dark wood', 'Blue carpet', 'Pink carpet', 'Red tiles', 'Blue tiles'];
+    cols.forEach((col, i) => { const b = tile(cur === i, () => { (walls ? h.wall : h.floor)[rid] = i; persist(); sfx.tick && sfx.tick(); drawHome(); }); b.innerHTML = `<span class="hsw" style="background:${pat[i] ? pat[i] + ',' : ''}${col}"></span><span>${names[i] || ''}</span><span class="tag">Free</span>`; });
+  }
+  const bb = $('hmBuyBox'), msg = $('hmMsg'); bb.innerHTML = ''; msg.textContent = '';
+  if (homePrev && !locked){ const [, , name, price] = FURNITURE.find(f => f[0] === homePrev), can = save.coins >= price;
+    const btn = document.createElement('button'); btn.className = 'btn small' + (can ? ' green' : ' white'); btn.disabled = !can;
+    btn.innerHTML = can ? `Buy ${esc(name)} <span class="coin-ico" style="display:inline-block;width:16px;height:16px;vertical-align:-2px"></span> ${price}` : `${esc(name)}: need ${price - save.coins} more coins`;
+    btn.onclick = () => { if (save.coins < price) return; save.coins -= price; h.own[homePrev] = 1; homePop[homePrev] = clock; homePrev = null; save.buys = (save.buys || 0) + 1; persist(); sfx.buy(); checkStickers(); drawHome(); };
+    bb.appendChild(btn);
+  } else if (homeTab === 'Things' && !locked){ const n = FURNITURE.filter(f => f[1] === rid && h.own[f[0]]).length; msg.textContent = n ? `${n} of 8 things in this room` : 'Tap something to see it in the room'; }
+}
+function renderHome3D(){
+  const h = home(), rid = ROOMS[homeRoom][0], wide = viewW/viewH > 1, card = $('hmCard').getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
+  const fitW = wide ? Math.max(0.35, (card.left - 12)/W) : 0.96, fitH = wide ? 0.94 : Math.max(0.3, (card.top - 12)/H);
+  const st = { room: rid, owned: homeRoom < roomsOpen() ? h.own : {}, wall: h.wall[rid] ?? ROOM_LOOK[rid][0], floor: h.floor[rid] ?? ROOM_LOOK[rid][1], preview: homePrev, pop: homePop };
+  R3.renderHome(st, viewW, viewH, clock, wide ? fitW/2 : 0.5, wide ? 0.5 : fitH/2, fitW, fitH);
+  g.clearRect(0, 0, viewW, viewH);
+}
+$('vHome').onclick = openHome;
+$('hmDone').onclick = () => { homePrev = null; persist(); toVillage(); };
+
 let wardKid = 0, wardTab = 'Hats', wardTry = null, wardSpin = 0.3, wardSpinV = 0, wardFrom = 'village';
 const hatThumbs = new Map();
 function hatThumbFor(id){ if (hatThumbs.has(id)) return hatThumbs.get(id); let t = null; try { t = R3 && R3.hatThumb && R3.hatThumb(id, 84, 70); } catch (e) { console.warn(e); } if (t) hatThumbs.set(id, t); return t; }
