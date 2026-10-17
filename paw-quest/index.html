@@ -247,7 +247,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 43</p>
+    <p class="ver" id="tVer">Version 44</p>
   </div>
 </section>
 
@@ -2473,7 +2473,7 @@ $('vHome').onclick = openHome;
 $('hmDone').onclick = () => { homePrev = null; persist(); toVillage(); };
 
 // celebrations for winning a level, picked per kid in Dress up (dances are Erik's Mixamo clips in dances.js)
-const CELEBS = [['cheer', 'Cheer', '\u{1F64C}'], ['victory', 'Victory', '\u{1F3C6}'], ['hiphop2', 'Hip hop', '\u{1F57A}'], ['hiphop', 'Arm dance', '\u{1F4AA}']];
+const CELEBS = [['cheer', 'Cheer', '\u{1F64C}'], ['victory', 'Victory', '\u{1F3C6}'], ['hiphop2', 'Hip hop', '\u{1F57A}'], ['hiphop', 'Arm dance', '\u{1F4AA}'], ['shuffle', 'Shuffle', '\u{1F45F}']];
 const celebOf = ki => { const c = save.kids[ki % 2].celeb; return CELEBS.some(x => x[0] === c) ? c : 'cheer'; };
 let wardCelebT0 = 0;
 let wardKid = 0, wardTab = 'Hats', wardTry = null, wardSpin = 0.3, wardSpinV = 0, wardFrom = 'village';
