@@ -249,7 +249,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 46</p>
+    <p class="ver" id="tVer">Version 47</p>
   </div>
 </section>
 
@@ -744,6 +744,12 @@ function drawCritter(c, kind, x, y, w, h, t, squish){
     c.save(); c.translate(0, -10); c.rotate(-0.5 - fl); ep(c, 1, -6, 5, 9); fs(c, 'rgba(160,225,255,.85)', 1); c.restore();
     c.beginPath(); c.moveTo(-10, -9); c.lineTo(-17, -15); c.lineTo(-15, -9); c.lineTo(-17, -3); c.closePath(); fs(c, '#4f8fe8', 1.2);
     ep(c, 0, -9, 11, 5.5); fs(c, lg(c, 0, -15, 0, -3, '#3f7fe0', '#e8f4ff'), 1.4); cp(c, 6, -10, 2.2); fs(c, '#fff', 1); circle(c, 6.6, -10, 1.1, OL);
+  } else if (kind === 'snowman'){
+    const fl = Math.sin(t*10)*0.5; c.strokeStyle = '#6b4423'; c.lineWidth = 1.8;
+    c.beginPath(); c.moveTo(-6, -11); c.lineTo(-15, -15 - fl*6); c.moveTo(6, -11); c.lineTo(15, -15 - fl*6); c.stroke();
+    circle(c, 0, -6, 8, '#fff'); circle(c, 0, -17, 6, '#fff'); c.lineWidth = 1.4; c.strokeStyle = OL; c.beginPath(); c.arc(0, -6, 8, 0, 2*Math.PI); c.stroke(); c.beginPath(); c.arc(0, -17, 6, 0, 2*Math.PI); c.stroke();
+    c.fillStyle = '#e8384f'; c.fillRect(-6, -12.5, 12, 3); c.fillStyle = '#262335'; c.fillRect(-6, -23, 12, 2); c.fillRect(-4, -30, 8, 7);
+    circle(c, 2, -18, 1.2, OL); circle(c, -2, -18, 1.2, OL); c.fillStyle = '#ff8a1f'; c.beginPath(); c.moveTo(1, -16); c.lineTo(8, -15); c.lineTo(1, -14); c.fill();
   } else if (kind === 'bunny'){
     const fl = 0.3 + (0.5 + 0.5*Math.sin(t*10))*0.7;
     c.save(); c.translate(-3, -13); c.scale(1, fl); ep(c, -2, -6, 6, 8); fs(c, '#bfe3ff', 1.2); c.restore();
@@ -1966,7 +1972,7 @@ function renderLevel(){
     if (B.alive){ g.fillStyle = '#ffd23a'; g.strokeStyle = OL; g.lineWidth = .6; g.beginPath(); g.moveTo(-7, -23); g.lineTo(-7, -29); g.lineTo(-3.5, -26); g.lineTo(0, -31); g.lineTo(3.5, -26); g.lineTo(7, -29); g.lineTo(7, -23); g.closePath(); g.fill(); g.stroke(); }
     g.restore();
     if (B.alive){ g.fillStyle = '#7a5a3a'; for (let k = 0; k < 4; k++) g.fillRect(B.bx + 14, G*T - 4 - k*28 - 24, 6, 24); g.fillRect(B.bx + 8, G*T - 120, 18, 6); } }
-  L.flyers.forEach(fl => { if (fl.alive || fl.squish > 0){ g.save(); g.translate(fl.x + 13, 0); g.scale(fl.face, 1); g.translate(-(fl.x + 13), 0); if (!fl.alive){ g.translate(fl.x + 13, fl.y + 10); g.rotate(Math.PI); g.translate(-(fl.x + 13), -(fl.y + 10)); } drawCritter(g, L.theme === 'forest' ? 'butterfly' : L.theme === 'beach' ? 'fish' : L.theme === 'snow' ? 'bunny' : 'bee', fl.x, fl.y, fl.w, fl.h, clock, 0); g.restore(); } });
+  L.flyers.forEach(fl => { if (fl.alive || fl.squish > 0){ g.save(); g.translate(fl.x + 13, 0); g.scale(fl.face, 1); g.translate(-(fl.x + 13), 0); if (!fl.alive){ g.translate(fl.x + 13, fl.y + 10); g.rotate(Math.PI); g.translate(-(fl.x + 13), -(fl.y + 10)); } drawCritter(g, L.theme === 'forest' ? 'butterfly' : L.theme === 'beach' ? 'fish' : L.theme === 'snow' ? 'snowman' : 'bee', fl.x, fl.y, fl.w, fl.h, clock, 0); g.restore(); } });
   const d = L.dog, near = Math.abs(p.x - d.x) < 220;
   const hop = L.won ? Math.abs(Math.sin(L.won*9))*14 : 0;
   cp(g, d.x, d.y - 20, 46); g.fillStyle = rg(g, d.x, d.y - 20, 4, 46, 'rgba(255,240,170,.45)', 'rgba(255,240,170,0)'); g.fill();
