@@ -180,6 +180,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 .wt .lock{position:absolute;top:4px;right:6px;font-size:15px}
 .chips{display:flex;gap:3px;height:52px;align-items:flex-end;margin:6px 0 4px}
 .chips i{display:block;width:22px;border:2.5px solid var(--ink);border-radius:7px}
+.celico{font-size:44px;line-height:60px;margin:4px 0}
 .hairsw{width:60px;height:60px;border-radius:50%;border:3px solid var(--ink);margin:4px 0}
 .home .wkids,.home .tabs,.home .wtop,.home .msg,.home .wact{flex:none}.home .wkids{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}.home .wkids .opt{flex:none}.home .wgrid{min-height:96px}
 @media (max-height:520px){.home .card{max-width:400px;gap:6px;padding:12px 14px}.home h2{font-size:22px}.home .tabs button,.home .wkids .opt{padding:4px 12px;font-size:14px}.home .wact .btn{padding:6px 14px;font-size:16px}.home .wt canvas{width:70px;height:58px}.home .wgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}}
@@ -246,7 +247,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 42</p>
+    <p class="ver" id="tVer">Version 43</p>
   </div>
 </section>
 
@@ -1447,7 +1448,7 @@ function step(dt){
     if (Math.random() < dt*10) parts.push({type:'heart', x:L.dog.x + (Math.random()-.5)*30, y:L.dog.y - 40, vy:-60, life:1.2});
     if (Math.random() < dt*14) parts.push({type:'confetti', x:L.dog.x + (Math.random()-.5)*viewW*.6, y:-offY - 10, vx:(Math.random()-.5)*60, vy:80 + Math.random()*60, rot:Math.random()*6, col:['#ff5a5f','#ffd23a','#5cd17c','#3e8ed0','#a77bff'][Math.floor(Math.random()*5)], life:3});
     parts.forEach(q => tickPart(q, dt)); parts = parts.filter(q => q.life > 0);
-    if (L.won > 2.4 && state === 'level') finishLevel();
+    if (L.won > (celebOf(L.kid) === 'cheer' ? 2.4 : 4) && state === 'level') finishLevel();
     return;
   }
   L.movers.forEach(m => { const px = m.x, py = m.y; if (m.sp){ m.t += dt; const k = 0.5 - 0.5*Math.cos(m.t*m.sp); m.x = m.ax + (m.bx - m.ax)*k; m.y = m.ay + (m.by - m.ay)*k; } m.dx = m.x - px; m.dy = m.y - py; m.py = py; });
@@ -2108,7 +2109,7 @@ const cv3 = document.getElementById('cv3'); let R3 = null;
 const GM = { T, ROWS, G, VIEW_H, THEMES, VILLAGE_FG: 316, get save(){ return save; }, get offY(){ return offY; } };
 function loadScript(src){ return new Promise((res, rej) => { const el = document.createElement('script'); el.src = src; el.onload = res; el.onerror = () => rej(new Error('load ' + src)); document.head.appendChild(el); }); }
 const kidData = i => () => loadScript('kid' + (i + 1) + '.js').then(() => window.PQ_KID[i]);
-loadScript('world3d.js').then(() => window.PQ3D.createWorld(GM, cv3, [kidData(0), kidData(1)])).then(r => { R3 = r; window.R3 = r; applyPrefs(); }).catch(e => console.warn('3D unavailable, using 2D', e));
+loadScript('world3d.js').then(() => window.PQ3D.createWorld(GM, cv3, [kidData(0), kidData(1)])).then(r => { R3 = r; window.R3 = r; applyPrefs(); loadScript('dances.js').catch(e => console.warn('no dances', e)); }).catch(e => console.warn('3D unavailable, using 2D', e));
 function followCam(){
   const p = L.p, target = p.x + p.w/2 - viewW*0.4, rm = L.room, inRoom = rm && p.x > rm.c0*T - T;
   // the bonus room sits past the end of the level, so keep it out of view unless you're inside it
@@ -2471,11 +2472,15 @@ $('vHome').onclick = openHome;
 });
 $('hmDone').onclick = () => { homePrev = null; persist(); toVillage(); };
 
+// celebrations for winning a level, picked per kid in Dress up (dances are Erik's Mixamo clips in dances.js)
+const CELEBS = [['cheer', 'Cheer', '\u{1F64C}'], ['victory', 'Victory', '\u{1F3C6}'], ['hiphop2', 'Hip hop', '\u{1F57A}'], ['hiphop', 'Arm dance', '\u{1F4AA}']];
+const celebOf = ki => { const c = save.kids[ki % 2].celeb; return CELEBS.some(x => x[0] === c) ? c : 'cheer'; };
+let wardCelebT0 = 0;
 let wardKid = 0, wardTab = 'Hats', wardTry = null, wardSpin = 0.3, wardSpinV = 0, wardFrom = 'village';
 const hatThumbs = new Map();
 function hatThumbFor(id){ if (hatThumbs.has(id)) return hatThumbs.get(id); let t = null; try { t = R3 && R3.hatThumb && R3.hatThumb(id, 84, 70); } catch (e) { console.warn(e); } if (t) hatThumbs.set(id, t); return t; }
 function drawNoHat(c, id){ c.clearRect(0, 0, 84, 70); c.font = '34px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(id === 'own' ? '✨' : '\u{1F6AB}', 42, 36); }
-function openWard(ki = wardKid, from = 'village'){ wardKid = ki; wardFrom = from; wardTry = null; state = 'wardrobe'; vBar.hidden = true; panUI(); show('sWard'); drawWard(); }
+function openWard(ki = wardKid, from = 'village'){ wardCelebT0 = clock; wardKid = ki; wardFrom = from; wardTry = null; state = 'wardrobe'; vBar.hidden = true; panUI(); show('sWard'); drawWard(); }
 function previewLook(){ const l = outfitLook(lookOf(wardKid)); if (wardTry) l.hat = wardTry; return l; }
 function drawWard(){
   syncLooks();
@@ -2483,7 +2488,7 @@ function drawWard(){
   const kb = $('wKids'); kb.innerHTML = '';
   save.kids.forEach((k, i) => { const b = document.createElement('button'); b.className = 'opt'; b.textContent = k.name; b.setAttribute('aria-pressed', i === wardKid); b.onclick = () => { wardKid = i; wardTry = null; drawWard(); }; kb.appendChild(b); });
   const tabs = $('wTabs'); tabs.innerHTML = '';
-  ['Hats','Outfits','Hair','Name'].forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === wardTab); b.onclick = () => { wardTab = t; wardTry = null; drawWard(); }; tabs.appendChild(b); });
+  ['Hats','Outfits','Hair','Celebrate','Name'].forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === wardTab); b.onclick = () => { wardTab = t; wardTry = null; drawWard(); }; tabs.appendChild(b); });
   const grid = $('wGrid'), look = lookOf(wardKid); grid.innerHTML = '';
   const tile = (pressed, onclick) => { const b = document.createElement('button'); b.className = 'wt'; b.setAttribute('aria-pressed', pressed); b.onclick = onclick; grid.appendChild(b); return b; };
   if (wardTab === 'Hats'){
@@ -2509,6 +2514,13 @@ function drawWard(){
       const orig = wardKid === 0 ? '#5a2a14' : '#68c0c2';
       b.innerHTML = `<span class="hairsw" style="background:${c || orig}${c ? '' : ';background-image:linear-gradient(135deg,transparent 45%,#fff 45% 55%,transparent 55%)'}"></span><span>${esc(name)}</span>`;
     });
+  } else if (wardTab === 'Celebrate'){
+    const cur = celebOf(wardKid);
+    CELEBS.forEach(([id, name, ico]) => {
+      const b = tile(cur === id, () => { save.kids[wardKid].celeb = id; wardCelebT0 = clock; persist(); drawWard(); });
+      b.innerHTML = `<span class="celico" aria-hidden="true">${ico}</span><span>${esc(name)}</span>` + (cur === id ? '<span class="tag">Chosen</span>' : '');
+    });
+    const tip = document.createElement('p'); tip.className = 'small'; tip.style.gridColumn = '1/-1'; tip.textContent = `${save.kids[wardKid].name} does this when finding ${save.dog.name} at the end of a level.`; grid.appendChild(tip);
   } else {
     const box = document.createElement('div'); box.className = 'who-edit'; box.style.gridColumn = '1/-1';
     const inp = document.createElement('input'); inp.maxLength = 12; inp.value = save.kids[wardKid].name; inp.oninput = () => { save.kids[wardKid].name = inp.value.trim() || defaults.kids[wardKid].name; persist(); titleText(); $('wKids').children[wardKid].textContent = save.kids[wardKid].name; };
@@ -2529,7 +2541,7 @@ function renderWard3D(){
   const wide = viewW/viewH > 1, card = $('wCard').getBoundingClientRect();
   const cx = wide ? Math.max(0.22, (card.left/2)/window.innerWidth) : 0.5, cy = wide ? 0.5 : Math.min(0.5, (card.top/2 + 10)/window.innerHeight);
   const zoom = wide ? 1 : Math.max(0.55, Math.min(1, card.top/window.innerHeight*1.15));
-  R3.renderWardrobe(wardKid, previewLook(), viewW, viewH, clock, wardSpin, cx, cy, zoom);
+  R3.renderWardrobe(wardKid, previewLook(), viewW, viewH, clock, wardSpin, cx, cy, zoom, wardTab === 'Celebrate' ? { id: celebOf(wardKid), t: clock - wardCelebT0 } : null);
   g.clearRect(0, 0, viewW, viewH);
 }
 let wardDrag = null;
