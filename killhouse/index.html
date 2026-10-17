@@ -166,6 +166,22 @@ h2 { font-size: clamp(30px, 5vw, 48px); margin: 0; letter-spacing: .02em; text-w
 .xfer .row { gap: 10px; }
 #codeIn { flex: 1 1 180px; min-width: 0; background: rgba(7,8,10,.5); border: 1px solid var(--line); color: var(--fg); font-family: var(--mono); font-size: 12px; padding: 11px 10px; }
 #codeMsg { min-height: 1.2em; margin-top: 6px; }
+.callrow { margin: 10px 0 4px; gap: 10px; }
+#callIn { flex: 0 1 220px; min-width: 0; background: rgba(7,8,10,.5); border: 1px solid var(--line); color: var(--fg); font-family: var(--mono); font-size: 13px; padding: 9px 10px; }
+.opgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 12px; margin: 18px 0; }
+.opc { border: 1px solid var(--line); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; background: rgba(7,8,10,.35); }
+.opc .k { font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
+.opc .nm { font-size: 18px; font-weight: 700; }
+.opc.lock { opacity: .45; }
+.opc .st { font-family: var(--mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--amber); }
+.opc .fl { display: flex; gap: 6px; }
+.opc .fl button { flex: 1; height: 38px; border: 1px solid var(--line); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 13px; font-weight: 600; cursor: pointer; }
+.opc .fl button.done { color: var(--fg); border-color: rgba(233,231,225,.45); }
+.opc .fl button.done:hover { background: rgba(242,169,59,.18); border-color: var(--amber); }
+.opc .fl button.cur { border-color: var(--amber); color: var(--amber); cursor: default; }
+.opc .fl button:disabled { cursor: default; }
+.opc .fl button.boss::after { content: ' B'; font-size: 9px; color: #ffb3ad; }
+.opc .bst { font-size: 13px; color: var(--dim); }
 .grades { display: flex; gap: 14px; margin-top: 18px; flex-wrap: wrap; }
 .grade { flex: 1 1 200px; border: 1px solid var(--line); padding: 10px 14px; display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: 14px; align-items: center; }
 .grade .label { grid-column: 2; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--dim); }
@@ -541,7 +557,7 @@ html.touch .slots { display: none; }
     </div>
     <div class="heat"><span class="label">Class</span><div class="heatsel classsel" id="classSel"></div><span class="fine" id="classInfo"></span></div>
     <div class="heat"><span class="label">Heat</span><div class="heatsel" id="heatSel"></div><span class="fine" id="heatInfo"></span></div>
-    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="newBtn" hidden>New campaign</button><button class="btn ghost" id="endlessBtn" hidden>Endless</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
+    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="newBtn" hidden>New campaign</button><button class="btn ghost" id="endlessBtn" hidden>Endless</button><button class="btn ghost" id="opsBtn" hidden>Operations</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
     <div class="fine deskonly" style="display:block">Mouse and keyboard, or play on a phone held sideways. Headphones recommended.</div>
   </div>
 </div>
@@ -562,6 +578,15 @@ html.touch .slots { display: none; }
     <p class="lede" id="briefText"></p>
     <div class="intel" id="briefIntel"></div>
     <div class="row"><button class="btn" id="briefGo">Deploy</button><button class="btn ghost" id="briefQuit">Return to base</button><span class="fine" id="briefNote"></span></div>
+  </div>
+</div>
+
+<div class="overlay" id="ops" hidden>
+  <div class="panel">
+    <div class="eyebrow">Campaign · replay any floor you have cleared</div>
+    <h2>Operations</h2>
+    <div class="opgrid" id="opGrid"></div>
+    <div class="row"><button class="btn" id="opsBack">Back</button><span class="fine">Replays start with the kit you had for that operation and never touch your campaign save. Play a whole operation to set a new best grade.</span></div>
   </div>
 </div>
 
@@ -628,7 +653,7 @@ html.touch .slots { display: none; }
     <div><div class="sublabel" id="chalLabel">Challenges</div><div class="chal" id="carChal"></div></div>
     <div><div class="sublabel" id="evoLabel">Evolutions</div><div class="chal" id="carEvo"></div></div>
     <div><div class="sublabel">Gun mastery · kills with each gun unlock attachments and finishes</div><div class="mast" id="carMast"></div></div>
-    <div class="xfer"><div class="sublabel">Move your progress · copy the code on one device and load it on another</div>
+    <div class="xfer"><div class="sublabel" id="xferLabel">Move your progress · copy the code on one device and load it on another</div>
       <div class="row"><button class="btn ghost" id="codeCopy">Copy save code</button><input id="codeIn" placeholder="Paste a save code here" spellcheck="false" autocomplete="off"><button class="btn ghost" id="codeLoad">Load code</button></div>
       <div class="fine" id="codeMsg"></div></div>
     <div class="row labfoot"><button class="btn" id="careerBack">Back</button><span class="fine">Some mutations start locked. Finish a challenge to add one to the cards for good.</span></div>
@@ -641,6 +666,7 @@ html.touch .slots { display: none; }
     <h2>Today's leaderboard</h2>
     <p class="lede boardlede">Everyone gets the same floors, the same enemies and the same mutation offers today. Lab upgrades are switched off so the board is fair. New floors at midnight UTC.</p>
     <ol class="boardlist" id="boardList"><li class="empty">Loading scores…</li></ol>
+    <div class="row callrow" id="callRow" hidden><span class="fine">Your name on the board</span><input id="callIn" maxlength="24" spellcheck="false" autocomplete="off"></div>
     <div class="fine" id="boardNote">Score: 1,000 per floor cleared, 100 per kill, 50 per headshot or stab, 500 per boss.</div>
     <div class="row"><button class="btn" id="dailyPlay">Play today's run</button><button class="btn ghost" id="boardBack">Back</button></div>
   </div>
@@ -654,7 +680,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 51;
+const KH_VERSION = 52;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -3406,8 +3432,36 @@ function updateBmLabels() {
   for (const el of document.querySelectorAll('.bmMenu')) el.textContent = Math.floor(meta.bm);
   $('labBm').textContent = Math.floor(meta.bm);
 }
+// ---------- online progress outside claude.ai (the GitHub Pages copy): a Supabase project reached through four database functions ----------
+// each browser gets a random sync code; loading that code on another device shares the same progress and leaderboard name
+const SUPA = { url: '', key: '' };
+const supaOn = () => !!(SUPA.url && SUPA.key) && !DBH;
+const newSync = () => 'KHS-' + (crypto.randomUUID ? crypto.randomUUID() : Array.from({ length: 4 }, () => Math.floor(nativeRandom() * 2 ** 32).toString(16).padStart(8, '0')).join('-'));
+let syncSecret = store.get('kh.sync') || ''; if (!/^KHS-[\w-]{20,}$/.test(syncSecret)) { syncSecret = newSync(); store.set('kh.sync', syncSecret); }
+let callsign = store.get('kh.name') || 'Operator ' + syncSecret.slice(-4).toUpperCase();
+let supaReady = false, supaSaveT = 0;
+async function supa(fn, args) {
+  const h = { 'Content-Type': 'application/json', apikey: SUPA.key }; if (SUPA.key.startsWith('eyJ')) h.Authorization = 'Bearer ' + SUPA.key;
+  const r = await fetch(SUPA.url.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn, { method: 'POST', headers: h, body: JSON.stringify(args) });
+  if (!r.ok) throw new Error(fn + ' ' + r.status);
+  const t = await r.text(); return t ? JSON.parse(t) : null;
+}
+function adoptMeta(v) {
+  meta = Object.assign({ bm: 0, lv: {}, best: 0, runs: 0, earned: 0 }, JSON.parse(JSON.stringify(v)));
+  store.set('kh.meta', JSON.stringify(meta)); if (VMS.rifle) applySkins(); updateBmLabels(); renderLab(); renderHeat(); renderCampaignMenu();
+}
+async function initSupa(force) {
+  if (!supaOn()) return false;
+  try {
+    const v = await supa('kh_load', { p_secret: syncSecret });
+    if (v && v.meta && typeof v.meta.bm === 'number' && (force || (v.meta.earned || 0) >= (meta.earned || 0))) adoptMeta(v.meta);
+    if (v && v.name) { callsign = v.name; store.set('kh.name', callsign); }
+    supaReady = true; supaPush(); return !!v;
+  } catch (e) { supaReady = false; return false; }
+}
+function supaPush() { if (!supaReady) return; clearTimeout(supaSaveT); supaSaveT = setTimeout(() => { supa('kh_save', { p_secret: syncSecret, p_meta: meta, p_name: callsign }).catch(() => {}); }, 800); }
 function saveMeta() {
-  store.set('kh.meta', JSON.stringify(meta));
+  store.set('kh.meta', JSON.stringify(meta)); supaPush();
   if (metaDoc) { clearTimeout(metaSaveT); metaSaveT = setTimeout(() => { metaDoc.set(JSON.parse(JSON.stringify(meta))).catch(() => { metaDoc = null; }); }, 300); }
   updateBmLabels();
 }
@@ -3430,6 +3484,7 @@ let DBH = null, USERH = null, UID = null;
 async function submitDaily() {
   const sc = runScore(), date = daily.date, row = { date, score: sc, floor: floorN, kills: stats.kills, heads: stats.heads, at: Date.now() };
   try { const loc = JSON.parse(store.get('kh.daily') || 'null'); if (!loc || loc.date !== date || sc > loc.score) store.set('kh.daily', JSON.stringify(row)); } catch (e) {}
+  if (supaOn()) { try { if (!supaReady) await initSupa(); await supa('kh_save', { p_secret: syncSecret, p_meta: meta, p_name: callsign }); await supa('kh_submit', { p_secret: syncSecret, p_day: date, p_score: sc, p_floor: floorN, p_kills: stats.kills, p_heads: stats.heads }); } catch (e) {} return; }
   if (!DBH || !UID) return;
   try {
     const ref = DBH.doc('scores/' + UID), snap = await ref.get(), cur = snap.exists ? snap.data() : null;
@@ -3442,6 +3497,25 @@ async function renderBoard() {
   $('boardDate').textContent = date;
   let loc = null; try { loc = JSON.parse(store.get('kh.daily') || 'null'); } catch (e) {}
   const mine = loc && loc.date === date ? `Your best today: ${fmtN(loc.score)} (floor ${loc.floor}).` : '';
+  $('callRow').hidden = !supaOn(); $('callIn').value = callsign;
+  if (!DBH && supaOn()) {
+    list.innerHTML = '<li class="empty">Loading scores…</li>';
+    try {
+      const rows = (await supa('kh_board', { p_day: date, p_secret: syncSecret })) || [];
+      list.innerHTML = '';
+      if (!rows.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = `${mine} No scores yet today. Be the first on the board.`.trim(); list.appendChild(li); return; }
+      rows.forEach((v, i) => {
+        const li = document.createElement('li'); if (v.me) li.className = 'me';
+        const rk = document.createElement('span'); rk.className = 'rk'; rk.textContent = '#' + (i + 1);
+        const av = document.createElement('img'); av.alt = ''; av.style.visibility = 'hidden';
+        const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = (v.name || 'Operator') + (v.me ? ' (you)' : '');
+        const sub = document.createElement('div'); sub.className = 'sub'; sub.textContent = `Floor ${Number(v.floor) || 0} · ${Number(v.kills) || 0} kills · ${Number(v.heads) || 0} headshots`; nm.appendChild(sub);
+        const sc = document.createElement('span'); sc.className = 'sc'; sc.textContent = fmtN(v.score);
+        li.append(rk, av, nm, sc); list.appendChild(li);
+      });
+    } catch (e) { list.innerHTML = '<li class="empty">Could not load the leaderboard right now.</li>'; }
+    return;
+  }
   if (!DBH) { list.innerHTML = ''; const li = document.createElement('li'); li.className = 'empty'; li.textContent = `${mine} The shared board appears when the game is opened on claude.ai while signed in.`.trim(); list.appendChild(li); return; }
   list.innerHTML = '<li class="empty">Loading scores…</li>';
   try {
@@ -3489,7 +3563,7 @@ $('labBtn').onclick = () => openLab('menu');
 $('labBtn2').onclick = () => openLab('dead');
 $('labBack').onclick = () => { $('lab').hidden = true; $(labFrom).hidden = false; };
 updateBmLabels();
-initMetaStore();
+initMetaStore().then(() => initSupa()).then(renderSyncUI);
 
 // ---------- player ----------
 const P = { pos: new V3(), vel: new V3(), onGround: true, hp: 100, maxHp: 100, lastHurt: -99, air: 0, dashT: 0, dashDir: new V3(), dashCharges: 1, dashRe: 0, novaCd: 0, odCd: 0, odT: 0, slamCd: 0, bob: 0, crouch: false, ch: 0, stabCd: 0, lungeT: 0, lungeDir: new V3(), revived: false, frags: 2, flashes: 2, adsHold: false, adsToggle: false, blindT: 0, blindK: 0 };
@@ -3538,6 +3612,7 @@ function snapStats() {
 function saveCheckpoint() {
   if (!inCampaign()) return;
   meta.cp = { floor: floorN, ups: { ...ups }, evo: { ...evo }, hp: Math.round(P.hp), gun: LO.slots[0].k, cls: classSel, heat: heatSel, seed: runSeed, revived: !!P.revived, stats: snapStats(), at: Date.now() };
+  if ((floorN - 1) % OPF === 0) { meta.opKit = meta.opKit || {}; meta.opKit[opOf(floorN)] = { ups: { ...ups }, evo: { ...evo }, gun: LO.slots[0].k }; }
   saveMeta();
 }
 function loadCheckpoint() {
@@ -3560,16 +3635,46 @@ function showBrief() {
   state = 'brief'; document.body.className = 'upgrade'; mouseDown = false; timeScale = 1;
   if (document.pointerLockElement) document.exitPointerLock();
   saveCheckpoint();
-  $('briefEyebrow').textContent = `Operation ${i + 1} of ${OPS.length} · Floors ${a} to ${b} · ${THEME_NAME[op.theme]}`;
+  $('briefEyebrow').textContent = mode === 'replay' ? `Replay · Operation ${i + 1} · ${floorN === a ? `Floors ${a} to ${b}` : `Floor ${floorN} to ${b}`} · ${THEME_NAME[op.theme]}` : `Operation ${i + 1} of ${OPS.length} · Floors ${a} to ${b} · ${THEME_NAME[op.theme]}`;
   $('briefTitle').textContent = `Operation ${op.name}`;
   $('briefText').textContent = op.brief;
   const foes = i === 0 ? FOE_FROM.map(([f, t]) => f > 1 ? `${t} from floor ${f}` : t).join(', ') + '.' : 'Everything you have met so far, in greater numbers, better armed and more accurate, with more elites.';
-  const objs = []; for (let n = a; n < b; n++) { const k = objFor(n); if (k) objs.push(`floor ${n}, ${OBJ[k].name.toLowerCase()}`); }
-  $('briefIntel').innerHTML = [['Hostiles', foes], ['Training', TRAINING[Math.min(i, TRAINING.length - 1)] + ' They get sharper every floor.'], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
+  const objs = []; for (let n = Math.max(a, floorN); n < b; n++) { const k = objFor(n); if (k) objs.push(`floor ${n}, ${OBJ[k].name.toLowerCase()}`); }
+  $('briefIntel').innerHTML = [['Hostiles', foes], ['Training', TRAINING[Math.min(i, TRAINING.length - 1)] + ' They get sharper every floor.'], ['Enemy intel', intelText()], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
     ...(meta.opBest && meta.opBest[i] ? [['Your best', `Stealth ${meta.opBest[i].s} · Speed ${meta.opBest[i].t}`]] : []),
     ['Your kit', `${WEAPONS[LO.slots[0].k].name} · ${Math.round(P.hp)} / ${P.maxHp} hp · ${Object.keys(ups).length ? Object.keys(ups).length + (Object.keys(ups).length === 1 ? ' mutation' : ' mutations') : 'no mutations yet'}`]].map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('');
-  $('briefNote').textContent = i ? 'Progress saved. You can stop here and continue later.' : 'Progress saves at the start of every operation.';
+  $('briefQuit').textContent = mode === 'replay' ? 'Back to operations' : 'Return to base';
+  $('briefNote').textContent = mode === 'replay' ? "Replays don't change your campaign save." : i ? 'Progress saved. You can stop here and continue later.' : 'Progress saves at the start of every operation.';
   $('brief').hidden = false;
+}
+// ---------- enemy intel: the soldiers adapt to your habits, learned floor by floor and kept with your progress ----------
+// meta.intel holds running averages of how you clear floors; AD turns them into counters (0 to 1, close is -1 to 1)
+let AD = { shadows: 0, close: 0, spread: 0, cover: 0, decoy: 0, lights: 0 };
+const INTEL0 = () => ({ n: 0, stealth: .2, close: .35, heads: .25, nades: .3, decoy: 0, lights: 0 });
+function learnFloor() {
+  if (daily) return; const F = stats.fl; if (!F || F.k + F.nades + F.bottles + F.lights < 2) return;
+  const I = meta.intel = Object.assign(INTEL0(), meta.intel || {}), mix = (k, v) => { I[k] += (clamp(v, 0, 1) - I[k]) * .3; };
+  if (F.k) { mix('stealth', F.quiet / F.k); mix('close', F.close / F.k); }
+  if (F.gk) mix('heads', F.gh / F.gk);
+  mix('nades', F.nades / 3); mix('decoy', F.bottles / 2); mix('lights', F.lights / 2);
+  I.n++; stats.fl = null;
+}
+function computeAdapt() {
+  const I = meta.intel; if (!I || daily) return { shadows: 0, close: 0, spread: 0, cover: 0, decoy: 0, lights: 0 };
+  const sv = Math.min(1, I.n / 6), r = (v, lo, hi) => clamp((v - lo) / (hi - lo), 0, 1) * sv;
+  return { shadows: r(I.stealth, .2, .7), close: sv * clamp((I.close - .35) / .35, -1, 1), spread: r(I.nades, .25, .8), cover: r(I.heads, .2, .55), decoy: r(I.decoy, .1, .6), lights: r(I.lights, .1, .6) };
+}
+function intelText() {
+  const A = computeAdapt(), I = meta.intel, out = [];
+  if (!I || I.n < 2) return 'Meridian has only started studying you. The more floors you clear, the more their soldiers adapt to your habits.';
+  if (A.shadows > .2) out.push('you strike from the dark, so they search the shadows harder and spot bodies further off');
+  if (A.close > .2) out.push('you like it up close, so they keep their distance and rush you less');
+  if (A.close < -.2) out.push('you fight at range, so they close in and flank more');
+  if (A.spread > .2) out.push('you lean on grenades, so they scatter sooner');
+  if (A.cover > .2) out.push('your aim is good, so they stay behind cover');
+  if (A.decoy > .2) out.push('they know the bottle trick, and a noise puts them on edge');
+  if (A.lights > .2) out.push('a light going out puts the whole area on alert');
+  return out.length ? `They have studied your last ${Math.min(I.n, 99)} floors. ` + out.map((t, i) => i ? t : t[0].toUpperCase() + t.slice(1)).join('; ') + '.' : `They have studied your last ${I.n} floors and found no habit to exploit yet.`;
 }
 // operation grades: stealth is the share of rooms cleared before anyone raised the alarm, speed is time against par
 const GRADES = ['S', 'A', 'B', 'C', 'D'];
@@ -3578,19 +3683,22 @@ const stealthGrade = (q, n) => GRADES[!n ? 4 : q >= n ? 0 : q / n >= .75 ? 1 : q
 const speedGrade = (t, par) => GRADES[t <= par ? 0 : t <= par * 1.35 ? 1 : t <= par * 1.8 ? 2 : t <= par * 2.5 ? 3 : 4];
 const betterGrade = (a, b) => !b || GRADES.indexOf(a) < GRADES.indexOf(b);
 function showDebrief() {
-  const i = opOf(floorN), op = OPS[i % OPS.length], last = i === OPS.length - 1, b0 = (meta.cp && meta.cp.stats) || {};
+  const rp = mode === 'replay', i = opOf(floorN), op = OPS[i % OPS.length], last = !rp && i === OPS.length - 1, b0 = (!rp && meta.cp && meta.cp.stats) || {};
   const d = k => Math.round((stats[k] || 0) - (b0[k] || 0)), el = (performance.now() - stats.t0) / 1000 - (b0.el || 0);
-  $('debEyebrow').textContent = last ? 'Campaign complete' : `Operation ${i + 1} of ${OPS.length} complete`;
+  $('debEyebrow').textContent = rp ? `Replay · Operation ${i + 1} complete` : last ? 'Campaign complete' : `Operation ${i + 1} of ${OPS.length} complete`;
   $('debTitle').textContent = last ? 'Meridian is finished' : `Operation ${op.name} complete`;
   $('debText').textContent = last ? OPS_END : op.done;
   const rq = d('rq'), rn = d('rn'), pt = d('pt'), par = d('par'), sg = stealthGrade(rq, rn), tg = speedGrade(pt, par);
-  const ob = (meta.opBest = meta.opBest || {}), prev = ob[i] || {}, newS = betterGrade(sg, prev.s), newT = betterGrade(tg, prev.t);
-  ob[i] = { s: newS ? sg : prev.s, t: newT ? tg : prev.t }; saveMeta();
-  const gb = (lab, g, sub, nw, pv) => `<div class="grade g${g}"><div class="label">${lab}</div><div class="gl">${g}</div><div class="gs">${sub}${nw && pv ? '<b> · new best</b>' : !nw ? ` · best ${pv}` : ''}</div></div>`;
+  const whole = !rp || (replay && (replay.f - 1) % OPF === 0);
+  const ob = (meta.opBest = meta.opBest || {}), prev = ob[i] || {}, newS = whole && betterGrade(sg, prev.s), newT = whole && betterGrade(tg, prev.t);
+  ob[i] = { s: newS ? sg : prev.s || sg, t: newT ? tg : prev.t || tg }; if (!whole && !prev.s) delete ob[i]; saveMeta();
+  const gb = (lab, g, sub, nw, pv) => `<div class="grade g${g}"><div class="label">${lab}</div><div class="gl">${g}</div><div class="gs">${sub}${nw && pv ? '<b> · new best</b>' : !nw && pv ? ` · best ${pv}` : ''}</div></div>`;
+  $('debGrades').hidden = !whole;
   $('debGrades').innerHTML = gb('Stealth', sg, `${rq} of ${rn} rooms cleared unseen`, newS, prev.s) + gb('Speed', tg, `${fmtT(pt)} against par ${fmtT(par)}`, newT, prev.t);
   $('debStats').innerHTML = [['Kills', d('kills')], ['Headshots', d('heads')], ['Takedowns', d('stabs')], ['Objectives', `${d('obj')}<small> / ${d('objN')}</small>`], ['Biomass', '+' + d('bm')], ['Time', fmtT(pt || el)]]
     .map(([k, v]) => `<div class="stat"><div class="label">${k}</div><div class="v">${v}</div></div>`).join('');
-  $('debGo').hidden = last; $('debMenu').hidden = !last;
+  $('debGo').hidden = last || rp; $('debMenu').hidden = !(last || rp); $('debMenu').textContent = rp ? 'Back to operations' : 'Main menu';
+  if (rp) { recordRun(false); bankRun(); }
   if (last) { meta.camp = true; delete meta.cp; recordRun(false); bankRun(); saveMeta(); }
   $('debrief').hidden = false;
 }
@@ -3602,7 +3710,42 @@ function toMenu() {
   if (document.pointerLockElement) document.exitPointerLock();
   renderHeat(); $('menu').hidden = false;
 }
+// highest campaign floor cleared; floors up to it can be replayed from the Operations screen
+const doneFloor = () => Math.max(meta.campMax || 0, meta.camp ? OPS.length * OPF : 0, meta.cp ? meta.cp.floor - 1 : 0);
+let replay = null; // { i, f } while a replay is running
+function openOps() {
+  initAudio(); for (const id of ['menu', 'dead', 'debrief']) $(id).hidden = true;
+  const df = doneFloor(), ob = meta.opBest || {};
+  $('opGrid').innerHTML = OPS.map((op, i) => {
+    const a = i * OPF + 1, st = df >= a + OPF - 1 ? 'done' : df >= a - 1 ? 'cur' : 'lock';
+    const fl = Array.from({ length: OPF }, (_, j) => { const f = a + j, d = f <= df, c = !d && f === df + 1; return `<button data-f="${f}" class="${d ? 'done' : c ? 'cur' : ''}${j === OPF - 1 ? ' boss' : ''}" ${d ? '' : 'disabled'} aria-label="Floor ${f}${d ? ', replay' : c ? ', next' : ', locked'}">${String(f).padStart(2, '0')}</button>`; }).join('');
+    const b = ob[i];
+    return `<div class="opc ${st}"><div><div class="k">Operation ${i + 1} · ${THEME_NAME[op.theme]}</div><div class="nm">${op.name}</div></div>
+      <div class="st">${st === 'done' ? 'Complete' : st === 'cur' ? (df >= a ? 'In progress' : 'Next up') : 'Locked'}</div>
+      <div class="fl">${fl}</div><div class="bst">${b ? `Best · Stealth ${b.s} · Speed ${b.t}` : st === 'lock' ? 'Clear the operation before it to unlock' : 'No grade yet'}</div></div>`;
+  }).join('');
+  $('ops').hidden = false;
+}
+$('opGrid').onclick = e => { const b = e.target.closest('button.done'); if (b) startReplay(+b.dataset.f); };
+$('opsBtn').onclick = () => openOps();
+$('opsBack').onclick = () => { $('ops').hidden = true; toMenu(); };
+// a replay: the operation's starting kit, plus one mutation for each floor of it you skip
+function startReplay(f) {
+  initAudio(); goFullscreen(); if (ac && ac.state === 'suspended') ac.resume();
+  for (const id of ['menu', 'dead', 'board', 'career', 'ops']) $(id).hidden = true;
+  daily = null; mode = 'replay'; resetRun();
+  const i = opOf(f), k = meta.opKit && meta.opKit[i], picks = (k ? 0 : i * OPF) + (f - 1) % OPF;
+  if (k) {
+    for (const u in ups) delete ups[u]; Object.assign(ups, k.ups || {}); for (const u in evo) delete evo[u]; Object.assign(evo, k.evo || {});
+    const g = WEAPONS[k.gun] ? k.gun : LO.slots[0].k; LO.slots[0] = { k: g, ammo: magFor(WEAPONS[g]) };
+  }
+  for (let n = 0; n < picks; n++) { const pool = Object.keys(UP).filter(u => U(u) < UP[u].max && inPool(u)); if (pool.length) { const u = pick(pool); ups[u] = U(u) + 1; } }
+  floorN = f; replay = { i, f };
+  P.maxHp = baseMaxHp() + 60 * U('hp'); P.hp = P.maxHp;
+  showBrief();
+}
 function renderCampaignMenu() {
+  $('opsBtn').hidden = doneFloor() < 1;
   const c = meta.cp;
   $('startBtn').textContent = c ? `Continue · Operation ${opOf(c.floor) + 1}` : 'Deploy';
   $('newBtn').hidden = !c; $('newBtn').classList.remove('armed'); $('newBtn').textContent = 'New campaign';
@@ -3630,9 +3773,10 @@ function startFloor() {
   scene.fog.color.setHex(rooms[0].mood.fog);
   const ec = enemies.length, bossE = enemies.find(e => e.boss);
   stats.par = (stats.par || 0) + parFor(ec, !!bossE);
+  stats.fl = { k: 0, quiet: 0, close: 0, gk: 0, gh: 0, nades: 0, bottles: 0, lights: 0 }; AD = computeAdapt();
   // black card with the floor number, fading out over the freshly built level
   const fd = $('fade'); $('fadeN').innerHTML = `Floor <b>${String(floorN).padStart(2, '0')}</b>`;
-  $('fadeSub').textContent = bossE ? `Boss floor · ${bossE.boss}` : `${H() ? `Heat ${H()} · ` : ''}${THEME_NAME[THEME]} · ${daily ? 'Daily challenge' : inCampaign() ? `Operation ${OPS[opOf(floorN) % OPS.length].name} · floor ${(floorN - 1) % OPF + 1} of ${OPF}` : 'Breach and clear'}`;
+  $('fadeSub').textContent = bossE ? `Boss floor · ${bossE.boss}` : `${H() ? `Heat ${H()} · ` : ''}${THEME_NAME[THEME]} · ${daily ? 'Daily challenge' : inCampaign() || mode === 'replay' ? `Operation ${OPS[opOf(floorN) % OPS.length].name} · floor ${(floorN - 1) % OPF + 1} of ${OPF}` : 'Breach and clear'}`;
   fd.classList.remove('go'); void fd.offsetWidth; fd.classList.add('go');
   callout(bossE ? `Floor ${String(floorN).padStart(2, '0')} · Boss` : `Floor ${String(floorN).padStart(2, '0')}`, bossE ? `${bossE.boss} is waiting in the last room · restock at the crate` : `${rooms.length} rooms · ${ec} hostiles · ${obj ? OBJ[obj.k].brief : 'breach, then toss a flashbang in'}`, 3.4);
   $('breachHint').textContent = IS_TOUCH ? 'Walk to the door to breach, then throw a FLASH' : 'Walk up to the door to breach · then T flashbang or G frag';
@@ -3722,17 +3866,18 @@ function continueCampaign() {
 $('startBtn').onclick = () => meta.cp ? continueCampaign() : beginRun(false);
 $('newBtn').onclick = () => { const b = $('newBtn'); if (!b.classList.contains('armed')) { b.classList.add('armed'); b.textContent = 'Click again to start over'; return; } beginRun(false); };
 $('endlessBtn').onclick = () => beginRun(false, 'endless');
-$('cpBtn').onclick = () => continueCampaign();
-$('retryBtn').onclick = () => beginRun(!!daily, daily ? 'endless' : mode);
+$('cpBtn').onclick = () => mode === 'replay' && replay ? startReplay(replay.f) : continueCampaign();
+$('retryBtn').onclick = () => mode === 'replay' ? (toMenu(), openOps()) : beginRun(!!daily, daily ? 'endless' : mode);
 $('briefGo').onclick = () => { initAudio(); $('brief').hidden = true; startFloor(); state = 'playing'; document.body.className = 'playing'; lockPointer(); };
-$('briefQuit').onclick = () => { recordRun(false); bankRun(); toMenu(); };
+$('briefQuit').onclick = () => { if (mode === 'replay') { $('brief').hidden = true; toMenu(); openOps(); return; } recordRun(false); bankRun(); toMenu(); };
 $('debGo').onclick = () => { $('debrief').hidden = true; dealCards(); $('upgrade').hidden = false; SFX.mutate(); };
-$('debMenu').onclick = () => toMenu();
+$('debMenu').onclick = () => { const rp = mode === 'replay'; $('debrief').hidden = true; toMenu(); if (rp) openOps(); };
 $('dailyPlay').onclick = () => beginRun(true);
 let boardFrom = 'menu';
 function openBoard(from) { boardFrom = from; initAudio(); $(from).hidden = true; $('board').hidden = false; renderBoard(); }
 $('dailyBtn').onclick = () => openBoard('menu');
 $('boardBtn2').onclick = () => openBoard('dead');
+$('callIn').onchange = () => { const v = $('callIn').value.trim().slice(0, 24); callsign = v || 'Operator ' + syncSecret.slice(-4).toUpperCase(); $('callIn').value = callsign; store.set('kh.name', callsign); supaPush(); setTimeout(renderBoard, 1200); };
 $('boardBack').onclick = () => { $('board').hidden = true; $(boardFrom).hidden = false; };
 $('menuBtn2').onclick = () => { renderHeat(); $('dead').hidden = true; daily = null; state = 'menu'; document.body.className = ''; $('menu').hidden = false; };
 $('voiceToggle').checked = voiceOn;
@@ -3876,7 +4021,7 @@ function fire() {
     const dir = new V3().copy(camDir).addScaledVector(right, Math.cos(a) * r).addScaledVector(up, Math.sin(a) * r).normalize();
     traceBullet(camPos, dir, scatter ? .7 : 1, i < 3 && (i === 0 || Math.random() < .5));
   }
-  makeNoise(shotLamp || P.pos);
+  makeNoise(shotLamp || P.pos, shotLamp ? 'light' : 'shot');
   suppressAlong(camPos, camDir, wp.pellets > 1 ? 1.3 : 1);
   W.bloom = Math.min(.04, W.bloom + (wp.auto ? .006 : .012));
   const rec = wp.recoil * (MR(wp.key) >= 1 ? .8 : 1) * (scatter ? 1.3 : 1) * (1 - .3 * P.ch) * (1 - .12 * M('steady')) * (1 - .35 * ads);
@@ -3906,7 +4051,7 @@ function nadeThreat(e, dt) {
   let best = null, bd = 6.8;
   for (const n of nades) { if (n.owner !== 'player' || n.kind !== 'frag') continue; const d = Math.hypot(n.m.position.x - e.g.position.x, n.m.position.z - e.g.position.z); if (d < bd) { bd = d; best = n; } }
   if (!best) { e.dodgeN = null; return null; }
-  if (e.dodgeN !== best) { e.dodgeN = best; e.dodgeT = rand(.35, .75) * (1 - .4 * e.iq) + (e.crouchK > .5 ? .25 : 0); e.dodgeOk = Math.random() < .55 + .4 * e.iq; }
+  if (e.dodgeN !== best) { e.dodgeN = best; e.dodgeT = rand(.35, .75) * (1 - .4 * e.iq) * (1 - .3 * AD.spread) + (e.crouchK > .5 ? .25 : 0); e.dodgeOk = Math.random() < .55 + .4 * e.iq + .3 * AD.spread; }
   e.dodgeT -= dt;
   if (e.dodgeT > 0 || !e.dodgeOk) return null;
   if (!best.called) { best.called = true; say(e, pick(['Grenade!', 'Frag! Move!', 'Grenade, get clear!']), true); }
@@ -4069,7 +4214,7 @@ function tryThrow(kind) {
   if (state !== 'playing' || W.throwT > 0 || W.stabT > 0) return;
   const key = kind === 'frag' ? 'frags' : kind === 'bottle' ? 'bottles' : 'flashes';
   if (P[key] <= 0) { SFX.empty(); return; }
-  P[key]--; W.throwT = .42;
+  P[key]--; W.throwT = .42; if (stats.fl) stats.fl[kind === 'bottle' ? 'bottles' : 'nades']++;
   camera.getWorldPosition(camPos); camera.getWorldDirection(camDir);
   const p = camPos.clone().addScaledVector(camDir, .35); p.y -= .08;
   const v = camDir.clone().multiplyScalar(14.5).add(new V3(0, 3, 0)).addScaledVector(P.vel, .5);
@@ -4287,6 +4432,7 @@ function damageEnemy(e, amt, point, head, kind) {
 const DEATH_BONES = ['Spine', 'Spine1', 'Spine2', 'Neck', 'Head', 'LeftUpLeg', 'LeftLeg', 'RightUpLeg', 'RightLeg', 'LeftArm', 'RightArm', 'LeftForeArm', 'RightForeArm'];
 function killEnemy(e) {
   e.dead = true; e.deathT = 0; stats.kills++; if (e.elite) stats.elites++;
+  const FL = stats.fl; if (FL && !e.boss) { FL.k++; if (!e.room.contact) FL.quiet++; if (Math.hypot(e.g.position.x - P.pos.x, e.g.position.z - P.pos.z) < 6) FL.close++; if (e.lastKind === 'gun') { FL.gk++; if (e.lastHead) FL.gh++; } }
   const src = e.lastKind === 'gun' ? LO.slots[LO.cur].k : e.lastKind === 'stab' ? 'knife' : e.lastKind === 'frag' ? 'frag' : e.lastKind === 'bomb' ? 'bomb' : 'mutation';
   const rk0 = WEAPONS[src] ? rankOf(src) : 0;
   stats.wk[src] = (stats.wk[src] || 0) + 1;
@@ -4610,6 +4756,7 @@ function escortWaiting() {
 }
 function completeFloor() {
   state = 'upgrade'; stats.floors = floorN; document.body.className = 'upgrade';
+  learnFloor(); if (inCampaign()) meta.campMax = Math.max(meta.campMax || 0, floorN);
   if (document.pointerLockElement) document.exitPointerLock();
   mouseDown = false;
   $('upEyebrow').textContent = `Floor ${String(floorN).padStart(2, '0')} cleared${obj ? ` · ${OBJ[obj.k].name.toLowerCase()} ${obj.state === 'done' ? 'complete' : 'failed'}` : ''}`;
@@ -4619,7 +4766,7 @@ function completeFloor() {
   if (floorN === 5 && H() >= (meta.heatMax || 0) && H() < 5) { meta.heatMax = H() + 1; calloutQ.push([`Heat ${meta.heatMax} unlocked`, 'Pick it on the main menu for more biomass', 3]); }
   bankRun();
   rerolls = M('reroll');
-  if (inCampaign() && floorN % OPF === 0) { showDebrief(); SFX.mutate(); return; }
+  if ((inCampaign() || mode === 'replay') && floorN % OPF === 0) { showDebrief(); SFX.mutate(); return; }
   dealCards();
   $('upgrade').hidden = false;
   SFX.mutate();
@@ -4738,11 +4885,11 @@ function renderBars(el, wk) {
 }
 function gameOver() {
   state = 'dead'; document.body.className = 'dead'; P.adsHold = false;
-  meta.runs = (meta.runs || 0) + 1;
+  meta.runs = (meta.runs || 0) + 1; learnFloor();
   const recs = recordRun(true); bankRun();
   $('deadScore').hidden = !daily; $('boardBtn2').hidden = !daily;
-  const cp = inCampaign() && meta.cp; $('cpBtn').hidden = !cp; if (cp) $('cpBtn').textContent = `Retry Operation ${OPS[opOf(cp.floor) % OPS.length].name}`;
-  $('retryBtn').textContent = cp ? 'New campaign' : 'Redeploy'; $('retryBtn').className = cp ? 'btn ghost' : 'btn';
+  const cp = inCampaign() && meta.cp, rp = mode === 'replay' && replay; $('cpBtn').hidden = !cp && !rp; if (cp) $('cpBtn').textContent = `Retry Operation ${OPS[opOf(cp.floor) % OPS.length].name}`; if (rp) $('cpBtn').textContent = `Retry from floor ${rp.f}`;
+  $('retryBtn').textContent = rp ? 'Operations' : cp ? 'New campaign' : 'Redeploy'; $('retryBtn').className = cp || rp ? 'btn ghost' : 'btn';
   if (daily) { $('deadScore').textContent = `Daily challenge score: ${fmtN(runScore())}`; submitDaily(); }
   if (document.pointerLockElement) document.exitPointerLock();
   const secs = Math.round((performance.now() - stats.t0) / 1000);
@@ -4797,7 +4944,11 @@ renderHeat();
 $('careerBtn').onclick = () => openCareer('menu');
 $('careerBtn2').onclick = () => openCareer('dead');
 // ---------- save code: all your unlocks, biomass, career and campaign checkpoint in one string ----------
-const saveCode = () => 'KH1-' + btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
+const saveCode = () => supaReady ? syncSecret : 'KH1-' + btoa(unescape(encodeURIComponent(JSON.stringify(meta))));
+function renderSyncUI() {
+  $('xferLabel').textContent = supaReady ? 'Progress syncs online · to play on another device, copy your sync code and load it there' : 'Move your progress · copy the code on one device and load it on another';
+  $('codeCopy').textContent = supaReady ? 'Copy sync code' : 'Copy save code';
+}
 function readSaveCode(txt) {
   const t = String(txt || '').replace(/\s+/g, ''); if (!t.startsWith('KH1-')) return null;
   try { const v = JSON.parse(decodeURIComponent(escape(atob(t.slice(4))))); return v && typeof v.bm === 'number' ? v : null; } catch (e) { return null; }
@@ -4809,10 +4960,18 @@ $('codeCopy').onclick = () => {
   try { navigator.clipboard.writeText(c).then(() => { msg.textContent = 'Save code copied. Paste it into Load code on your other device.'; }, shown); } catch (e) { shown(); }
 };
 $('codeLoad').onclick = () => {
-  const v = readSaveCode($('codeIn').value), msg = $('codeMsg'), b = $('codeLoad');
-  if (!v) { msg.textContent = "That doesn't look like a Killhouse save code."; return; }
+  const raw = $('codeIn').value.replace(/\s+/g, ''), sync = /^KHS-[\w-]{20,}$/.test(raw) && supaOn(), v = sync ? null : readSaveCode(raw), msg = $('codeMsg'), b = $('codeLoad');
+  if (!sync && !v) { msg.textContent = "That doesn't look like a Killhouse code."; return; }
   if (!codeArm) { codeArm = setTimeout(() => { codeArm = 0; b.textContent = 'Load code'; }, 4000); b.textContent = 'Click again to replace'; msg.textContent = "Loading replaces this device's progress with the code's."; return; }
   clearTimeout(codeArm); codeArm = 0; b.textContent = 'Load code';
+  if (sync) {
+    const old = syncSecret; syncSecret = raw; store.set('kh.sync', raw); msg.textContent = 'Loading…';
+    initSupa(true).then(found => {
+      if (!found) { syncSecret = old; store.set('kh.sync', old); initSupa(); msg.textContent = supaReady ? 'No progress is saved under that sync code.' : 'Could not reach the server. Try again in a moment.'; return; }
+      $('codeIn').value = ''; openCareer(careerFrom); renderSyncUI(); $('codeMsg').textContent = `Linked. ${Math.floor(meta.bm)} biomass${meta.cp ? `, operation ${opOf(meta.cp.floor) + 1} saved` : ''}, playing as ${callsign}.`;
+    });
+    return;
+  }
   meta = Object.assign({ bm: 0, lv: {}, best: 0, runs: 0, earned: 0 }, v); saveMeta();
   if (VMS.rifle) applySkins(); renderLab(); renderHeat(); renderCampaignMenu(); openCareer(careerFrom);
   $('codeIn').value = ''; $('codeMsg').textContent = `Progress loaded: ${Math.floor(meta.bm)} biomass${meta.cp ? `, operation ${opOf(meta.cp.floor) + 1} saved` : ''}.`;
@@ -5076,7 +5235,7 @@ function breakLight(r, f, at) {
   sparks.emit(at, 24, { speed: 5, color: [3, 2.6, 1.8], size: .03, life: .5, gravity: 9, spread: 1 });
   sparks.emit(at, 18, { speed: 2.5, color: [.9, .95, 1], size: .022, life: 1.1, gravity: 11, spread: 1 });
   flash(at, 0xfff0d0, 25); SFX.glass(at.distanceTo(P.pos));
-  stats.lights = (stats.lights || 0) + 1;
+  stats.lights = (stats.lights || 0) + 1; if (stats.fl) stats.fl.lights++;
   return new V3(f.p.x, 0, f.p.z);
 }
 // sight builds suspicion (faster up close, in the open, on the move); a crouch-walk is quiet, running is not
@@ -5089,11 +5248,11 @@ function perceive(e, dt, dist, dx, dz) {
   if (e.los) {
     const ang = Math.acos(clamp((Math.sin(e.yaw) * dx + Math.cos(e.yaw) * dz) / (dist || 1), -1, 1));
     const half = dog ? 1.9 : e.chkNoise ? 1.35 : 1.05;
-    const range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (.5 + .5 * lit) * (.9 + .2 * e.iq);
+    const sh = dog ? 0 : AD.shadows, range = (dog ? 10 : e.type === 'sniper' ? 42 : 28) * (crouch ? .6 : 1) * (.5 + .5 * lit) * (.9 + .2 * e.iq);
     if (dist < range && ang < half + .45) {
       rate = 1 / (.2 + dist * .11);
       if (ang > half) rate *= pv > 1 ? .3 : 0; // the corner of the eye only catches movement
-      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (.8 + .45 * e.iq) * (e.chkNoise ? 1.6 : 1) * (.35 + .8 * lit);
+      rate *= (crouch ? .5 : 1) * (pv > 4.5 ? 1.3 : pv < .4 ? .6 : 1) * (e.elite ? 1.25 : 1) * (.8 + .45 * e.iq) * (e.chkNoise ? 1.6 : 1) * (.35 + .12 * sh + (.8 - .12 * sh) * lit);
       rate *= 1 - .6 * smooth(range * .55, range, dist);
       if (dist < 2.2 && ang < half) rate = Math.max(rate, 4);
     }
@@ -5128,7 +5287,7 @@ function perceive(e, dt, dist, dx, dz) {
     if (!o.dead || o.gone || o.found || o.deathT < .4 || o.dog && o.room !== RM) continue;
     if (o.g.position.z < RM.z0 || o.g.position.z >= RM.z1) continue;
     const bx = o.g.position.x - e.g.position.x, bz = o.g.position.z - e.g.position.z, bd = Math.hypot(bx, bz);
-    if (bd > 4.5 + 11.5 * poolLight(o.g.position.x, o.g.position.z) || (fx * bx + fz * bz) / (bd || 1) < .45) continue;
+    if (bd > 4.5 + 6 * AD.shadows + (11.5 - 6 * AD.shadows) * poolLight(o.g.position.x, o.g.position.z) || (fx * bx + fz * bz) / (bd || 1) < .45) continue;
     eEye.copy(e.g.position); eEye.y += 1.5; tmpV2.set(o.g.position.x, .35, o.g.position.z);
     if (!lineOfSight(eEye, tmpV2)) continue;
     e.bodyChk = o; e.sus = Math.max(e.sus, .6); e.susP.set(o.g.position.x, 0, o.g.position.z); return;
@@ -5147,17 +5306,17 @@ function makeNoise(p, kind = 'shot') {
     const d = Math.hypot(e.g.position.x - p.x, e.g.position.z - p.z); if (d > hear) continue;
     if (e.chkNoise) { inv = e; bd = -1; } // already on his way: he takes the new spot
     else if (!e.dog && !e.bodyChk && d < bd) { inv = e; bd = d; }
-    if (d < 7) near.push(e);
+    if (d < (kind === 'light' ? 7 + 6 * AD.lights : 7)) near.push(e);
   }
   const send = o => {
     if (!o.chkNoise) { o.susSaid = false; o.chkNoise = { t: 0, look: 0, lookT: 0 }; }
     o.chkNoise.t = 0; o.chkNoise.look = 0; o.chkNoise.p = new V3(p.x, 0, p.z);
-    o.sus = Math.max(o.sus, .6); o.susP.set(p.x, 0, p.z);
+    o.sus = Math.max(o.sus, .6 + (kind === 'toss' ? .25 * AD.decoy : kind === 'light' ? .2 * AD.lights : 0)); o.susP.set(p.x, 0, p.z);
   };
   if (inv) {
     send(inv);
     // well-drilled squads send a second man to cover him
-    if (inv.iq >= .7 && !pr.enemies.some(o => o !== inv && o.chkNoise)) {
+    if ((inv.iq >= .7 || kind === 'toss' && AD.decoy > .5) && !pr.enemies.some(o => o !== inv && o.chkNoise)) {
       let b2 = null, d2 = hear;
       for (const o of pr.enemies) { if (o === inv || o.dead || o.alerted || o.dog || o.boss || o.bodyChk || o.sus === undefined) continue; const d = Math.hypot(o.g.position.x - p.x, o.g.position.z - p.z); if (d < d2) { b2 = o; d2 = d; } }
       if (b2) send(b2);
@@ -5614,7 +5773,7 @@ function updateEnemy(e, dt) {
       // you're reloading or badly hurt: one of them rushes you while it lasts
       if (e.mode !== 'push' && time > (RM.pushAt || 0) && dist > 4 && dist < 16 && e.reloadT <= 0 && e.supp < .8 && (e.los || e.noLosT < 2) &&
           ((W.reload > 0 && wep().model !== 'shotgun') || P.hp < P.maxHp * (.3 + .1 * e.iq))) {
-        RM.pushAt = time + rand(7, 10) * (1 - .35 * e.iq);
+        RM.pushAt = time + rand(7, 10) * (1 - .35 * e.iq) * (1 + .6 * Math.max(0, AD.close));
         if (e.mode === 'cover') leaveCover(e); else if (e.mode === 'flank') RM.flanker = null;
         if (RM.holder === e) RM.holder = null;
         e.mode = 'push'; e.modeT = 2.8;
@@ -5625,13 +5784,13 @@ function updateEnemy(e, dt) {
         else { [mx, mz] = steer(e, P.pos.x, P.pos.z); spMul = 1.25; }
       }
       if (e.mode === 'engage') {
-        const wantCover = e.coverCd <= 0 && (e.reloadT > 0 || e.supp > .8 || (e.hurtT > 0 && e.hp < e.maxHp * .75) || (e.modeT <= 0 && Math.random() < .35 + .3 * e.iq));
+        const wantCover = e.coverCd <= 0 && (e.reloadT > 0 || e.supp > .8 || (e.hurtT > 0 && e.hp < e.maxHp * .75) || (e.modeT <= 0 && Math.random() < .35 + .3 * e.iq + .25 * AD.cover));
         if (wantCover && findCover(e)) {
           e.mode = 'cover'; e.modeT = rand(8, 13); e.peekT = rand(1, 2); e.peeking = false;
           if (Math.random() < .3) say(e, pick(['Moving to cover!', 'Covering!', 'Get down!']));
         } else if (e.modeT <= 0) {
           e.modeT = rand(3, 6);
-          if (e.type === 'grunt' && e.gunModel !== 'dmr' && !e.room.flanker && dist > 6 && Math.random() < .3 + .4 * e.iq && aliveIn(e.room) >= 2) startFlank(e, fx, fz);
+          if (e.type === 'grunt' && e.gunModel !== 'dmr' && !e.room.flanker && dist > 6 && Math.random() < .3 + .4 * e.iq + .25 * Math.max(0, -AD.close) && aliveIn(e.room) >= 2) startFlank(e, fx, fz);
         }
       }
       if (e.mode === 'cover') {
@@ -5651,7 +5810,7 @@ function updateEnemy(e, dt) {
         else { [mx, mz] = steer(e, fp.x, fp.z); spMul = 1.15; if (dist > 7) { faceX = mx; faceZ = mz; } }
       }
       if (e.mode === 'engage') {
-        const pref = e.type === 'heavy' ? 7 : e.gunModel === 'dmr' ? 16 : 11;
+        const pref = (e.type === 'heavy' ? 7 : e.gunModel === 'dmr' ? 16 : 11) + 4 * AD.close;
         if (!e.los) {
           // out of sight: one of them holds the angle where you vanished, the rest check that spot, then hunt you by sound
           const fresh = RM.seenP && time - RM.seenT < 8;
@@ -6151,6 +6310,8 @@ const BOOT = {
     'Get close and stab. It drops a regular soldier in one hit, and from behind it does triple damage.',
     'Soldiers do not know you are there until they spot you or find a body. A shot brings the nearest one over to check, so move after you fire. Crouch and keep to the dark between the lights to stay hidden (crawler drones see in the dark); a takedown on someone who never saw you is silent.',
     'Hide too long and they will cook a frag. Keep moving between cover.',
+    'Meridian studies how you fight. Lean on one trick for too long and their soldiers learn to counter it. The briefing tells you what they have picked up.',
+    'Cleared floors can be replayed from Operations on the main menu, without touching your campaign save.',
     'Shoot out a light indoors to make your own patch of dark. The nearest guard comes to see why it went out.',
     'Throw a bottle (B, or BOTTLE on a phone) to pull a guard away from a doorway. You get three a floor.',
     'Drag bodies into the dark or behind cover (X, or DRAG BODY on a phone). Guards spot a body in the light from far off, in the dark only up close.',
@@ -6217,7 +6378,7 @@ async function warmUp() {
   last = performance.now(); requestAnimationFrame(frame);
   setTimeout(() => { $('boot').classList.add('done'); clearInterval(tipT); setTimeout(() => $('boot').hidden = true, 800); }, 350);
 })();
-window.__kh = { get state() { return state; }, soldier: () => SOLDIER, VMS, inspectVM: (k = 'rifle', ry = Math.PI / 2, d = 1, rx = 0, foc = null) => { const g = VMS[k].g.clone(); g.visible = true; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(0, foc ? 0 : -.05, -d)); g.rotation.set(rx, yaw + ry, 0, 'YXZ'); if (foc) { g.updateMatrixWorld(); g.position.sub(new V3(...foc).applyQuaternion(g.quaternion)); } if (window.__marks) for (const [p, c] of window.__marks) { const m = new THREE.Mesh(new THREE.SphereGeometry(.005, 8, 6), new THREE.MeshBasicMaterial({ color: c, depthTest: false })); m.renderOrder = 99; m.position.fromArray(p); g.add(m); } scene.add(g); vm.visible = false; window.__vmHide = true; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); },  NAV, navPath, los: (a, b) => lineOfSight(new V3(...a), new V3(...b)), props: () => props, debris: () => debris, hitProp, blastProps, P, stats, W, stabTarget, fire: on => { mouseDown = on; }, inspectEnemy: (ry = 0, d = 2.2) => { const e = enemies.find(e => !e.dead); camera.updateMatrixWorld(); camera.localToWorld(e.g.position.set(0, 0, -d)); e.g.position.y = 0; e.yaw = yaw + Math.PI + ry; e.alerted = false; e.vel.set(0, 0, 0); window.__IE = e; return e.g.position.toArray(); }, inspect: (k = 'rifle', ry = Math.PI / 2, hi = false, d = .75, dx = 0) => { const g = hi ? buildRifle(k, true, true) : GUNPROTO[k].clone(); if (window.__insp) scene.remove(window.__insp); window.__insp = g; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(dx, -.05, -d)); g.rotation.set(0, yaw + ry, 0); scene.add(g); vm.visible = false; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); }, decal: (x, y, z, nx, ny, nz, sz, k) => addDecal(new V3(x, y, z), new V3(nx, ny, nz), sz, k), decalCount: () => level.children.filter(o => o.geometry === decalGeo).length, decalInfo: () => level.children.filter(o => o.geometry === decalGeo).slice(0, 3).map(o => ({ p: o.position.toArray().map(v => +v.toFixed(2)), s: o.scale.x, vis: o.visible, mat: o.material.type, map: !!o.material.map, ro: o.renderOrder })), shoot: n => { for (let i = 0; i < n; i++) { W.ammo = 30; fire(); } }, hurt: (n, who) => damagePlayer(n, new V3(P.pos.x, 1, P.pos.z + 1), who), enemies: () => enemies, rooms: () => rooms, ups, touch, killAll: () => enemies.forEach(e => !e.dead && killEnemy(e)), obj: () => obj, npcs: () => npcs, bossFor: L => bossFor(L), kill: e => killEnemy(e), setSeed: v => { runSeed = v; }, eshoot: (e, d) => enemyShoot(e, d), los: (a, b) => lineOfSight(a, b), breach: () => breach(), ext: () => extraction, spawn(t, d = 8) { const e = spawnEnemy(roomAt(P.pos.z), floorN, t); e.g.position.set(P.pos.x - Math.sin(yaw) * d, 0, P.pos.z - Math.cos(yaw) * d); rebuildTargets(); return e; }, complete: () => completeFloor(), arm(k) { LO.slots[0] = { k, ammo: magFor(WEAPONS[k]) }; LO.cur = 0; W.ammo = LO.slots[0].ammo; W.reload = 0; showVM(WEAPONS[k].model); }, reloadAt(u, empty) { if (W.reload <= 0) { W.ammo = empty ? 0 : 1; startReload(); } W.reload = W.rT * (1 - u); window.__rlU = u; }, view(y, p, x, z) { yaw = y; pitch = p; if (x !== undefined) { P.pos.x = x; P.pos.z = z; } }, give(k, n) { ups[k] = n; if (k === 'hp') { P.maxHp = baseMaxHp() + 60 * n; P.hp = P.maxHp; } renderMuts(); }, meta: () => meta, earn: n => { stats.bm += n; }, LO, WEAPONS, nades, get enemyThrows() { return enemyThrows; }, groundGuns: () => groundGuns, switchTo, takeGun, tryThrow, spawnNade, say, ads: on => { P.adsHold = on; }, floor: n => { floorN = n; startFloor(); }, setDaily: on => { daily = on ? { date: todayKey() } : null; }, runScore, renderBoard, pose: (crouch, flinch, aim) => { const e = window.__IE; e.poseLock = { c: crouch, f: flinch, a: aim }; }, walkPose: (vx, vz) => { const e = window.__IE; e.walkLock = vx == null ? null : { vx, vz, p: e.g.position.clone() }; }, freeze: on => { window.__frozen = on; }, killAs: (kind, head, t) => { const e = window.__IE; e.poseLock = null; e.knock.set(0, 0, 0); e.lastKind = kind; e.lastHead = !!head; killEnemy(e); e.deathFreeze = t; e.deathKind = kind === 'frag' ? 'blast' : e.deathKind; return e.deathKind; }, blind: k => { P.blindK = k; P.blindT = 3; }, drag, toggleDrag, poolLight, bodyPt, step: sec => { for (let t = 0; t < sec && state === 'playing'; t += 1 / 30) { camera.updateMatrixWorld(); tick(1 / 30); } }  };
+window.__kh = { get state() { return state; }, soldier: () => SOLDIER, VMS, inspectVM: (k = 'rifle', ry = Math.PI / 2, d = 1, rx = 0, foc = null) => { const g = VMS[k].g.clone(); g.visible = true; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(0, foc ? 0 : -.05, -d)); g.rotation.set(rx, yaw + ry, 0, 'YXZ'); if (foc) { g.updateMatrixWorld(); g.position.sub(new V3(...foc).applyQuaternion(g.quaternion)); } if (window.__marks) for (const [p, c] of window.__marks) { const m = new THREE.Mesh(new THREE.SphereGeometry(.005, 8, 6), new THREE.MeshBasicMaterial({ color: c, depthTest: false })); m.renderOrder = 99; m.position.fromArray(p); g.add(m); } scene.add(g); vm.visible = false; window.__vmHide = true; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); },  NAV, navPath, los: (a, b) => lineOfSight(new V3(...a), new V3(...b)), props: () => props, debris: () => debris, hitProp, blastProps, P, stats, W, stabTarget, fire: on => { mouseDown = on; }, inspectEnemy: (ry = 0, d = 2.2) => { const e = enemies.find(e => !e.dead); camera.updateMatrixWorld(); camera.localToWorld(e.g.position.set(0, 0, -d)); e.g.position.y = 0; e.yaw = yaw + Math.PI + ry; e.alerted = false; e.vel.set(0, 0, 0); window.__IE = e; return e.g.position.toArray(); }, inspect: (k = 'rifle', ry = Math.PI / 2, hi = false, d = .75, dx = 0) => { const g = hi ? buildRifle(k, true, true) : GUNPROTO[k].clone(); if (window.__insp) scene.remove(window.__insp); window.__insp = g; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(dx, -.05, -d)); g.rotation.set(0, yaw + ry, 0); scene.add(g); vm.visible = false; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); }, decal: (x, y, z, nx, ny, nz, sz, k) => addDecal(new V3(x, y, z), new V3(nx, ny, nz), sz, k), decalCount: () => level.children.filter(o => o.geometry === decalGeo).length, decalInfo: () => level.children.filter(o => o.geometry === decalGeo).slice(0, 3).map(o => ({ p: o.position.toArray().map(v => +v.toFixed(2)), s: o.scale.x, vis: o.visible, mat: o.material.type, map: !!o.material.map, ro: o.renderOrder })), shoot: n => { for (let i = 0; i < n; i++) { W.ammo = 30; fire(); } }, hurt: (n, who) => damagePlayer(n, new V3(P.pos.x, 1, P.pos.z + 1), who), enemies: () => enemies, rooms: () => rooms, ups, touch, killAll: () => enemies.forEach(e => !e.dead && killEnemy(e)), obj: () => obj, npcs: () => npcs, bossFor: L => bossFor(L), kill: e => killEnemy(e), setSeed: v => { runSeed = v; }, eshoot: (e, d) => enemyShoot(e, d), los: (a, b) => lineOfSight(a, b), breach: () => breach(), ext: () => extraction, spawn(t, d = 8) { const e = spawnEnemy(roomAt(P.pos.z), floorN, t); e.g.position.set(P.pos.x - Math.sin(yaw) * d, 0, P.pos.z - Math.cos(yaw) * d); rebuildTargets(); return e; }, complete: () => completeFloor(), arm(k) { LO.slots[0] = { k, ammo: magFor(WEAPONS[k]) }; LO.cur = 0; W.ammo = LO.slots[0].ammo; W.reload = 0; showVM(WEAPONS[k].model); }, reloadAt(u, empty) { if (W.reload <= 0) { W.ammo = empty ? 0 : 1; startReload(); } W.reload = W.rT * (1 - u); window.__rlU = u; }, view(y, p, x, z) { yaw = y; pitch = p; if (x !== undefined) { P.pos.x = x; P.pos.z = z; } }, give(k, n) { ups[k] = n; if (k === 'hp') { P.maxHp = baseMaxHp() + 60 * n; P.hp = P.maxHp; } renderMuts(); }, meta: () => meta, earn: n => { stats.bm += n; }, LO, WEAPONS, nades, get enemyThrows() { return enemyThrows; }, groundGuns: () => groundGuns, switchTo, takeGun, tryThrow, spawnNade, say, ads: on => { P.adsHold = on; }, floor: n => { floorN = n; startFloor(); }, setDaily: on => { daily = on ? { date: todayKey() } : null; }, runScore, renderBoard, pose: (crouch, flinch, aim) => { const e = window.__IE; e.poseLock = { c: crouch, f: flinch, a: aim }; }, walkPose: (vx, vz) => { const e = window.__IE; e.walkLock = vx == null ? null : { vx, vz, p: e.g.position.clone() }; }, freeze: on => { window.__frozen = on; }, killAs: (kind, head, t) => { const e = window.__IE; e.poseLock = null; e.knock.set(0, 0, 0); e.lastKind = kind; e.lastHead = !!head; killEnemy(e); e.deathFreeze = t; e.deathKind = kind === 'frag' ? 'blast' : e.deathKind; return e.deathKind; }, blind: k => { P.blindK = k; P.blindT = 3; }, drag, toggleDrag, poolLight, bodyPt, learnFloor, computeAdapt, intelText, get AD() { return AD; }, setAD: o => { AD = Object.assign({ shadows: 0, close: 0, spread: 0, cover: 0, decoy: 0, lights: 0 }, o); }, startReplay, openOps, doneFloor, get mode() { return mode; }, submitDaily, get syncSecret() { return syncSecret; }, get callsign() { return callsign; }, get supaReady() { return supaReady; }, step: sec => { for (let t = 0; t < sec && state === 'playing'; t += 1 / 30) { camera.updateMatrixWorld(); tick(1 / 30); } }  };
 </script>
 
 
