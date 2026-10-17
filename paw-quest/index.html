@@ -26,6 +26,7 @@
 }
 html,body{height:100%;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:var(--sky);color:var(--ink);font-family:var(--font-b);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #cv,#cv3{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#tint{position:fixed;inset:0;pointer-events:none;mix-blend-mode:multiply}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit}
 .btn{font-family:var(--font-d);font-size:21px;font-weight:600;background:linear-gradient(#ffe07a,#ffbf2e);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:10px 20px;box-shadow:inset 0 3px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.08),0 5px 0 var(--ink);cursor:pointer;transition:transform .06s,box-shadow .06s;line-height:1.1}
@@ -202,6 +203,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 </style>
 
 <canvas id="cv3" aria-hidden="true"></canvas>
+<div id="tint" aria-hidden="true" hidden></div>
 <canvas id="cv" aria-label="Paw Quest game"></canvas>
 
 <div class="bar" id="vBar" hidden>
@@ -246,8 +248,8 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
       <button class="btn white" id="tMake">Make it yours</button>
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
-    <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 45</p>
+    <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
+    <p class="ver" id="tVer">Version 46</p>
   </div>
 </section>
 
@@ -419,11 +421,21 @@ const WORLDS = ['meadow','beach','forest','snow','sky'];
 function rng(seed){ let x = seed >>> 0; return () => { x = (Math.imul(x, 1664525) + 1013904223) >>> 0; return x / 4294967296; }; }
 const PER_LAND = 9;
 const BOSSES = {meadow:'King Slime', beach:'Captain Pinch', forest:'Old Toadstool', snow:'Emperor Waddles', sky:'Thunder Puff'};
+// lands 1-5 have 9 levels each; lands 6-10 (v46) revisit the five places at a new time of day, 8 harder levels each
+// tint is multiplied over the 3D picture (#tint) to set the time of day
+const LANDS = [...WORLDS.map(t => ({theme:t, name:THEMES[t].name, n:PER_LAND, boss:BOSSES[t]})),
+  {theme:'meadow', name:'Sunset Meadow', n:8, boss:'Queen Slime', tint:'#ffb27a', tint2:'#ffe0b8'},
+  {theme:'beach', name:'Coral Cove', n:8, boss:'Admiral Snap', tint:'#ffb8c6', tint2:'#ffe4e8'},
+  {theme:'forest', name:'Moonlit Woods', n:8, boss:'Grand Toadstool', tint:'#8f9fff', tint2:'#c8d0ff'},
+  {theme:'snow', name:'Crystal Glacier', n:8, boss:'Empress Waddles', tint:'#a8dcff', tint2:'#dff3ff'},
+  {theme:'sky', name:'Starry Skies', n:8, boss:'Storm Puff', tint:'#a98af0', tint2:'#e2d0ff'}];
+const OLD_LEVELS = WORLDS.length*PER_LAND, LEVELS_NEW = LANDS.slice(WORLDS.length).reduce((a, l) => a + l.n, 0);
 function makeLevels(){
   const out = [];
-  WORLDS.forEach((th, wi) => { for (let li = 0; li < PER_LAND; li++){
-    // d is the difficulty on the old 0–19 scale, so 45 levels ramp up as smoothly as 20 did
-    const n0 = wi*PER_LAND + li, d = Math.round(n0*19/(WORLDS.length*PER_LAND - 1)*10)/10, boss = li === PER_LAND - 1, R = rng(1234 + n0*977);
+  let n0 = -1;
+  LANDS.forEach((land, wi) => { const th = land.theme; for (let li = 0; li < land.n; li++){
+    // d is the difficulty on the old 0–19 scale, so 45 levels ramp up as smoothly as 20 did; the new lands go from 15 to 22
+    n0++; const d = n0 < OLD_LEVELS ? Math.round(n0*19/(OLD_LEVELS - 1)*10)/10 : Math.round((15 + (n0 - OLD_LEVELS)*7/(LEVELS_NEW - 1))*10)/10, boss = li === land.n - 1, R = rng(1234 + n0*977);
     const pool = ['coins','flat','plat','qblock','crit','gap','crit','gap'];
     if (d >= 1) pool.push('stairs','highplat','critpair');
     if (d >= 2) pool.push('spring','flyer');
@@ -469,7 +481,7 @@ function makeLevels(){
     // a dollar bill (worth 100 coins, once per level) in a hard spot: off a spring over a pit, or on top of a lone pillar
     if (!boss){ const RD = rng(7171 + n0*89), dk = ['dollarspring', 'dollarperch', 'dollarspring', 'dollarperch', 'dollarhigh'][(n0*3 + Math.floor(RD()*5)) % 5]; segs.splice(Math.floor(segs.length*(0.55 + RD()*0.3)), 0, dk); }
     segs.push('flat2', 'end');
-    out.push({theme:th, world:wi, num:li + 1, segs, d, boss, powers});
+    out.push({theme:th, world:wi, num:li + 1, segs, d, boss, powers, land:land.name, bossName:land.boss, tint:land.tint && `linear-gradient(180deg, ${land.tint}, ${land.tint2} 75%)`});
   } });
   return out;
 }
@@ -558,8 +570,8 @@ function buildLevel(spec){
     else if (ch === 'V'){ L.movers.push({kind:'v', w:64, h:14, ax:x, bx:x, ay:G*T - 18, by:(G-5)*T, t:c*0.5, sp:0.95}); grid[r][c] = ' '; }
     else if (ch === 'C'){ L.movers.push({kind:'c', w:72, h:16, ax:x - 4, bx:x - 4, ay:y + 8, by:y + 8, t:0, sp:0}); grid[r][c] = ' '; }
     else if (ch === 'J'){ L.springs.push({x:x + 4, y:(r+1)*T - 16, w:24, h:16, sq:0}); grid[r][c] = ' '; }
-    else if (ch === 'X'){ const w = spec.world || 0, hp = 3 + Math.floor(w/2);
-      L.boss = {x:x - 30, y:(r+1)*T - 66, w:78, h:66, vy:0, dir:-1, sp:75 + w*14, hop:560 + w*35, hopT:1.4, hp, max:hp, inv:0, alive:true, squish:0, onGround:false, awake:false, ax:x - 15*T, bx:x + 7*T, name:BOSSES[spec.theme]}; grid[r][c] = ' '; }
+    else if (ch === 'X'){ const w = Math.min(6, spec.world || 0), hp = 3 + Math.floor(w/2);
+      L.boss = {x:x - 30, y:(r+1)*T - 66, w:78, h:66, vy:0, dir:-1, sp:75 + w*14, hop:560 + w*35, hopT:1.4, hp, max:hp, inv:0, alive:true, squish:0, onGround:false, awake:false, ax:x - 15*T, bx:x + 7*T, name:spec.bossName || BOSSES[spec.theme]}; grid[r][c] = ' '; }
     else if (ch === 'b'){ L.flyers.push({x:x, y:y + 6, cx:x, y0:y + 6, w:26, h:20, t:c, sp:fsp, alive:true, squish:0, face:1}); grid[r][c] = ' '; }
   }
   L.movers.forEach(m => { m.x = m.ax; m.y = m.ay; m.dx = m.dy = 0; });
@@ -1617,7 +1629,7 @@ const STICKERS = [
   ['bones3', '🦴', 'Bone finder', 'Collect 3 golden bones'],
   ['landbones', '🗺️', 'Bone map', 'Every golden bone in one land'],
   ['bones15', '🏅', 'Bone hunter', 'Collect 15 golden bones'],
-  ['bones45', '💎', 'Bone master', 'Collect all 45 golden bones'],
+  ['bones45', '💎', 'Bone master', 'Collect 45 golden bones'],
   ['coins100', '💯', 'Every coin', 'Get 100% of the coins in a level'],
   ['coins10', '🪙', 'Coin vacuum', '100% of the coins in 10 levels'],
   ['nohurt', '🛡️', 'Not a scratch', 'Finish a level without getting hurt'],
@@ -1637,7 +1649,8 @@ const STICKERS = [
   ['goodboy', '🦮', 'Good dog', 'Teach your dog a trick'],
   ['showdog', '🎪', 'Show dog', 'Teach your dog every trick'],
   ['bestfriend', '💖', 'Best friends', 'Make your dog 100% happy'],
-  ['all45', '🌈', 'Paw Quest champion', 'Beat all 45 levels']
+  ['all45', '🌈', 'Paw Quest champion', 'Beat the first 45 levels'],
+  ['all85', '🌟', 'Super champion', 'Beat all 85 levels']
 ];
 let toastQ = [], toastBusy = false;
 // device settings (graphics, button size) live outside the save slots; helper mode is per kid in the save
@@ -1747,13 +1760,13 @@ function nextToast(){
 function checkStickers(){
   const n = boneCount(), b = save.bones || {}, pc = save.pct || {};
   if (n >= 3) award('bones3'); if (n >= 15) award('bones15'); if (n >= 45) award('bones45');
-  if (WORLDS.some((w, wi) => Array.from({length: PER_LAND}, (_, k) => b[wi*PER_LAND + k]).every(Boolean))) award('landbones');
+  if (LANDS.some((l, wi) => LEVELS.every((lv, i) => lv.world !== wi || b[i]))) award('landbones');
   const full = Object.values(pc).filter(v => v >= 100).length; if (full >= 1) award('coins100'); if (full >= 10) award('coins10');
   { const own = (save.home || {}).own || {}; if (Object.keys(own).length >= 5) award('home5'); if (ROOMS.some(r => FURNITURE.filter(f => f[1] === r[0]).every(f => own[f[0]]))) award('room8'); }
   { const nd = Object.keys(save.dollars || {}).length; if (nd >= 1) award('dollar1'); if (nd >= 10) award('dollars10'); }
   if ((save.buys || 0) >= 5) award('shop5'); if ((save.hats || []).length >= 5) award('hats5');
-  if ((save.done || []).length >= 1) award('first'); if ((save.done || []).length >= LEVELS.length) award('all45');
-  LEVELS.forEach((lv, i) => { if (lv.boss && save.done.includes(i)) award('boss_' + lv.theme); });
+  if ((save.done || []).length >= 1) award('first'); if (LEVELS.every((lv, i) => i >= OLD_LEVELS || save.done.includes(i))) award('all45'); if (LEVELS.every((lv, i) => save.done.includes(i))) award('all85');
+  LEVELS.forEach((lv, i) => { if (lv.boss && i < OLD_LEVELS && save.done.includes(i)) award('boss_' + lv.theme); });
 }
 // stickers about how this level went; runs before the level is recorded as done
 function levelStickers(){
@@ -1810,7 +1823,7 @@ function finishLevel(){
   const bonus = 25 + 10*LEVELS[L.li].world + (L.boss ? 50 : 0) + dig, total = L.got + bonus;
   save.coins += total; if (!save.done.includes(L.li)) save.done.push(L.li); persist();
   document.getElementById('dTitle').textContent = L.boss ? `You beat ${L.boss.name} and found ${save.dog.name}!` : `You found ${save.dog.name}!`;
-  document.getElementById('dText').textContent = `${save.kids[L.kid].name} collected ${L.got} coins in ${THEMES[L.theme].name} ${LEVELS[L.li].world + 1}-${LEVELS[L.li].num}, plus ${bonus} for finding ${save.dog.name}. Spend them in the village shop.`;
+  document.getElementById('dText').textContent = `${save.kids[L.kid].name} collected ${L.got} coins in ${LEVELS[L.li].land} ${LEVELS[L.li].world + 1}-${LEVELS[L.li].num}, plus ${bonus} for finding ${save.dog.name}. Spend them in the village shop.`;
   if (dig) $('dText').textContent += ` ${save.dog.name} was so happy and dug up ${dig} bonus coins.`;
   if (L.bone && L.bone.got) $('dText').textContent += ` You found the golden bone too!`;
   if (L.dollar && L.dollar.fresh) $('dText').textContent += ` And a dollar bill worth 100 coins!`;
@@ -2097,7 +2110,8 @@ function renderVillage(){
 }
 let dtLast = 0;
 function frame(now){
-  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if ((state === 'level') !== frame.playing){ frame.playing = state === 'level'; document.body.classList.toggle('playing', frame.playing); } if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI(); syncMusic(); watchFps(dt);
+  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if ((state === 'level') !== frame.playing){ frame.playing = state === 'level'; document.body.classList.toggle('playing', frame.playing); } if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI();
+  { const tn = (state === 'level' || state === 'done' || state === 'over' || state === 'paused') && L && R3 && R3.kidsReady && !R3.failed && LEVELS[L.li].tint || ''; const te = $('tint'); if (te.dataset.c !== tn){ te.dataset.c = tn; te.hidden = !tn; te.style.background = tn; } } syncMusic(); watchFps(dt);
   if (state === 'level'){ let s = dt; while (s > 0 && state === 'level'){ const h = Math.min(s, 1/120); step(h); s -= h; } }
   g.setTransform(dpr*scale, 0, 0, dpr*scale, 0, 0);
   const use3D = R3 && R3.kidsReady && !R3.failed;
@@ -2255,16 +2269,17 @@ function openLevels(){
   const list = $('lvlList'); list.innerHTML = '';
   { const n = boneCount(), extra = Math.floor(n/BONES_PER_HEART), left = (extra + 1)*BONES_PER_HEART <= LEVELS.length ? (extra + 1)*BONES_PER_HEART - n : 0;
     $('boneSum').innerHTML = `<span class="bonebadge big" aria-hidden="true"></span> Golden bones: <b>${n}</b> of ${LEVELS.length}. You start each level with <b>${HEARTS + extra}</b> hearts.` + (left ? ` Find ${left} more for an extra heart!` : ''); }
-  WORLDS.forEach((th, wi) => {
+  LANDS.forEach((land, wi) => { const th = land.theme;
     const w = document.createElement('div'); w.className = 'world';
-    w.innerHTML = `<canvas></canvas><div class="wbody"><span class="wname">Land ${wi + 1}: ${THEMES[th].name}</span><div class="lvrow"></div></div>`;
-    themeThumb(w.querySelector('canvas'), th);
+    w.innerHTML = `<canvas></canvas><div class="wbody"><span class="wname">Land ${wi + 1}: ${esc(land.name)}</span><div class="lvrow"></div></div>`;
+    const tc = w.querySelector('canvas'); themeThumb(tc, th);
+    if (land.tint){ const c = tc.getContext('2d'); c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'multiply'; const gr = c.createLinearGradient(0, 0, 0, tc.height); gr.addColorStop(0, land.tint); gr.addColorStop(0.75, land.tint2); c.fillStyle = gr; c.fillRect(0, 0, tc.width, tc.height); c.restore(); }
     const row = w.querySelector('.lvrow');
     LEVELS.forEach((lv, i) => {
       if (lv.world !== wi) return;
       const b = document.createElement('button'); const ok = unlocked(i), done = save.done.includes(i);
       b.className = 'lvb' + (lv.boss ? ' boss' : '') + (done ? ' done' : '') + (ok ? '' : ' locked');
-      b.setAttribute('aria-label', `${THEMES[th].name} level ${lv.num}` + (lv.boss ? `, boss: ${BOSSES[th]}` : '') + (done ? ', finished' : ok ? '' : ', locked'));
+      b.setAttribute('aria-label', `${land.name} level ${lv.num}` + (lv.boss ? `, boss: ${land.boss}` : '') + (done ? ', finished' : ok ? '' : ', locked'));
       const best = (save.best || {})[i]; if (best) b.setAttribute('aria-label', b.getAttribute('aria-label') + ', best score ' + best);
       if ((save.bones || {})[i]) b.setAttribute('aria-label', b.getAttribute('aria-label') + ', golden bone found');
       const pc = (save.pct || {})[i]; if (pc != null) b.setAttribute('aria-label', b.getAttribute('aria-label') + `, ${pc}% of coins`);
