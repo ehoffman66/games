@@ -246,7 +246,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 40</p>
+    <p class="ver" id="tVer">Version 41</p>
   </div>
 </section>
 
@@ -465,6 +465,8 @@ function makeLevels(){
     const RB = rng(4242 + n0*131), kinds = wi === 0 ? ['boneleap', 'boneblock', 'startbone', 'bonetower'] : ['boneleap', 'bonetower', 'boneblock', 'startbone', 'boneride', 'boneblock', 'boneride'];
     const bk = kinds[(n0*5 + Math.floor(RB()*kinds.length)) % kinds.length];
     if (bk === 'startbone') segs[0] = 'startbone'; else segs.splice(Math.floor(segs.length*(0.3 + RB()*0.4)), 0, bk);
+    // a dollar bill (worth 100 coins, once per level) in a hard spot: off a spring over a pit, or on top of a lone pillar
+    if (!boss){ const RD = rng(7171 + n0*89), dk = ['dollarspring', 'dollarperch', 'dollarspring', 'dollarperch', 'dollarhigh'][(n0*3 + Math.floor(RD()*5)) % 5]; segs.splice(Math.floor(segs.length*(0.55 + RD()*0.3)), 0, dk); }
     segs.push('flat2', 'end');
     out.push({theme:th, world:wi, num:li + 1, segs, d, boss, powers});
   } });
@@ -506,6 +508,10 @@ function buildLevel(spec){
     bonetower(){ col(); const a = col(); a[G-1] = 'J'; col(); const t = col(); for (let k = 1; k <= 7; k++) t[G-k] = 'S'; t[G-9] = 'Z'; col(); col(); },
     // a plain-looking block up high: bump it from below and the bone pops out
     boneblock(){ for (let i = 0; i < 7; i++){ const c = col(); if (i === 1){ for (let k = 1; k <= 2; k++) c[G-k] = 'S'; } if (i === 3) c[G-5] = 'Y'; if (i === 5) c[G-3] = '='; if (i === 6) c[G-3] = '='; } },
+    // dollar bills: spring up and steer onto it over a pit, land on a lone pillar, or climb two ledges for one way up high
+    dollarspring(){ col(); const a = col(); a[G-1] = 'J'; col(); for (let i = 0; i < 3; i++){ const c = col(false); if (i === 1) c[G-7] = '$'; } col(); col(); },
+    dollarperch(){ col(); const a = col(); a[G-1] = 'J'; col(); col(); const t = col(); t[G-7] = '='; t[G-8] = '$'; col(); col(); },
+    dollarhigh(){ col(); const a = col(); a[G-1] = 'S'; a[G-2] = 'S'; col(); const b = col(false); b[G-4] = '='; const b2 = col(false); b2[G-4] = '='; const c = col(); c[G-7] = '='; const c2 = col(); c2[G-7] = '='; c2[G-8] = '$'; col(); },
     // ride the moving platform out over a wide pit and jump for it
     boneride(){ col(); for (let i = 0; i < 7; i++){ const c = col(false); if (i === 0) c[G-2] = 'M'; if (i === 3) c[G-7] = 'Z'; } col(); },
     // pond: a raised bank each side, water two tiles deep, coins to collect under water
@@ -531,7 +537,7 @@ function buildLevel(spec){
   }
   const W = cols.length;
   const grid = []; for (let r = 0; r < ROWS; r++){ grid.push([]); for (let c = 0; c < W; c++) grid[r].push(cols[c][r]); }
-  const L = {grid, W, boss:null, bone:null, items:[], pows:{}, ice:new Set(), winds:new Set(), shots:[], room:null, pipes:[], coins:[], fruits:[], critters:[], movers:[], springs:[], flyers:[], dog:null, check:null, start:{x:64,y:0}};
+  const L = {grid, W, boss:null, bone:null, dollar:null, items:[], pows:{}, ice:new Set(), winds:new Set(), shots:[], room:null, pipes:[], coins:[], fruits:[], critters:[], movers:[], springs:[], flyers:[], dog:null, check:null, start:{x:64,y:0}};
   const cs = 55 + (spec.d || 0)*3, fsp = 0.9 + (spec.d || 0)*0.035;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < W; c++){
     const ch = grid[r][c]; const x = c*T, y = r*T;
@@ -541,6 +547,7 @@ function buildLevel(spec){
     else if (ch === 'w'){ L.winds.add(c); grid[r][c] = ' '; }
     else if (ch === 'O'){ L.coins.push({x:x+16, y:y+16, got:false}); grid[r][c] = 'W'; }
     else if (ch === 'Z'){ L.bone = {x:x+16, y:y+16, got:false}; grid[r][c] = ' '; }
+    else if (ch === '$'){ L.dollar = {x:x+16, y:y+16, got:false}; grid[r][c] = ' '; }
     else if (ch === 'Y'){ L.bone = {x:x+16, y:y - 22, got:false, hidden:true}; }
     else if (ch === 'c'){ L.critters.push({x:x+3, y:(r+1)*T-22, w:26, h:22, vx:-cs, vy:0, alive:true, squish:0, onGround:false}); grid[r][c] = ' '; }
     else if (ch === 'K'){ L.check = {x:x+16, y:(r+1)*T, hit:false}; grid[r][c] = ' '; }
@@ -1304,6 +1311,7 @@ const boneCount = () => Object.keys(save.bones || {}).length, startHearts = () =
 let HEARTS_MAX = 5;
 function startLevel(li, ki, ck){
   const spec = LEVELS[li]; L = buildLevel(spec); L.li = li; L.theme = spec.theme; L.kid = ki; L.got = 0; L.won = 0; L.jb = 0; L.hearts = startHearts(); HEARTS_MAX = L.hearts + 2; L.slots = L.hearts; L.score = 0; L.chain = 0; L.hurried = false;
+  if (L.dollar && (save.dollars || {})[li]) L.dollar.got = L.dollar.old = true;
   L.coinTot = L.coins.length + L.grid.reduce((n, row) => n + row.filter(ch => ch === '?').length, 0); L.coinGot = 0;
   L.helper = !!save.kids[ki].helper; L.timeMax = Math.ceil((L.W*T/210*2.2 + 45)/10)*10*(L.helper ? 1.5 : 1); L.time = L.timeMax;
   if (L.helper){ L.hearts += 2; HEARTS_MAX += 2; L.slots = L.hearts; L.critters.forEach(c => c.vx *= .75); L.flyers.forEach(f => f.sp *= .75); if (L.boss){ L.boss.hp = L.boss.max = Math.max(2, L.boss.hp - 1); L.boss.sp *= .8; } }
@@ -1352,6 +1360,7 @@ function loseHeart(p){
 let godMode = false;
 function outOfHearts(){
   state = 'over'; pad.hidden = true; hud.hidden = true; input.l = input.r = input.j = false;
+  if (L.dollar && L.dollar.fresh && !(L.check && L.check.hit && L.dollar.x < L.check.x)){ delete save.dollars[L.li]; persist(); }
   lastKid = L.kid; lastLevel = L.li; overCk = L.check && L.check.hit ? {got: L.ckGot, score: L.ckScore} : null;
   $('oText').textContent = overCk ? `Don't give up! ${save.kids[L.kid].name} will start again from the checkpoint flag.` : `Don't give up! Have another go and find ${save.dog.name}.`;
   sfx.hurt(); show('sOver');
@@ -1485,6 +1494,8 @@ function step(dt){
     if (L.pow.kind === 'star' && Math.random() < dt*30) parts.push({type:'star', x:pcx + (Math.random() - .5)*30, y:pcy + (Math.random() - .5)*40, vx:(Math.random() - .5)*60, vy:-40, life:.4});
     if (L.pow.kind === 'magnet') L.coins.forEach(k => { if (k.got) return; const dx = pcx - k.x, dy = pcy - k.y, dd = Math.hypot(dx, dy); if (dd < 170 && dd > 1){ const sp = Math.min(dd, (260 + (170 - dd)*4)*dt); k.x += dx/dd*sp; k.y += dy/dd*sp; } }); }
   L.coins.forEach(k => { if (!k.got && Math.abs(k.x - pcx) < 20 && Math.abs(k.y - pcy) < 28){ k.got = true; L.got++; L.coinGot++; L.score += 200; updHud(); sfx.coin(); for (let i = 0; i < 5; i++) parts.push({type:'spark', x:k.x, y:k.y, a:i*1.26 + Math.random(), life:.4}); } });
+  const dl = L.dollar; if (dl && !dl.got && Math.abs(dl.x - pcx) < 26 && Math.abs(dl.y - pcy) < 34){ dl.got = dl.fresh = true; save.dollars = save.dollars || {}; save.dollars[L.li] = 1; persist(); L.got += 100; L.score += 5000; updHud(); sfx.buy(); sfx.coin();
+    parts.push({type:'text', x:dl.x, y:dl.y - 18, text:'A dollar! +100 coins', life:2}); for (let i = 0; i < 14; i++) parts.push({type:'star', x:dl.x, y:dl.y, vx:Math.cos(i*0.45)*170, vy:Math.sin(i*0.45)*170 - 60, life:.8}); checkStickers(); }
   const bn = L.bone; if (bn && !bn.got && !bn.hidden && Math.abs(bn.x - pcx) < 24 && Math.abs(bn.y - pcy) < 32){ bn.got = true; save.bones = save.bones || {}; const fresh = !save.bones[L.li]; save.bones[L.li] = 1; persist(); L.score += 2000; updHud(); sfx.oneup();
     const n = boneCount(); parts.push({type:'text', x:bn.x, y:bn.y - 16, text: fresh && n % BONES_PER_HEART === 0 ? 'Golden bone! Extra heart unlocked!' : 'Golden bone!', life:1.8}); for (let i = 0; i < 12; i++) parts.push({type:'star', x:bn.x, y:bn.y, vx:Math.cos(i*0.52)*150, vy:Math.sin(i*0.52)*150 - 60, life:.7}); }
   L.fruits.forEach(f => { if (!f.got && Math.abs(f.x - pcx) < 22 && Math.abs(f.y - pcy) < 30){ f.got = true; L.got += 5; L.score += 1000; const extra = L.hearts < HEARTS_MAX; if (extra) L.hearts++; updHud(); sfx.fruit(); parts.push({type:'text', x:f.x, y:f.y - 14, text: extra ? '1000  +1 heart' : '1000', life:1.2}); if (extra) parts.push({type:'heart', x:f.x, y:f.y - 20, vy:-60, life:1}); for (let i = 0; i < 8; i++) parts.push({type:'spark', x:f.x, y:f.y, a:i*0.785, life:.5}); } });
@@ -1600,6 +1611,8 @@ const STICKERS = [
   ['pstar', '🌟', 'Star power', 'Grab a star shield'],
   ['pmagnet', '🧲', 'Coin magnet', 'Grab a coin magnet'],
   ['shop5', '🛍️', 'Shopper', 'Buy 5 things in the village'],
+  ['dollar1', '💵', 'Money finder', 'Grab a dollar bill'],
+  ['dollars10', '💰', 'Piggy bank', 'Collect 10 dollar bills'],
   ['home5', '🏠', 'Home sweet home', 'Buy 5 things for inside the house'],
   ['room8', '🛋️', 'Room designer', 'Fill a whole room in the house'],
   ['hats5', '🎩', 'Hat collector', 'Own 5 hats'],
@@ -1720,6 +1733,7 @@ function checkStickers(){
   if (WORLDS.some((w, wi) => Array.from({length: PER_LAND}, (_, k) => b[wi*PER_LAND + k]).every(Boolean))) award('landbones');
   const full = Object.values(pc).filter(v => v >= 100).length; if (full >= 1) award('coins100'); if (full >= 10) award('coins10');
   { const own = (save.home || {}).own || {}; if (Object.keys(own).length >= 5) award('home5'); if (ROOMS.some(r => FURNITURE.filter(f => f[1] === r[0]).every(f => own[f[0]]))) award('room8'); }
+  { const nd = Object.keys(save.dollars || {}).length; if (nd >= 1) award('dollar1'); if (nd >= 10) award('dollars10'); }
   if ((save.buys || 0) >= 5) award('shop5'); if ((save.hats || []).length >= 5) award('hats5');
   if ((save.done || []).length >= 1) award('first'); if ((save.done || []).length >= LEVELS.length) award('all45');
   LEVELS.forEach((lv, i) => { if (lv.boss && save.done.includes(i)) award('boss_' + lv.theme); });
@@ -1782,6 +1796,7 @@ function finishLevel(){
   document.getElementById('dText').textContent = `${save.kids[L.kid].name} collected ${L.got} coins in ${THEMES[L.theme].name} ${LEVELS[L.li].world + 1}-${LEVELS[L.li].num}, plus ${bonus} for finding ${save.dog.name}. Spend them in the village shop.`;
   if (dig) $('dText').textContent += ` ${save.dog.name} was so happy and dug up ${dig} bonus coins.`;
   if (L.bone && L.bone.got) $('dText').textContent += ` You found the golden bone too!`;
+  if (L.dollar && L.dollar.fresh) $('dText').textContent += ` And a dollar bill worth 100 coins!`;
   { const pc = coinPct(); save.pct = save.pct || {}; const prevP = save.pct[L.li] || 0; if (pc > prevP) save.pct[L.li] = pc; persist();
     $('dText').textContent += pc === 100 ? ` Every single coin: 100%!` : ` Coins found: ${pc}% (${L.coinGot} of ${L.coinTot})` + (prevP > pc ? `, your best is ${prevP}%.` : '.'); }
   document.getElementById('dCoins').textContent = '+' + total;
@@ -1912,6 +1927,7 @@ function renderLevel(){
   L.springs.forEach(sp => drawSpring(sp));
   L.coins.forEach(k => { if (!k.got && k.x > camX - 40 && k.x < camX + viewW + 40) drawCoin(g, k.x, k.y, clock); });
   L.fruits.forEach(f => { if (!f.got) drawFruit(g, th.fruit, f.x, f.y, clock); });
+  if (L.dollar && !L.dollar.got){ const d = L.dollar, by = d.y + Math.sin(clock*3)*3; g.save(); g.translate(d.x, by); g.rotate(Math.sin(clock*2)*0.15); rr(g, -15, -9, 30, 18, 3); g.fillStyle = '#7ccf6a'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#2f6b2a'; g.stroke(); g.fillStyle = '#2f6b2a'; g.font = '700 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText('$', 0, 1); g.restore(); }
   if (L.bone && !L.bone.got && !L.bone.hidden) drawBone(g, L.bone.x, L.bone.y + Math.sin(clock*3)*3, clock);
   L.items.forEach(it => { if (it.got) return; g.save(); g.font = '24px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(POWERS[it.kind].ico, it.x, it.y + Math.sin(clock*3)*3); g.restore(); });
   L.critters.forEach(cr => { if (cr.alive || cr.squish > 0){ if (cr.alive) shadowAt(cr.x + 13, cr.y + cr.h, 13); drawCritter(g, th.critter, cr.x, cr.y, cr.w, cr.h, clock, cr.alive ? 0 : 1); } });
