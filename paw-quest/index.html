@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -24,7 +24,7 @@
   --font-b:"Nunito","Trebuchet MS",system-ui,sans-serif;
   color-scheme:light;
 }
-html,body{height:100%;overflow:hidden;background:var(--sky);color:var(--ink);font-family:var(--font-b);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+html,body{height:100%;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:var(--sky);color:var(--ink);font-family:var(--font-b);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #cv,#cv3{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit}
@@ -231,7 +231,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 35</p>
+    <p class="ver" id="tVer">Version 36</p>
   </div>
 </section>
 
@@ -1078,6 +1078,17 @@ function drawVignette(){
 }
 
 const $ = id => document.getElementById(id);
+// ---------- no page zoom ----------
+// iOS Safari ignores user-scalable=no, so quick double taps on Jump or a pinch zoomed the whole page and pushed the controls off-screen
+(() => {
+  const no = e => e.preventDefault();
+  ['gesturestart', 'gesturechange', 'gestureend', 'dblclick'].forEach(t => document.addEventListener(t, no, { passive: false }));
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1 || (e.scale && e.scale !== 1)) e.preventDefault(); }, { passive: false });
+  let lastEnd = 0;
+  document.addEventListener('touchend', e => { const now = performance.now(); if (now - lastEnd < 350 && !e.target.closest('input,textarea')) e.preventDefault(); lastEnd = now; }, { passive: false });
+  // if a zoom slips through anyway, snap back to 1x
+  const vv = window.visualViewport; if (vv){ let m = document.querySelector('meta[name=viewport]'); vv.addEventListener('resize', () => { if (vv.scale > 1.01){ if (!m){ m = document.createElement('meta'); m.name = 'viewport'; document.head.appendChild(m); } const c = 'width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover'; m.content = c + ',x=1'; setTimeout(() => { m.content = c; }, 30); } }); }
+})();
 // ---------- sound ----------
 // Everything is synthesised with Web Audio: an sfx bus and a music bus into a soft compressor and a little room reverb.
 let AC = null, muted = false, BUS = null;
