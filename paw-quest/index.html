@@ -81,7 +81,7 @@ p{margin:0;font-size:18px;line-height:1.4}
 .lvb.locked{background:#d9deea;color:#8a90a8;cursor:default;box-shadow:0 4px 0 #8a90a8;border-color:#8a90a8}
 .lvb:active:not(.locked){transform:translateY(3px);box-shadow:0 1px 0 var(--ink)}
 .lvb svg{width:20px;height:20px}
-.bonesum{margin:-6px 0 0;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.bonesum{margin:-6px 0 0;font-weight:700;display:block;line-height:1.5}.bonesum .bonebadge{vertical-align:-4px;margin-right:6px}
 .bonebadge{position:absolute;top:-6px;right:-8px;width:24px;height:14px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 48 26'%3E%3Cg fill='%23ffd23a' stroke='%232a2340' stroke-width='3'%3E%3Ccircle cx='9' cy='8' r='6'/%3E%3Ccircle cx='9' cy='18' r='6'/%3E%3Ccircle cx='39' cy='8' r='6'/%3E%3Ccircle cx='39' cy='18' r='6'/%3E%3Crect x='9' y='8' width='30' height='10' rx='4'/%3E%3C/g%3E%3Crect x='9' y='9.5' width='30' height='7' fill='%23ffd23a'/%3E%3C/svg%3E") center/contain no-repeat}
 .bonebadge.big{position:static;display:inline-block;width:34px;height:20px}
 .slots{display:flex;flex-direction:column;gap:12px}
@@ -181,9 +181,19 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 .chips{display:flex;gap:3px;height:52px;align-items:flex-end;margin:6px 0 4px}
 .chips i{display:block;width:22px;border:2.5px solid var(--ink);border-radius:7px}
 .hairsw{width:60px;height:60px;border-radius:50%;border:3px solid var(--ink);margin:4px 0}
-.home .wkids{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}.home .wkids .opt{flex:none}.home .wgrid{min-height:96px}
+.home .wkids,.home .tabs,.home .wtop,.home .msg,.home .wact{flex:none}.home .wkids{flex-wrap:nowrap;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}.home .wkids .opt{flex:none}.home .wgrid{min-height:96px}
 @media (max-height:520px){.home .card{max-width:400px;gap:6px;padding:12px 14px}.home h2{font-size:22px}.home .tabs button,.home .wkids .opt{padding:4px 12px;font-size:14px}.home .wact .btn{padding:6px 14px;font-size:16px}.home .wt canvas{width:70px;height:58px}.home .wgrid{grid-template-columns:repeat(auto-fill,minmax(84px,1fr));gap:8px}}
-.hroom{position:relative}.hroom .lk{font-size:13px;margin-left:4px}.home .hsw{width:62px;height:52px;border-radius:12px;border:3px solid var(--ink);margin:4px 0}
+.hroom{position:relative}
+/* X in the top corner of every pop-up; it stays put while the card scrolls */
+.xbtn{position:sticky;top:0;align-self:flex-end;flex:none;z-index:4;width:44px;height:44px;margin:-6px -8px -50px 0;border-radius:50%;border:3px solid var(--ink);background:#fff;color:var(--ink);font:700 22px/1 var(--font-d);display:grid;place-items:center;cursor:pointer;box-shadow:0 3px 0 var(--ink);padding:0}
+.rothint{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);z-index:6;background:rgba(255,255,255,.92);border:3px solid var(--ink);border-radius:18px;padding:10px 16px;font:600 17px var(--font-d);text-align:center;pointer-events:none;display:none}
+@media (orientation:portrait) and (max-width:700px){body.playing .rothint{display:block}}
+.xbtn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--ink)}
+.card.hasx > .xbtn + *{padding-right:46px}
+.cloud{flex-direction:column;align-items:stretch}.cloud .lab{flex:none}.cloud input{font:700 15px var(--font-b);border:3px solid var(--ink);border-radius:12px;padding:8px 10px;width:100%;box-sizing:border-box;min-width:0}
+.cloud .fields{display:grid;grid-template-columns:1fr 1fr;gap:8px}.cloud .ok{color:#2f9a4c}.cloud .bad{color:#d33}.cloud small{font-size:12px;font-weight:700;opacity:.7}
+@media (max-width:560px){.cloud .fields{grid-template-columns:1fr}}
+@media (max-height:520px){#vBar .btn{font-size:16px;padding:6px 12px;border-radius:13px}#vBar .row{gap:6px}#vBar{gap:6px}.card{padding:14px 16px;gap:10px}.card h2{font-size:24px}.xbtn{width:38px;height:38px;font-size:19px;margin-bottom:-44px}.pet .card,.ward .card{gap:8px}}.hroom .lk{font-size:13px;margin-left:4px}.home .hsw{width:62px;height:52px;border-radius:12px;border:3px solid var(--ink);margin:4px 0}
 .wact{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}
 .wact .msg{font-weight:800;font-size:15px}
 .wspin{position:fixed;bottom:max(18px,env(safe-area-inset-bottom,0px));left:max(18px,env(safe-area-inset-left,0px));display:flex;gap:12px;z-index:21}
@@ -211,6 +221,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 
 <div class="powbar" id="hPow" hidden><span id="hPowName"></span><span class="track"><i id="hPowBar"></i></span></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
+<div class="rothint" aria-hidden="true">📱↻ Turn your phone sideways<br>for a bigger view</div>
 <div class="bossbar" id="hBoss" hidden><span id="hBossName"></span><span class="hp" id="hBossHp"></span></div>
 <div class="bar" id="hud" hidden>
   <div class="row"><span class="namepill" id="hName"></span><span class="hearts" id="hHearts"></span><span class="coinpill"><span class="coin-ico"></span><span id="hCoins">0</span><small class="pct" id="hPct"></small></span><span class="scorepill"><small>SCORE</small><span id="hScore">000000</span></span><span class="timepill" id="hTimeBox"><small>TIME</small><span id="hTime">0</span></span></div>
@@ -235,7 +246,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 39</p>
+    <p class="ver" id="tVer">Version 40</p>
   </div>
 </section>
 
@@ -394,7 +405,7 @@ function load(n = slot){
   return clone(defaults);
 }
 let save = load();
-function persist(){ try { localStorage.setItem(slotKey(slot), JSON.stringify(save)); localStorage.setItem(SLOT_KEY, String(slot)); } catch(e) {} }
+function persist(){ save._t = Date.now(); try { localStorage.setItem(slotKey(slot), JSON.stringify(save)); localStorage.setItem(SLOT_KEY, String(slot)); localStorage.removeItem(slotKey(slot) + '-del'); } catch(e) {} if (typeof cloudSoon === 'function') cloudSoon(); }
 
 const THEMES = {
   meadow:{name:'Sunny Meadow', sky:['#4fb0f2','#a3d9fb','#e6f6ff'], grass:'#5cc04a', grassL:'#9be36e', grassD:'#3f9a3a', dirt:'#b97a45', dirt2:'#9c6436', plat:'#e8a85c', fruit:'apple', critter:'slime', blades:true},
@@ -1606,6 +1617,69 @@ const savePrefs = () => { try { localStorage.setItem('pawquest-prefs', JSON.stri
 const gfxMode = () => prefs.gfx === 'fast' || (prefs.gfx === 'auto' && prefs.autoFast) ? 'fast' : 'fancy';
 function applyPrefs(){ document.body.classList.toggle('bigpad', !!prefs.big); if (R3 && R3.setQuality) R3.setQuality(gfxMode()); }
 function toastMsg(em, small, text){ toastQ.push([null, em, text, small]); if (!toastBusy) nextToast(); }
+// ---------- saves across devices: all three save slots live in one JSON file in a private GitHub repo ----------
+// The repo and access key are kept on each device; a setup link carries them in the # part of the address, which never leaves the browser.
+const CLOUD_KEY = 'pawquest-cloud', CLOUD_FILE = 'paw-quest-saves.json';
+let cloud = null; try { cloud = JSON.parse(localStorage.getItem(CLOUD_KEY)); } catch(e) {}
+const cloudSt = { busy: false, last: 0, err: '', timer: 0, again: false };
+const b64e = t => btoa(unescape(encodeURIComponent(t))), b64d = t => decodeURIComponent(escape(atob(t.replace(/\s/g, ''))));
+function cloudSetup(c){ cloud = c; try { if (c) localStorage.setItem(CLOUD_KEY, JSON.stringify(c)); else localStorage.removeItem(CLOUD_KEY); } catch(e) {} }
+(() => { const m = location.hash.match(/pqsync=([^&]+)/); if (!m) return; try { const c = JSON.parse(b64d(decodeURIComponent(m[1]))); if (c.repo && c.token) cloudSetup({ repo: c.repo, token: c.token }); } catch(e) {} try { history.replaceState(null, '', location.pathname + location.search); } catch(e) {} })();
+async function gh(method, body){
+  const r = await fetch(`https://api.github.com/repos/${cloud.repo}/contents/${CLOUD_FILE}`, { method, cache: 'no-store', headers: { Authorization: 'Bearer ' + cloud.token, Accept: 'application/vnd.github+json' }, body: body && JSON.stringify(body) });
+  if (method === 'GET' && r.status === 404){ const repo = await fetch(`https://api.github.com/repos/${cloud.repo}`, { cache: 'no-store', headers: { Authorization: 'Bearer ' + cloud.token } }); if (repo.ok) return null; }
+  if (!r.ok){ const e = new Error(r.status === 401 ? 'GitHub did not accept that access key.' : r.status === 404 ? `Couldn't find ${cloud.repo}, or the key isn't allowed to open it.` : r.status === 403 ? `The key isn't allowed to save in ${cloud.repo}.` : 'GitHub said ' + r.status + '.'); e.status = r.status; throw e; }
+  return r.json();
+}
+function localSlots(){ const o = {}; for (let n = 1; n <= NSLOTS; n++){ const s = n === slot ? save : rawSlot(n); let del = 0; try { del = +localStorage.getItem(slotKey(n) + '-del') || 0; } catch(e) {} o[n] = s && s.kids && (n !== slot || hasProgress(s) || s._t) ? s : del ? { _del: 1, _t: del } : null; } return o; }
+function adoptSlot(n, s){ try { if (s._del){ localStorage.removeItem(slotKey(n)); localStorage.setItem(slotKey(n) + '-del', String(s._t)); } else { localStorage.setItem(slotKey(n), JSON.stringify(s)); localStorage.removeItem(slotKey(n) + '-del'); } } catch(e) {} }
+// only swap in a newer game between levels, so nothing changes under the kids' feet
+const cloudSafe = () => ['village', 'title'].includes(state) || !$('sTitle').hidden;
+async function cloudSync(){
+  if (!cloud || cloudSt.busy) return; if (!cloudSafe()){ cloudSoon(); return; }
+  cloudSt.busy = true; cloudSt.err = ''; let pulled = false;
+  try {
+    for (let tries = 0; tries < 3; tries++){
+      const f = await gh('GET'), remote = f ? (JSON.parse(b64d(f.content)).slots || {}) : {}, local = localSlots(), out = {}; let push = !f;
+      for (let n = 1; n <= NSLOTS; n++){ const a = local[n], b = remote[n], ta = (a && a._t) || 0, tb = (b && b._t) || 0;
+        if (b && tb > ta){ out[n] = b; adoptSlot(n, b); pulled = true; } else { out[n] = a || b || null; if (a && ta > tb) push = true; } }
+      if (pulled){ save = load(slot); syncLooks(); portraitCache.clear(); titleText(); if (state === 'village') toVillage(); }
+      if (!push) break;
+      try { await gh('PUT', { message: 'Paw Quest save', content: b64e(JSON.stringify({ v: 1, slots: out })), ...(f ? { sha: f.sha } : {}) }); break; }
+      catch (e){ if (e.status !== 409 && e.status !== 422) throw e; }
+    }
+    cloudSt.last = Date.now();
+    if (pulled) toastMsg('☁️', 'SAVED GAMES', 'Picked up your game from another device');
+  } catch (e){ cloudSt.err = e.status ? e.message : "Couldn't reach GitHub just now. It will try again."; }
+  cloudSt.busy = false; if (!$('sSet').hidden) drawCloud();
+  if (cloudSt.again){ cloudSt.again = false; cloudSoon(); }
+}
+function cloudSoon(ms = 4000){ if (!cloud) return; if (cloudSt.busy){ cloudSt.again = true; return; } clearTimeout(cloudSt.timer); cloudSt.timer = setTimeout(cloudSync, ms); }
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') cloudSoon(500); else if (cloud && cloudSafe()) cloudSync(); });
+function drawCloud(){
+  const box = $('cloudBox'); if (!box) return;
+  const ago = t => { const m = Math.round((Date.now() - t)/60000); return m < 1 ? 'just now' : m === 1 ? 'a minute ago' : m < 60 ? m + ' minutes ago' : 'a while ago'; };
+  if (!cloud){
+    box.innerHTML = `<div class="lab"><b>Save across devices</b><span>Keep your games in a private GitHub repo so they show up on every phone and tablet.</span></div>
+      <div class="fields"><input id="cRepo" placeholder="owner/repo" value="ehoffman66/paw-quest-saves" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="GitHub repo"><input id="cKey" type="password" placeholder="Access key" autocomplete="off" aria-label="GitHub access key"></div>
+      <small>Make a private repo, then a fine-grained access key that can only read and write Contents in that one repo.</small>
+      <div class="opts"><button class="btn small green" id="cGo">Connect</button></div><span class="msg bad" id="cMsg">${esc(cloudSt.err)}</span>`;
+    $('cGo').onclick = async () => { const repo = $('cRepo').value.trim().replace(/^https?:\/\/github.com\//, '').replace(/\/$/, ''), token = $('cKey').value.trim();
+      if (!/^[\w.-]+\/[\w.-]+$/.test(repo) || !token){ $('cMsg').textContent = 'Fill in the repo (owner/name) and the access key.'; return; }
+      cloudSetup({ repo, token }); $('cMsg').className = 'msg'; $('cMsg').textContent = 'Connecting…'; await cloudSync(); if (cloudSt.err && !cloudSt.last){ const e = cloudSt.err; cloudSetup(null); cloudSt.err = e; } drawCloud(); };
+    return;
+  }
+  box.innerHTML = `<div class="lab"><b>Save across devices</b><span>Saving to <b>${esc(cloud.repo)}</b>. ${cloudSt.busy ? 'Saving now…' : cloudSt.last ? 'Last saved ' + ago(cloudSt.last) + '.' : ''}</span></div>
+    <span class="msg ${cloudSt.err ? 'bad' : 'ok'}">${esc(cloudSt.err)}</span>
+    <div class="opts"><button class="btn small green" id="cNow">Save now</button><button class="btn small white" id="cLink">Set up another device</button><button class="btn small white" id="cOff">Disconnect</button></div>
+    <small id="cHelp">Open the setup link on the other phone or tablet and it will join automatically. Anyone with the link can change your saved games, so only send it to your own devices.</small>`;
+  $('cNow').onclick = () => { cloudSync(); drawCloud(); };
+  $('cOff').onclick = () => { cloudSetup(null); cloudSt.err = ''; cloudSt.last = 0; drawCloud(); };
+  $('cLink').onclick = async () => { const url = location.href.split('#')[0] + '#pqsync=' + encodeURIComponent(b64e(JSON.stringify(cloud)));
+    try { if (navigator.share){ await navigator.share({ title: 'Paw Quest', url }); return; } } catch(e) { if (e.name === 'AbortError') return; }
+    try { await navigator.clipboard.writeText(url); $('cHelp').textContent = 'Setup link copied. Paste it into the other device’s browser.'; } catch(e) { $('cHelp').innerHTML = 'Copy this setup link to the other device:<br><input readonly value="' + esc(url) + '" onclick="this.select()">'; } };
+}
+if (cloud) setTimeout(() => cloudSync(), 1500);
 let setFrom = 'title';
 function openSettings(from){
   if (from) setFrom = from;
@@ -1615,6 +1689,7 @@ function openSettings(from){
   list.appendChild(row('Graphics', prefs.gfx === 'auto' ? (prefs.autoFast ? 'Auto switched to Fast because this device was slow.' : 'Auto picks Fast if the game starts to stutter.') : 'Fast runs smoother on older phones and tablets.', [['auto', 'Auto'], ['fancy', 'Fancy'], ['fast', 'Fast']], prefs.gfx, v => { prefs.gfx = v; if (v !== 'auto') prefs.autoFast = false; savePrefs(); applyPrefs(); }));
   list.appendChild(row('Button size', 'Bigger buttons are easier for small hands.', [[false, 'Normal'], [true, 'Big']], !!prefs.big, v => { prefs.big = v; savePrefs(); applyPrefs(); }));
   save.kids.forEach((k, i) => list.appendChild(row(`Helper mode for ${esc(k.name)}`, 'Two extra hearts, more time, slower enemies, easier bosses, and a bubble that rescues you from pits.', [[false, 'Off'], [true, 'On']], !!k.helper, v => { k.helper = v; persist(); })));
+  const cb = document.createElement('div'); cb.className = 'setrow cloud'; cb.id = 'cloudBox'; list.appendChild(cb); drawCloud();
   list.appendChild(row('Sound', 'Music and sound effects.', [[false, 'On'], [true, 'Off']], muted, v => { if (muted !== v) $('hSound').click(); }));
   show('sSet');
 }
@@ -1989,7 +2064,7 @@ function renderVillage(){
 }
 let dtLast = 0;
 function frame(now){
-  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI(); syncMusic(); watchFps(dt);
+  const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if ((state === 'level') !== frame.playing){ frame.playing = state === 'level'; document.body.classList.toggle('playing', frame.playing); } if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI(); syncMusic(); watchFps(dt);
   if (state === 'level'){ let s = dt; while (s > 0 && state === 'level'){ const h = Math.min(s, 1/120); step(h); s -= h; } }
   g.setTransform(dpr*scale, 0, 0, dpr*scale, 0, 0);
   const use3D = R3 && R3.kidsReady && !R3.failed;
@@ -2094,7 +2169,7 @@ function openSaves(msg){
       const [play, del] = row.querySelectorAll('button');
       play.onclick = () => { delArm = 0; useSlot(n, false); persist(); toVillage(); };
       del.onclick = () => { if (delArm !== n){ delArm = n; openSaves(`Tap "Really delete?" to erase Game ${n} for good.`); return; }
-        delArm = 0; try { localStorage.removeItem(slotKey(n)); } catch(e) {} if (n === slot){ save = clone(defaults); syncLooks(); portraitCache.clear(); titleText(); titleButtons(); } openSaves(`Game ${n} was deleted.`); };
+        delArm = 0; try { localStorage.removeItem(slotKey(n)); localStorage.setItem(slotKey(n) + '-del', String(Date.now())); } catch(e) {} cloudSoon(); if (n === slot){ save = clone(defaults); syncLooks(); portraitCache.clear(); titleText(); titleButtons(); } openSaves(`Game ${n} was deleted.`); };
     } else {
       row.innerHTML = `<div class="info"><b>Game ${n}</b><span>Empty</span></div><div class="acts"><button class="btn white small">New game</button></div>`;
       row.querySelector('button').onclick = () => { delArm = 0; useSlot(n, true); openMake('title'); };
@@ -2361,6 +2436,13 @@ function renderHome3D(){
   g.clearRect(0, 0, viewW, viewH);
 }
 $('vHome').onclick = openHome;
+// X close button on every pop-up: it presses that screen's own back/done button, which then isn't needed at the bottom
+[['sSet', 'setBack'], ['sPet', 'petBack'], ['sStick', 'stBack'], ['sSaves', 'sBack'], ['sLevels', 'lBack'], ['sShop', 'shopDone'], ['sMake', 'makeDone'], ['sWard', 'wDone'], ['sHome', 'hmDone']].forEach(([sid, bid]) => {
+  const card = $(sid).querySelector('.card'), back = $(bid), x = document.createElement('button');
+  x.className = 'xbtn'; x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '✕'; x.onclick = () => back.click();
+  card.classList.add('hasx'); card.prepend(x); back.hidden = true;
+  const row = back.parentElement; if (row.classList.contains('row') && [...row.children].every(c => c.hidden)) row.hidden = true;
+});
 $('hmDone').onclick = () => { homePrev = null; persist(); toVillage(); };
 
 let wardKid = 0, wardTab = 'Hats', wardTry = null, wardSpin = 0.3, wardSpinV = 0, wardFrom = 'village';
@@ -2436,7 +2518,7 @@ let wardDrag = null;
 $('wDone').onclick = () => { wardTry = null; persist(); syncLooks(); portraitCache.clear(); if (wardFrom === 'make'){ state = 'village'; openMake(makeFrom); } else toVillage(); };
 $('vWard').onclick = () => openWard(wardKid, 'village');
 syncLooks(); titleButtons();
-window.PQ = {get state(){ return state; }, openWard, set wardSpin(v){ wardSpin = v; }, set god(v){ godMode = v; }, set pan(v){ vPan = v; }, get L(){ return L; }, levels: LEVELS.length, spec: i => LEVELS[i], startLevel, save: () => save, bump: (c, r) => bump(c, r), mus: () => MUS.name, openStickers, award, step: n => { for (let i = 0; i < n && state === "level"; i++) step(1/120); }};
+window.PQ = {get state(){ return state; }, go: { toVillage, pauseGame, resumeGame, finishLevel, outOfHearts, openSettings, openSaves }, openWard, set wardSpin(v){ wardSpin = v; }, set god(v){ godMode = v; }, set pan(v){ vPan = v; }, get L(){ return L; }, levels: LEVELS.length, spec: i => LEVELS[i], startLevel, save: () => save, bump: (c, r) => bump(c, r), mus: () => MUS.name, openStickers, award, step: n => { for (let i = 0; i < n && state === "level"; i++) step(1/120); }};
 })();
 </script>
 
