@@ -231,7 +231,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">45 levels in 5 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 37</p>
+    <p class="ver" id="tVer">Version 38</p>
   </div>
 </section>
 
@@ -1272,9 +1272,9 @@ bindPad('bJ', 'j');
 
 // ---------- level runtime ----------
 let state = 'title', L = null, camX = 0, clock = 0, parts = [];
-const HEARTS = 3;
+const HEARTS = 2, BONES_PER_HEART = 6; // Erik: everyone starts with 2 hearts, +1 for every 6 golden bones
 // every 3 golden bones adds a heart to the start of each level (up to +5); fruit can top up 2 past that
-const boneCount = () => Object.keys(save.bones || {}).length, startHearts = () => HEARTS + Math.min(5, Math.floor(boneCount()/3));
+const boneCount = () => Object.keys(save.bones || {}).length, startHearts = () => HEARTS + Math.floor(boneCount()/BONES_PER_HEART);
 let HEARTS_MAX = 5;
 function startLevel(li, ki, ck){
   const spec = LEVELS[li]; L = buildLevel(spec); L.li = li; L.theme = spec.theme; L.kid = ki; L.got = 0; L.won = 0; L.jb = 0; L.hearts = startHearts(); HEARTS_MAX = L.hearts + 2; L.slots = L.hearts; L.score = 0; L.chain = 0; L.hurried = false;
@@ -1460,7 +1460,7 @@ function step(dt){
     if (L.pow.kind === 'magnet') L.coins.forEach(k => { if (k.got) return; const dx = pcx - k.x, dy = pcy - k.y, dd = Math.hypot(dx, dy); if (dd < 170 && dd > 1){ const sp = Math.min(dd, (260 + (170 - dd)*4)*dt); k.x += dx/dd*sp; k.y += dy/dd*sp; } }); }
   L.coins.forEach(k => { if (!k.got && Math.abs(k.x - pcx) < 20 && Math.abs(k.y - pcy) < 28){ k.got = true; L.got++; L.coinGot++; L.score += 200; updHud(); sfx.coin(); for (let i = 0; i < 5; i++) parts.push({type:'spark', x:k.x, y:k.y, a:i*1.26 + Math.random(), life:.4}); } });
   const bn = L.bone; if (bn && !bn.got && !bn.hidden && Math.abs(bn.x - pcx) < 24 && Math.abs(bn.y - pcy) < 32){ bn.got = true; save.bones = save.bones || {}; const fresh = !save.bones[L.li]; save.bones[L.li] = 1; persist(); L.score += 2000; updHud(); sfx.oneup();
-    const n = boneCount(); parts.push({type:'text', x:bn.x, y:bn.y - 16, text: fresh && n % 3 === 0 && n/3 <= 5 ? 'Golden bone! Extra heart unlocked!' : 'Golden bone!', life:1.8}); for (let i = 0; i < 12; i++) parts.push({type:'star', x:bn.x, y:bn.y, vx:Math.cos(i*0.52)*150, vy:Math.sin(i*0.52)*150 - 60, life:.7}); }
+    const n = boneCount(); parts.push({type:'text', x:bn.x, y:bn.y - 16, text: fresh && n % BONES_PER_HEART === 0 ? 'Golden bone! Extra heart unlocked!' : 'Golden bone!', life:1.8}); for (let i = 0; i < 12; i++) parts.push({type:'star', x:bn.x, y:bn.y, vx:Math.cos(i*0.52)*150, vy:Math.sin(i*0.52)*150 - 60, life:.7}); }
   L.fruits.forEach(f => { if (!f.got && Math.abs(f.x - pcx) < 22 && Math.abs(f.y - pcy) < 30){ f.got = true; L.got += 5; L.score += 1000; const extra = L.hearts < HEARTS_MAX; if (extra) L.hearts++; updHud(); sfx.fruit(); parts.push({type:'text', x:f.x, y:f.y - 14, text: extra ? '1000  +1 heart' : '1000', life:1.2}); if (extra) parts.push({type:'heart', x:f.x, y:f.y - 20, vy:-60, life:1}); for (let i = 0; i < 8; i++) parts.push({type:'spark', x:f.x, y:f.y, a:i*0.785, life:.5}); } });
   L.critters.forEach(cr => {
     if (!cr.alive){ cr.squish -= dt; return; }
@@ -2126,7 +2126,7 @@ function themeThumb(cvs, key){
 function unlocked(i){ return i === 0 || save.done.includes(i) || save.done.includes(i - 1) || save.done.some(j => j > i); }
 function openLevels(){
   const list = $('lvlList'); list.innerHTML = '';
-  { const n = boneCount(), extra = Math.min(5, Math.floor(n/3)), left = extra < 5 ? 3 - n % 3 : 0;
+  { const n = boneCount(), extra = Math.floor(n/BONES_PER_HEART), left = (extra + 1)*BONES_PER_HEART <= LEVELS.length ? (extra + 1)*BONES_PER_HEART - n : 0;
     $('boneSum').innerHTML = `<span class="bonebadge big" aria-hidden="true"></span> Golden bones: <b>${n}</b> of ${LEVELS.length}. You start each level with <b>${HEARTS + extra}</b> hearts.` + (left ? ` Find ${left} more for an extra heart!` : ''); }
   WORLDS.forEach((th, wi) => {
     const w = document.createElement('div'); w.className = 'world';
