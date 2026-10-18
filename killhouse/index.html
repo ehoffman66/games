@@ -178,7 +178,8 @@ h2 { font-size: clamp(30px, 5vw, 48px); margin: 0; letter-spacing: .02em; text-w
 .opc .fl button { flex: 1; height: 38px; border: 1px solid var(--line); background: transparent; color: var(--dim); font-family: var(--mono); font-size: 13px; font-weight: 600; cursor: pointer; }
 .opc .fl button.done { color: var(--fg); border-color: rgba(233,231,225,.45); }
 .opc .fl button.done:hover { background: rgba(242,169,59,.18); border-color: var(--amber); }
-.opc .fl button.cur { border-color: var(--amber); color: var(--amber); cursor: default; }
+.opc .fl button.cur { border-color: var(--amber); color: var(--amber); cursor: pointer; }
+.opc .fl button.cur:hover { background: rgba(242,169,59,.18); }
 .opc .fl button:disabled { cursor: default; }
 .opc .fl button.boss::after { content: ' B'; font-size: 9px; color: #ffb3ad; }
 .opc .bst { font-size: 13px; color: var(--dim); }
@@ -561,7 +562,7 @@ html.touch .slots { display: none; }
     </div>
     <div class="heat"><span class="label">Class</span><div class="heatsel classsel" id="classSel"></div><span class="fine" id="classInfo"></span></div>
     <div class="heat"><span class="label">Heat</span><div class="heatsel" id="heatSel"></div><span class="fine" id="heatInfo"></span></div>
-    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="newBtn" hidden>New campaign</button><button class="btn ghost" id="endlessBtn" hidden>Endless</button><button class="btn ghost" id="opsBtn" hidden>Operations</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
+    <div class="row"><button class="btn" id="startBtn" disabled>Deploy</button><button class="btn ghost" id="newBtn" hidden>New campaign</button><button class="btn ghost" id="endlessBtn" hidden>Endless</button><button class="btn ghost" id="opsBtn">Select level</button><button class="btn ghost" id="dailyBtn">Daily challenge</button><button class="btn ghost" id="labBtn">Evolution lab · <span class="bmMenu">0</span></button><button class="btn ghost" id="careerBtn">Career · unlocks</button><span id="loading">Generating the building…</span></div>
     <div class="fine deskonly" style="display:block">Mouse and keyboard, or play on a phone held sideways. Headphones recommended.</div>
   </div>
 </div>
@@ -587,10 +588,10 @@ html.touch .slots { display: none; }
 
 <div class="overlay" id="ops" hidden>
   <div class="panel">
-    <div class="eyebrow">Campaign · replay any floor you have cleared</div>
-    <h2>Operations</h2>
+    <div class="eyebrow">Campaign · pick up where you left off, or replay any floor you have cleared</div>
+    <h2>Select level</h2>
     <div class="opgrid" id="opGrid"></div>
-    <div class="row"><button class="btn" id="opsBack">Back</button><span class="fine">Replays start with the kit you had for that operation and never touch your campaign save. Play a whole operation to set a new best grade.</span></div>
+    <div class="row"><button class="btn" id="opsBack">Back</button><span class="fine">The highlighted floor continues your campaign. Cleared floors replay with the kit you had for that operation and never touch your campaign save. Play a whole operation to set a new best grade.</span></div>
   </div>
 </div>
 
@@ -684,7 +685,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 54;
+const KH_VERSION = 55;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -4028,7 +4029,7 @@ function showBrief() {
   $('briefIntel').innerHTML = [['Hostiles', foes], ['Training', TRAINING[Math.min(i, TRAINING.length - 1)] + ' They get sharper every floor.'], ['Enemy intel', intelText()], ['Objectives', objs.length ? objs.join(' · ') : 'Clear each floor and extract'], ['Target', `${BOSS_INTRO[bossFor(b)]} on floor ${b}`],
     ...(meta.opBest && meta.opBest[i] ? [['Your best', `Stealth ${meta.opBest[i].s} · Speed ${meta.opBest[i].t}`]] : []),
     ['Your kit', `${WEAPONS[LO.slots[0].k].name} · ${Math.round(P.hp)} / ${P.maxHp} hp · ${Object.keys(ups).length ? Object.keys(ups).length + (Object.keys(ups).length === 1 ? ' mutation' : ' mutations') : 'no mutations yet'}`]].map(([k, v]) => `<b>${k}</b><span>${v}</span>`).join('');
-  $('briefQuit').textContent = mode === 'replay' ? 'Back to operations' : 'Return to base';
+  $('briefQuit').textContent = mode === 'replay' ? 'Back to level select' : 'Return to base';
   $('briefNote').textContent = mode === 'replay' ? "Replays don't change your campaign save." : i ? 'Progress saved. You can stop here and continue later.' : 'Progress saves at the start of every operation.';
   $('brief').hidden = false;
 }
@@ -4082,7 +4083,7 @@ function showDebrief() {
   $('debGrades').innerHTML = gb('Stealth', sg, `${rq} of ${rn} rooms cleared unseen`, newS, prev.s) + gb('Speed', tg, `${fmtT(pt)} against par ${fmtT(par)}`, newT, prev.t);
   $('debStats').innerHTML = [['Kills', d('kills')], ['Headshots', d('heads')], ['Takedowns', d('stabs')], ['Objectives', `${d('obj')}<small> / ${d('objN')}</small>`], ['Biomass', '+' + d('bm')], ['Time', fmtT(pt || el)]]
     .map(([k, v]) => `<div class="stat"><div class="label">${k}</div><div class="v">${v}</div></div>`).join('');
-  $('debGo').hidden = last || rp; $('debMenu').hidden = !(last || rp); $('debMenu').textContent = rp ? 'Back to operations' : 'Main menu';
+  $('debGo').hidden = last || rp; $('debMenu').hidden = !(last || rp); $('debMenu').textContent = rp ? 'Back to level select' : 'Main menu';
   if (rp) { recordRun(false); bankRun(); }
   if (last) { meta.camp = true; delete meta.cp; recordRun(false); bankRun(); saveMeta(); }
   $('debrief').hidden = false;
@@ -4100,10 +4101,10 @@ const doneFloor = () => Math.max(meta.campMax || 0, meta.camp ? OPS.length * OPF
 let replay = null; // { i, f } while a replay is running
 function openOps() {
   initAudio(); for (const id of ['menu', 'dead', 'debrief']) $(id).hidden = true;
-  const df = doneFloor(), ob = meta.opBest || {};
+  const df = doneFloor(), ob = meta.opBest || {}, contF = meta.cp ? meta.cp.floor : df + 1; // the campaign carries on from the start of its operation
   $('opGrid').innerHTML = OPS.map((op, i) => {
     const a = i * OPF + 1, st = df >= a + OPF - 1 ? 'done' : df >= a - 1 ? 'cur' : 'lock';
-    const fl = Array.from({ length: OPF }, (_, j) => { const f = a + j, d = f <= df, c = !d && f === df + 1; return `<button data-f="${f}" class="${d ? 'done' : c ? 'cur' : ''}${j === OPF - 1 ? ' boss' : ''}" ${d ? '' : 'disabled'} aria-label="Floor ${f}${d ? ', replay' : c ? ', next' : ', locked'}">${String(f).padStart(2, '0')}</button>`; }).join('');
+    const fl = Array.from({ length: OPF }, (_, j) => { const f = a + j, d = f <= df, c = !d && f === contF; return `<button data-f="${f}" class="${d ? 'done' : c ? 'cur' : ''}${j === OPF - 1 ? ' boss' : ''}" ${d || c ? '' : 'disabled'} aria-label="Floor ${f}${d ? ', replay' : c ? ', continue the campaign' : ', locked'}">${String(f).padStart(2, '0')}</button>`; }).join('');
     const b = ob[i];
     return `<div class="opc ${st}"><div><div class="k">Operation ${i + 1} · ${THEME_NAME[op.theme]}</div><div class="nm">${op.name}</div></div>
       <div class="st">${st === 'done' ? 'Complete' : st === 'cur' ? (df >= a ? 'In progress' : 'Next up') : 'Locked'}</div>
@@ -4111,7 +4112,7 @@ function openOps() {
   }).join('');
   $('ops').hidden = false;
 }
-$('opGrid').onclick = e => { const b = e.target.closest('button.done'); if (b) startReplay(+b.dataset.f); };
+$('opGrid').onclick = e => { const b = e.target.closest('button.done, button.cur'); if (!b) return; if (b.classList.contains('done')) startReplay(+b.dataset.f); else { $('ops').hidden = true; $('startBtn').click(); } };
 $('opsBtn').onclick = () => openOps();
 $('opsBack').onclick = () => { $('ops').hidden = true; toMenu(); };
 // a replay: the operation's starting kit, plus one mutation for each floor of it you skip
@@ -4130,7 +4131,6 @@ function startReplay(f) {
   showBrief();
 }
 function renderCampaignMenu() {
-  $('opsBtn').hidden = doneFloor() < 1;
   const c = meta.cp;
   $('startBtn').textContent = c ? `Continue · Operation ${opOf(c.floor) + 1}` : 'Deploy';
   $('newBtn').hidden = !c; $('newBtn').classList.remove('armed'); $('newBtn').textContent = 'New campaign';
@@ -5274,7 +5274,7 @@ function gameOver() {
   const recs = recordRun(true); bankRun();
   $('deadScore').hidden = !daily; $('boardBtn2').hidden = !daily;
   const cp = inCampaign() && meta.cp, rp = mode === 'replay' && replay; $('cpBtn').hidden = !cp && !rp; if (cp) $('cpBtn').textContent = `Retry Operation ${OPS[opOf(cp.floor) % OPS.length].name}`; if (rp) $('cpBtn').textContent = `Retry from floor ${rp.f}`;
-  $('retryBtn').textContent = rp ? 'Operations' : cp ? 'New campaign' : 'Redeploy'; $('retryBtn').className = cp || rp ? 'btn ghost' : 'btn';
+  $('retryBtn').textContent = rp ? 'Select level' : cp ? 'New campaign' : 'Redeploy'; $('retryBtn').className = cp || rp ? 'btn ghost' : 'btn';
   if (daily) { $('deadScore').textContent = `Daily challenge score: ${fmtN(runScore())}`; submitDaily(); }
   if (document.pointerLockElement) document.exitPointerLock();
   const secs = Math.round((performance.now() - stats.t0) / 1000);
