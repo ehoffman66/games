@@ -42,6 +42,7 @@ button{font:inherit;color:inherit}
 .btn.white{background:linear-gradient(#ffffff,#e6efff)}
 .btn.small{font-size:17px;padding:7px 14px;border-radius:13px;box-shadow:inset 0 2px 0 rgba(255,255,255,.55),0 4px 0 var(--ink)}
 .btn[disabled]{opacity:.45;cursor:default;transform:none}
+.movebar{position:fixed;left:max(16px,env(safe-area-inset-left,0px));bottom:max(16px,env(safe-area-inset-bottom,0px));display:flex;gap:8px;align-items:center;z-index:11}.movebar.on #vMove{background:var(--green,#5cd17c)}
 .screen{position:fixed;inset:0;display:grid;place-items:center;grid-template-rows:minmax(0,1fr);padding-block:max(16px,env(safe-area-inset-top,0px)) max(16px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));background:radial-gradient(ellipse at center,rgba(42,35,64,.15),rgba(42,35,64,.45));z-index:20}
 .card{background:linear-gradient(#ffffff,#f6f9ff);border:4px solid var(--ink);border-radius:26px;box-shadow:inset 0 4px 0 rgba(255,255,255,.9),0 9px 0 var(--ink),0 18px 40px rgba(20,10,50,.35);padding:20px 22px;width:100%;max-width:680px;max-height:100%;overflow:auto;touch-action:pan-y;display:flex;flex-direction:column;gap:14px;box-sizing:border-box}
 h1,h2,h3{font-family:var(--font-d);margin:0;text-wrap:balance}
@@ -234,6 +235,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
   </div>
 </div>
 
+<div class="movebar" id="moveBar" hidden><button class="btn white" id="vMove">✋ Move things</button><button class="btn white small" id="vMoveBack" hidden>Put it all back</button></div>
 <button class="panbtn" id="panL" hidden aria-label="Look left">&#8249;</button><button class="panbtn" id="panR" hidden aria-label="Look right">&#8250;</button>
 
 <div class="powbar" id="hPow" hidden><span id="hPowName"></span><span class="track"><i id="hPowBar"></i></span></div>
@@ -264,7 +266,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">93 levels in 11 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 53</p>
+    <p class="ver" id="tVer">Version 54</p>
   </div>
 </section>
 
@@ -2314,10 +2316,35 @@ function renderLevel3D(){
 // the village is wider than the screen: drag, arrow keys or the side buttons look around
 let vPan = 0, vPanV = 0; const PAN_MAX = 34;
 const SLOTX = {house:0, pond:-8.5, doghouse:8.6, tree:-14, swing:-17.5, statue:13, veggie:15.5, scarecrow:17.6, birdbath:-12.5, hammock:21.5, hoop:-24, goal:24, bouncy:-27.5, icecream:11, windmill:-20.5, gazebo:19.5, golfcart:-6, lemonade:-15.5, telescope:26.5, carousel:30.5, ferris:-31.5, car:-6.6, helipad:33.5, sandbox:17.5, trampoline:-21.5, balloon:-11};
-function panUI(){ const on = state === 'village' && !vBar.hidden && !!(R3 && R3.kidsReady && !R3.failed); $('panL').hidden = $('panR').hidden = !on; }
+function panUI(){ const on = state === 'village' && !vBar.hidden && !!(R3 && R3.kidsReady && !R3.failed); $('panL').hidden = $('panR').hidden = !on; $('moveBar').hidden = !on; if (!on && moveMode) setMoveMode(false); }
+// ---------- moving yard things and furniture: drag to slide, tap to turn ----------
+let moveMode = false, mv = null;
+function setMoveMode(on){ moveMode = on; $('moveBar').classList.toggle('on', on); $('vMove').textContent = on ? '✓ Done moving' : '✋ Move things'; $('vMoveBack').hidden = !on || !Object.keys(save.place || {}).length; if (on) toastMsg('✋', 'Move things', 'Drag something to move it. Tap it to turn it.'); }
+$('vMove').onclick = () => { sfx.tick && sfx.tick(); setMoveMode(!moveMode); };
+$('vMoveBack').onclick = () => { save.place = {}; persist(); sfx.bump && sfx.bump(); $('vMoveBack').hidden = true; };
+const ndcOf = e => { const r = $('cv3').getBoundingClientRect(); return [(e.clientX - r.left)/r.width*2 - 1, 1 - (e.clientY - r.top)/r.height*2]; };
+function startMove(e, kind){
+  if (!R3 || R3.failed) return false;
+  const [nx, ny] = ndcOf(e), id = kind === 'yard' ? R3.pickYard(nx, ny) : R3.pickHome(nx, ny); if (!id) return false;
+  const spot = kind === 'yard' ? R3.yardSpot(id) : R3.homeSpot(id), g = kind === 'yard' ? R3.groundYard(nx, ny) : R3.groundHome(id, nx, ny); if (!spot || !g) return false;
+  mv = { id, kind, off: [spot[0] - g[0], spot[1] - g[1]], r: spot[2], x: e.clientX, y: e.clientY, moved: false };
+  R3.dragId = id; sfx.bump && sfx.bump(); return true;
+}
+function storeMove(x, z, r){
+  const box = mv.kind === 'yard' ? (save.place = save.place || {}) : (home().pos = home().pos || {});
+  box[mv.id] = [Math.round(x*100)/100, Math.round(z*100)/100, r];
+}
+window.addEventListener('pointermove', e => { if (!mv) return;
+  if (!mv.moved && Math.hypot(e.clientX - mv.x, e.clientY - mv.y) < 8) return; mv.moved = true;
+  const [nx, ny] = ndcOf(e), g = mv.kind === 'yard' ? R3.groundYard(nx, ny) : R3.groundHome(mv.id, nx, ny); if (!g) return;
+  let x = g[0] + mv.off[0], z = g[1] + mv.off[1]; if (mv.kind === 'yard'){ x = Math.max(-38, Math.min(38, x)); z = Math.max(-17, Math.min(3, z)); } else { x = Math.max(-5.8, Math.min(5.8, x)); z = Math.max(-3.0, Math.min(3.2, z)); }
+  storeMove(x, z, mv.r); });
+window.addEventListener('pointerup', () => { if (!mv) return;
+  if (!mv.moved && !(mv.kind === 'home' && R3.homeWall(mv.id))){ const sp = mv.kind === 'yard' ? R3.yardSpot(mv.id) : R3.homeSpot(mv.id); if (sp) storeMove(sp[0], sp[1], Math.round(((mv.r || 0) + Math.PI/4)*1000)/1000); sfx.tick && sfx.tick(); }
+  R3.dragId = null; mv = null; persist(); if (moveMode) $('vMoveBack').hidden = !Object.keys(save.place || {}).length; if (state === 'home') drawHome(); });
 (() => {
   let drag = null; const cvEl = document.getElementById('cv');
-  cvEl.addEventListener('pointerdown', e => { if (state !== 'village' || vBar.hidden) return; drag = {x: e.clientX, p: vPan}; vPanV = 0; });
+  cvEl.addEventListener('pointerdown', e => { if (state !== 'village' || vBar.hidden) return; if (moveMode && startMove(e, 'yard')) return; drag = {x: e.clientX, p: vPan}; vPanV = 0; });
   window.addEventListener('pointermove', e => { if (drag) vPan = Math.max(-PAN_MAX, Math.min(PAN_MAX, drag.p - (e.clientX - drag.x)/32)); });
   window.addEventListener('pointerup', () => drag = null);
   window.addEventListener('keydown', e => { if (state !== 'village' || vBar.hidden) return; if (e.key === 'ArrowLeft') vPanV = -1; if (e.key === 'ArrowRight') vPanV = 1; });
@@ -2569,6 +2596,7 @@ const home = () => { const h = save.home = save.home || {}; h.own = h.own || {};
 const roomsOpen = () => lvOf('house') + 1;
 const roomName = i => ROOMS[i][0] === 'dog' ? `${save.dog.name}'s room` : ROOMS[i][1];
 let homeRoom = 0, homeTab = 'Things', homePrev = null; const homePop = {}, furnThumbs = new Map();
+$('sHome').addEventListener('pointerdown', e => { if (e.target.closest('.card') || homeRoom >= roomsOpen()) return; if (startMove(e, 'home')) e.preventDefault(); });
 function openHome(){ state = 'home'; homePrev = null; vBar.hidden = true; panUI(); show('sHome'); if (homeRoom >= roomsOpen()) homeRoom = 0; drawHome(); }
 function drawHome(){
   const h = home(), open = roomsOpen(), rid = ROOMS[homeRoom][0], locked = homeRoom >= open;
@@ -2603,12 +2631,14 @@ function drawHome(){
     btn.innerHTML = can ? `Buy ${esc(name)} <span class="coin-ico" style="display:inline-block;width:16px;height:16px;vertical-align:-2px"></span> ${price}` : `${esc(name)}: need ${price - save.coins} more coins`;
     btn.onclick = () => { if (save.coins < price) return; save.coins -= price; h.own[homePrev] = 1; homePop[homePrev] = clock; homePrev = null; save.buys = (save.buys || 0) + 1; persist(); sfx.buy(); checkStickers(); drawHome(); };
     bb.appendChild(btn);
-  } else if (homeTab === 'Things' && !locked){ const n = FURNITURE.filter(f => f[1] === rid && h.own[f[0]]).length; msg.textContent = n ? `${n} of 8 things in this room` : 'Tap something to see it in the room'; }
+  } else if (homeTab === 'Things' && !locked){ const n = FURNITURE.filter(f => f[1] === rid && h.own[f[0]]).length; msg.textContent = n ? `${n} of 8 things here. Drag them to move, tap to turn.` : 'Tap something to see it in the room';
+    const moved = Object.keys(h.pos || {}).filter(id => FURNITURE.some(f => f[0] === id && f[1] === rid));
+    if (moved.length){ const btn = document.createElement('button'); btn.className = 'btn small white'; btn.textContent = 'Put back'; btn.onclick = () => { moved.forEach(id => delete h.pos[id]); persist(); sfx.bump && sfx.bump(); drawHome(); }; bb.appendChild(btn); } }
 }
 function renderHome3D(){
   const h = home(), rid = ROOMS[homeRoom][0], wide = viewW/viewH > 1, card = $('hmCard').getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
   const fitW = wide ? Math.max(0.35, (card.left - 12)/W) : 0.96, fitH = wide ? 0.94 : Math.max(0.3, (card.top - 12)/H);
-  const st = { room: rid, owned: homeRoom < roomsOpen() ? h.own : {}, wall: h.wall[rid] ?? ROOM_LOOK[rid][0], floor: h.floor[rid] ?? ROOM_LOOK[rid][1], preview: homePrev, pop: homePop };
+  const st = { room: rid, pos: h.pos || {}, owned: homeRoom < roomsOpen() ? h.own : {}, wall: h.wall[rid] ?? ROOM_LOOK[rid][0], floor: h.floor[rid] ?? ROOM_LOOK[rid][1], preview: homePrev, pop: homePop };
   R3.renderHome(st, viewW, viewH, clock, wide ? fitW/2 : 0.5, wide ? 0.5 : fitH/2, fitW, fitH);
   g.clearRect(0, 0, viewW, viewH);
 }
