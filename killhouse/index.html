@@ -680,7 +680,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 52;
+const KH_VERSION = 53;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -1361,22 +1361,68 @@ function buildOfficeMaterials() {
   OFF.ledG = new THREE.MeshStandardMaterial({ color: 0x050505, emissive: 0x30ff60, emissiveIntensity: 4 });
   OFF.ledA = new THREE.MeshStandardMaterial({ color: 0x050505, emissive: 0xffa020, emissiveIntensity: 4 });
   OFF.panelOff = new THREE.MeshStandardMaterial({ color: 0x8c9096, roughness: .4, envMapIntensity: .6 });
-  // the city at night, one long panorama sliced across each run of windows
-  OFF.city = new THREE.MeshBasicMaterial({ map: canvasTex(2048, 512, (x, W, H) => {
-    const sky = x.createLinearGradient(0, 0, 0, H); sky.addColorStop(0, '#05070d'); sky.addColorStop(.7, '#14182a'); sky.addColorStop(1, '#2a2430'); x.fillStyle = sky; x.fillRect(0, 0, W, H);
-    for (const [far, base] of [[1, .55], [0, .72]]) {
-      for (let bx = 0; bx < W;) {
-        const bw = rand(50, 150) * (far ? .7 : 1), top = H * (far ? rand(.15, .5) : rand(.3, .65)), shade = far ? 14 : 8;
-        x.fillStyle = `rgb(${shade},${shade + 1},${shade + 5})`; x.fillRect(bx, top, bw, H - top);
-        for (let wy = top + 8; wy < H * base + 200; wy += far ? 9 : 13) for (let wx = bx + 5; wx < bx + bw - 6; wx += far ? 7 : 10) {
-          if (Math.random() < (far ? .25 : .32)) { const warm = Math.random() < .7; x.fillStyle = warm ? `rgba(255,${190 + randi(0, 40)},120,${rand(.5, .95)})` : `rgba(170,200,255,${rand(.4, .8)})`; x.fillRect(wx, wy, far ? 3 : 5, far ? 4 : 6); }
+  // the city at night seen through the glass: rows of towers at real distances behind each pane, so they shift as you move,
+  // lit windows that thin out into a glow far away, the street grid far below and a hazy sky
+  OFF.city = new THREE.ShaderMaterial({
+    uniforms: { uH: { value: 60 }, uSeed: { value: 0 }, uPix: { value: .002 } },
+    vertexShader: `varying vec3 vW; varying vec3 vN; varying vec3 vAx;
+      void main() { vec4 w = modelMatrix * vec4(position, 1.0); vW = w.xyz; vN = normalize(mat3(modelMatrix) * vec3(0., 0., 1.)); vAx = normalize(mat3(modelMatrix) * vec3(1., 0., 0.));
+        gl_Position = projectionMatrix * viewMatrix * w; }`,
+    fragmentShader: `uniform float uH, uSeed, uPix; varying vec3 vW; varying vec3 vN; varying vec3 vAx;
+      float hs(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+      const vec3 HAZE = vec3(.07, .05, .058);
+      void main() {
+        vec3 dir = normalize(vW - cameraPosition), o = -normalize(vN), ax = normalize(vAx);
+        float dOut = max(dot(dir, o), .02), du = dot(dir, ax), u0 = dot(vW, ax), y0 = vW.y;
+        // sky: city glow on the horizon fading up into the night, a few stars
+        vec3 col = mix(vec3(.11, .07, .07), vec3(.005, .008, .018), smoothstep(-.05, .5, dir.y));
+        vec2 sp = vec2(du, dir.y) / dOut * 90.; float st = hs(floor(sp) + uSeed);
+        col += vec3(.55, .6, .75) * step(.996, st) * smoothstep(.12, .3, dir.y) * smoothstep(.5, .1, length(fract(sp) - .5));
+        // where the ray would reach the street, measured straight out from the glass
+        float Dg = dir.y < 0. ? (-uH - y0) / dir.y * dOut : 1e9;
+        bool hit = false;
+        for (int k = 0; k < 4; k++) {
+          float fk = float(k), D = k == 0 ? 26. : k == 1 ? 58. : k == 2 ? 120. : 250.;
+          if (Dg < D) break;
+          float t = D / dOut, u = u0 + du * t, y = y0 + dir.y * t + uH;
+          float bw = k == 0 ? 15. : k == 1 ? 21. : k == 2 ? 30. : 44.;
+          float cu = u / bw + uSeed * 7.1 + fk * 13.37, c = floor(cu), fu = fract(cu);
+          float h1 = hs(vec2(c, fk + uSeed)), h2 = hs(vec2(c + 3.7, fk * 2.1 + uSeed + 1.3));
+          float wf = .55 + .4 * h2, lft = (1. - wf) * h1;
+          if (fu < lft || fu > lft + wf) continue;
+          float top = (k == 0 ? 8. : k == 1 ? 20. : k == 2 ? 35. : 55.) + h1 * h2 * (k == 0 ? 80. : k == 1 ? 120. : k == 2 ? 170. : 230.) + h1 * 25.;
+          float bx = (fu - lft) * bw, bwid = wf * bw;
+          // setbacks: tall towers step in near the top
+          if (top > 70. && y > top - 14. && abs(bx - bwid * .5) > bwid * .32) continue;
+          if (y > top) continue;
+          vec2 wc = vec2(bx / 2.2, y / 3.4), wi = floor(wc), wq = fract(wc);
+          float ratio = .1 + .4 * hs(vec2(c, 9. + fk));
+          float lit = step(1. - ratio, hs(wi + vec2(c * 7.3, fk * 11.)));
+          float win = smoothstep(.1, .2, wq.x) * smoothstep(.9, .8, wq.x) * smoothstep(.18, .3, wq.y) * smoothstep(.86, .74, wq.y) * (1. - .7 * smoothstep(.47, .49, wq.x) * smoothstep(.53, .51, wq.x));
+          float blind = smoothstep(.55, .9, hs(wi + c * 2.9)) * step(.5, fract(wq.y * 6.)) * .45; // half-drawn blinds in some windows
+          vec3 wcol = mix(vec3(1., .7, .4), vec3(.6, .74, 1.), step(.7, hs(wi + c * 1.7))) * (.5 + .9 * hs(wi + 3.3));
+          // a window narrower than a pixel or two becomes its average glow, so distant towers don't sparkle
+          float px = t * uPix / 2.2, w = mix(win * lit, ratio * .42, smoothstep(.3, 1., px));
+          vec3 b = vec3(.012, .014, .02) * (1. + .5 * h1) + wcol * w * (1. - blind) * (k == 0 ? .75 : 1.1);
+          b += vec3(.03, .035, .05) * smoothstep(top - .8, top, y) * (1. - smoothstep(.5, 2., px)); // a lit parapet
+          if (top > 90. && abs(bx - bwid * .5) < .9 + px * 1.2 && y > top - 1.2) b = vec3(2., .08, .05) * (1. - smoothstep(.5, 3., px)) + b; // red air-traffic light
+          col = mix(b, HAZE, fk == 0. ? .08 : fk == 1. ? .22 : fk == 2. ? .42 : .62);
+          hit = true; break;
         }
-        if (!far && Math.random() < .3) { x.fillStyle = '#ff2a20'; x.fillRect(bx + bw / 2 - 2, top - 6, 4, 4); }
-        bx += bw + rand(0, 30);
-      }
-    }
-  }), color: new THREE.Color(1.15, 1.15, 1.2) });
-  OFF.city.map.wrapS = THREE.RepeatWrapping;
+        if (!hit && Dg < 1e8) { // the street grid with sodium lamps along the roads
+          float t = Dg / dOut, gu = u0 + du * t, s = Dg;
+          float fa = abs(fract((s - 12.) / 55.) - .5), fb = abs(fract(gu / 70.) - .5);
+          float ra = smoothstep(.38, .4, fa), rb = smoothstep(.41, .43, fb), road = max(ra, rb);
+          float lamp = smoothstep(.47, .49, fa) * smoothstep(.05, .0, abs(fract(gu / 24.) - .5)) + smoothstep(.48, .495, fb) * smoothstep(.05, .0, abs(fract(s / 24.) - .5));
+          float px = t * uPix / 4.;
+          col = mix(vec3(.006, .006, .008) + road * vec3(.05, .032, .015) + lamp * vec3(1., .55, .2) * .8, vec3(.05, .035, .025) + road * .03, smoothstep(.3, 1.5, px));
+          col = mix(col, HAZE, clamp(Dg / 600., 0., .7));
+        }
+        // the glass: a faint cool tint and a sheen at grazing angles
+        col = col * vec3(.86, .9, .95) + vec3(.03, .035, .045) * pow(1. - dOut, 3.);
+        gl_FragColor = vec4(col, 1.);
+      }`,
+  });
   OFF.boards = [0, 1, 2].map(k => new THREE.MeshStandardMaterial({ roughness: .25, envMapIntensity: .8, map: canvasTex(512, 288, (x, W, H) => {
     x.fillStyle = '#e6e6e1'; x.fillRect(0, 0, W, H);
     const ink = ['#1b3f9a', '#a3221b', '#1d1d1d'][k]; x.strokeStyle = x.fillStyle = ink; x.lineWidth = 3; x.font = 'bold 30px "Permanent Marker", sans-serif';
@@ -1694,11 +1740,11 @@ const TALL = ['tallCrate', 'boxes', 'sandbags', 'halfWall'];
 // props that splinter apart under fire: hit points per type
 const DESTR = { crate: 90, tallCrate: 125, boxes: 50, pallets: 70 };
 let props = [], debris = [];
-const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6], crateStack: [1.4, 1.4], lockers: [2.0, .55], partition: [2.6, .5], container: [2.44, 3.0], labBench: [2.4, .9], cryoTank: [1.2, 1.2], gurney: [2.0, .75] };
+const FOOT = { tallCrate: [1.3, 1.3], boxes: [1.35, .95], sandbags: [2.6, .75], halfWall: [2.8, .42], desk: [1.6, .8], deskOver: [1.6, .8], cabinet: [.55, .65], cabinetDown: [1.35, .6], barrels: [1.4, 1.4], pallets: [1.25, 1.05], crate: [1.1, 1.1], rubble: [1.8, 1.6], barrier: [2.6, .5], pillar: [.9, .9], shelf: [2.0, .55], cubicle: [2.2, 2.2], workDesk: [1.6, .8], tableFlip: [2.4, .5], copier: [1.0, .7], serverRack: [.7, 1.0], vending: [1.0, .85], conference: [3.2, 1.3], log: [3.0, .8], boulder: [1.8, 1.4], rocks: [1.5, 1.1], stump: [.85, .85], trunk: [1.1, 1.1], woodpile: [2.2, .6], crateStack: [1.4, 1.4], lockers: [2.0, .55], partition: [2.6, .5], container: [2.44, 3.0], labBench: [2.4, .9], cryoTank: [1.2, 1.2], gurney: [2.0, .75], rack: [2.8, 1.1], wrapPallet: [1.2, 1.05], forklift: [1.2, 2.9], fumeHood: [1.85, .9], fridge: [.8, .75], generator: [2.5, 1.3], tent: [2.5, 3.2], logPile: [3.5, 2.3] };
 // full-height pieces: a standing man can hide behind these
 const FULL = { warehouse: ['crateStack', 'crateStack', 'lockers', 'shelfFull'], office: ['partition', 'partition', 'lockers', 'serverRack'], jungle: ['trunk', 'crateStack'], woods: ['crateStack', 'crateStack'], ship: ['container', 'container', 'crateStack'], lab: ['cryoTank', 'partition', 'lockers', 'serverRack'] };
 function buildProp(type, x, z, rot, r) {
-  const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = rot ? Math.PI / 2 : 0; level.add(g);
+  const g = new THREE.Group(), q = rot === true ? 1 : (rot | 0) & 3; g.position.set(x, 0, z); g.rotation.y = q * Math.PI / 2; level.add(g);
   let [w, d] = FOOT[type]; let h = 1;
   const M = MAT;
   if (type === 'desk') {
@@ -1887,15 +1933,329 @@ function buildProp(type, x, z, rot, r) {
     part(g, 1.95, .12, .7, LAB.white, 0, .8, 0); part(g, 1.9, .04, .66, LAB.steel, 0, .72, 0, { ray: false }); part(g, 1.9, .04, .66, LAB.steel, 0, .22, 0, { ray: false });
     for (const sx of [-.9, .9]) for (const sz of [-.3, .3]) part(g, .04, .72, .04, LAB.steel, sx, .38, sz, { ray: false });
     h = .9;
+  } else if (type === 'rack') {
+    // heavy pallet racking: blue uprights, orange beams, two loaded levels and a top shelf
+    const B = pbatch();
+    for (const sx of [-1.36, 1.36]) { for (const sz of [-.5, .5]) B.box(.08, 2.7, .08, PM.blue, sx, 1.35, sz, { ray: false }); for (const y of [.35, 1.0, 1.7, 2.35]) B.box(.04, .04, 1.0, PM.blue, sx, y, 0, { ray: false }); B.box(.04, .7, .04, PM.blue, sx, 1.35, 0, { ray: false, rx: .9 }); }
+    for (const y of [1.32, 2.5]) for (const sz of [-.5, .5]) B.box(2.8, .12, .06, PM.orange, 0, y, sz);
+    const load = (x, y, top) => {
+      const k = Math.random(); if (k < .2) return; // an empty bay
+      palletParts(B, x, y, 0); const by = y + .12, room = top - by;
+      if (k < .48) { const hh = rand(.55, room); B.box(1.1, hh, .96, PM.wrap, x, by + hh / 2, 0); B.box(.04, hh + .01, .98, PM.rubber, x + rand(-.3, .3), by + hh / 2, 0, { ray: false }); }
+      else if (k < .85) for (let ry = 0, rows = Math.floor(room / .36); ry < rows; ry++) for (let cx = 0; cx < 2; cx++) for (let cz = 0; cz < 2; cz++) {
+        if (ry === rows - 1 && Math.random() < .35) continue;
+        B.box(.52, .34, .44, MAT.card, x - .27 + cx * .54 + rand(-.02, .02), by + .17 + ry * .35, -.23 + cz * .47, { ry: rand(-.06, .06) });
+      }
+      else if (room > .9) for (const [dx, dz] of [[-.28, -.24], [.28, -.24], [-.28, .24], [.28, .24]]) B.cyl(.25, .86, Math.random() < .5 ? MAT.rustRed : MAT.metal, x + dx, by + .43, dz, { seg: 14 });
+    };
+    for (const x of [-.68, .68]) { load(x, 0, 1.24); load(x, 1.38, 2.42); if (Math.random() < .35) load(x, 2.56, 2.95); }
+    B.flush(g); h = 2.7;
+  } else if (type === 'wrapPallet') {
+    // a pallet load shrink-wrapped in film, strapped twice
+    const B = pbatch(), hh = rand(1.05, 1.55);
+    palletParts(B, 0, 0, 0, true); B.box(1.1, hh, .98, PM.wrap, 0, .12 + hh / 2, 0);
+    for (const sx of [-.3, .3]) B.box(.04, hh + .01, 1.0, PM.rubber, sx, .12 + hh / 2, 0, { ray: false });
+    B.box(1.12, .06, 1.0, MAT.card, 0, .12 + hh + .03, 0, { ray: false });
+    B.flush(g); h = .12 + hh;
+  } else if (type === 'forklift') {
+    // a counterbalance forklift parked with its forks down
+    const B = pbatch(), o = -.25;
+    B.box(1.06, .62, 1.5, PM.yellow, 0, .55, -.2 + o); B.box(1.1, .72, .42, MAT.steel, 0, .6, -1.0 + o);
+    B.box(.5, .1, .5, PM.rubber, 0, .92, -.35 + o, { ray: false }); B.box(.48, .45, .1, PM.rubber, 0, 1.17, -.6 + o, { ray: false });
+    B.box(.6, .22, .3, PM.yellow, 0, 1.0, .3 + o, { ray: false }); B.cyl(.16, .03, PM.rubber, 0, 1.25, .2 + o, { rx: -.9, ray: false });
+    for (const sx of [-.5, .5]) for (const sz of [-.82, .32]) B.cyl(.27, .22, PM.rubber, sx, .27, sz + o, { rz: Math.PI / 2, seg: 14, ray: false });
+    for (const sx of [-.48, .48]) { for (const sz of [-.8, .25]) B.box(.06, 1.3, .06, MAT.trim, sx, 1.45, sz + o, { ray: false }); B.box(.05, .05, 1.12, MAT.trim, sx, 2.1, -.28 + o, { ray: false }); }
+    for (let k = 0; k < 5; k++) B.box(1.0, .04, .04, MAT.trim, 0, 2.11, -.8 + k * .26 + o, { ray: false });
+    for (const sx of [-.32, .32]) B.box(.1, 2.1, .12, MAT.steel, sx, 1.05, .62 + o);
+    B.box(.8, .5, .06, MAT.steel, 0, .35, .72 + o, { ray: false }); for (const sx of [-.25, .25]) B.box(.12, .05, 1.0, MAT.steel, sx, .04, 1.25 + o, { ray: false });
+    B.flush(g); h = 2.15;
+  } else if (type === 'fumeHood') {
+    // a fume cupboard: base cabinets, a lit work chamber behind the glass sash, the extract duct going up
+    const B = pbatch();
+    B.box(1.8, .88, .85, LAB.white, 0, .44, 0); B.box(1.84, .04, .88, LAB.steel, 0, .9, 0, { ray: false });
+    for (const sx of [-.88, .88]) B.box(.08, 1.38, .85, LAB.white, sx, 1.61, 0);
+    B.box(1.76, 1.38, .05, LAB.white, 0, 1.61, -.4); B.box(1.84, .42, .85, LAB.white, 0, 2.51, 0);
+    B.box(1.5, .02, .1, PM.hoodLamp, 0, 2.29, -.1, { ray: false }); B.box(1.7, .05, .05, LAB.steel, 0, 1.1, .42, { ray: false });
+    for (const sx of [-.45, .45]) B.box(.02, .7, .01, LAB.steel, sx, .45, .43, { ray: false });
+    B.cyl(.13, .55, LAB.steel, .45, 2.98, -.1, { ray: false });
+    for (let k = 0, n = randi(2, 5); k < n; k++) { const bh = rand(.12, .3); B.cyl(rand(.03, .06), bh, pick([LAB.glass, LAB.fluid]), rand(-.7, .7), .92 + bh / 2, rand(-.25, .2), { seg: 10, ray: false }); }
+    B.flush(g);
+    part(g, 1.68, .95, .02, LAB.glass, 0, 1.75, .38, { ray: false, cast: false }); part(g, 1.7, .05, .04, LAB.steel, 0, 1.27, .39, { ray: false });
+    h = 2.72;
+  } else if (type === 'fridge') {
+    // a tall specimen freezer with a temperature readout
+    const B = pbatch();
+    B.box(.78, 1.96, .7, LAB.white, 0, .98, 0); B.box(.76, .012, .012, LAB.steel, 0, 1.32, .355, { ray: false });
+    for (const y of [.9, 1.6]) B.box(.03, .4, .03, LAB.steel, .3, y, .37, { ray: false });
+    B.box(.14, .06, .01, Math.random() < .7 ? PM.ledG : PM.ledR, -.2, 1.78, .356, { ray: false });
+    B.flush(g); h = 1.96;
+  } else if (type === 'generator') {
+    // a diesel generator set on its skid: engine, alternator, radiator, exhaust and a control box
+    const B = pbatch();
+    B.box(2.4, .16, 1.2, MAT.steel, 0, .08, 0); B.box(1.1, .85, .8, PM.engine, -.4, .6, 0); B.box(.75, .3, .6, PM.engine, -.4, 1.18, 0);
+    B.cyl(.38, .8, PM.engine, .5, .55, 0, { rz: Math.PI / 2, seg: 18 }); B.box(.2, 1.2, 1.0, MAT.trim, -1.1, .76, 0);
+    for (let k = 0; k < 8; k++) B.box(.02, 1.05, .02, MAT.galv, -1.21, .76, -.42 + k * .12, { ray: false });
+    B.box(.5, .6, .3, PM.panel, .85, 1.25, .3); B.box(.05, .05, .01, PM.ledG, .75, 1.4, .455, { ray: false }); B.box(.05, .05, .01, Math.random() < .5 ? PM.ledR : PM.ledG, .9, 1.4, .455, { ray: false });
+    B.cyl(.07, 1.5, MAT.galv, -.15, 1.85, -.25, { ray: false }); B.cyl(.045, .9, MAT.pipeRed, .05, .4, .45, { rz: Math.PI / 2, ray: false });
+    B.flush(g); h = 1.5;
+  } else if (type === 'tent') {
+    // an army ridge tent: canvas pulled over a ridge pole, the flap tied back, guy lines out to pegs
+    const r0 = 1.36, geo = new THREE.CylinderGeometry(r0, r0, 3.0, 3, 1).toNonIndexed(); geo.computeVertexNormals();
+    const t = new THREE.Mesh(geo, PM.canvas); t.rotation.x = -Math.PI / 2; t.position.y = r0 / 2; t.castShadow = !LOWFX; t.receiveShadow = true; g.add(t); worldMeshes.push(t);
+    const sh = new THREE.Shape(); sh.moveTo(-.55, 0); sh.lineTo(.55, 0); sh.lineTo(0, 1.55); sh.closePath();
+    const fl = new THREE.Mesh(new THREE.ShapeGeometry(sh), PM.flap); fl.position.set(0, .01, 1.505); g.add(fl);
+    const ridge = 1.5 * r0;
+    for (const sz of [-1, 1]) { cyl(g, .025, .5, JNG.bark, 0, ridge + .1, sz * 1.5, { seg: 6, ray: false }); between(g, new V3(0, ridge + .25, sz * 1.5), new V3(0, 0, sz * 2.3), .006, MAT.cable); }
+    for (const sx of [-1, 1]) for (const sz of [-.9, .9]) between(g, new V3(sx * .55, ridge * .6, sz), new V3(sx * 1.6, 0, sz * 1.1), .006, MAT.cable);
+    h = ridge;
+  } else if (type === 'logPile') {
+    // felled trunks stacked for hauling, end grain showing, held by stakes
+    const B = pbatch(), rr = .27;
+    [4, 3, 2].forEach((n, row) => { for (let i = 0; i < n; i++) {
+      const z = (i - (n - 1) / 2) * .56, y = rr + row * .47, len = 3.2 + rand(-.25, .2), dx = rand(-.1, .1), rad = rr + rand(-.03, .02);
+      B.cyl(rad, len, JNG.bark, dx, y, z, { rz: Math.PI / 2, seg: 10 }); for (const s of [-1, 1]) B.cyl(rad * .9, .02, PM.grain, dx + s * len / 2, y, z, { rz: Math.PI / 2, seg: 10, ray: false });
+    } });
+    for (const sx of [-1.15, 1.15]) for (const sz of [-1.25, 1.25]) B.cyl(.05, 1.3, JNG.bark, sx, .6, sz, { seg: 6, ray: false });
+    B.flush(g); h = 1.48;
   }
-  if (rot) [w, d] = [d, w];
+  if (q & 1) [w, d] = [d, w];
   propCol(x, z, w * .96, d * .96, h);
   let D = null;
   if (DESTR[type]) {
     D = { g, type, hp: DESTR[type], col: colliders[colliders.length - 1], w, d, h, room: r, cover: null, decals: [], shake: 0, base: g.position.clone() };
     g.traverse(o => { if (o.isMesh) o.userData.prop = D; }); props.push(D);
   }
-  return { w, d, D };
+  return { w, d, D, h, g };
+}
+
+// paint and fittings for the furniture added in v53, made once
+const PM = {};
+function propMats() {
+  if (PM.blue) return;
+  const paint = (c, r = .5, m = .4) => surface(new THREE.MeshStandardMaterial({ color: c, roughness: r, metalness: m, envMapIntensity: .6 }), { macro: .45, grime: .3, detail: .25, rep: 3 });
+  PM.blue = paint(0x1b3866); PM.orange = paint(0xb04c18); PM.yellow = paint(0xb48a16, .55, .3); PM.engine = paint(0x33433a, .5, .5);
+  PM.wrap = new THREE.MeshStandardMaterial({ color: 0xa4abb0, roughness: .26, metalness: 0, envMapIntensity: 1.2 });
+  PM.rubber = new THREE.MeshStandardMaterial({ color: 0x0d0d0e, roughness: .85 });
+  PM.canvas = surface(new THREE.MeshStandardMaterial({ color: 0x4a4c31, roughness: .95, envMapIntensity: .2 }), { macro: .7, grime: .45, detail: .5, rep: 4 });
+  PM.flap = new THREE.MeshStandardMaterial({ color: 0x090a07, roughness: 1, side: THREE.DoubleSide });
+  PM.line = new THREE.MeshStandardMaterial({ color: 0x8c6e12, roughness: .75, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  PM.red = new THREE.MeshStandardMaterial({ color: 0x8a1410, roughness: .3, metalness: .2, envMapIntensity: .8 });
+  PM.panel = new THREE.MeshStandardMaterial({ color: 0x5f6468, roughness: .5, metalness: .6, envMapIntensity: .7 });
+  PM.grain = new THREE.MeshStandardMaterial({ color: 0x8a6a45, roughness: .9 });
+  PM.hoodLamp = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: 0xdfe8ff, emissiveIntensity: 2.5 });
+  PM.ledG = new THREE.MeshStandardMaterial({ color: 0x050505, emissive: 0x30ff60, emissiveIntensity: 4 });
+  PM.ledR = new THREE.MeshStandardMaterial({ color: 0x050505, emissive: 0xff3020, emissiveIntensity: 4 });
+  PM.exit = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 2.4, 2.2), map: canvasTex(128, 48, (x, W, H) => {
+    x.fillStyle = '#0b8a3a'; x.fillRect(0, 0, W, H); x.fillStyle = '#f2fff4'; x.font = 'bold 34px Arial, sans-serif'; x.textAlign = 'center'; x.fillText('EXIT', W / 2, 36);
+  }) });
+}
+// a prop's boxes and cylinders merged per material, so a loaded rack is a handful of draw calls
+function pbatch() {
+  const m = new Map();
+  const put = (geo, mat, ray) => { const k = mat.uuid + ray; if (!m.has(k)) m.set(k, { mat, ray, gs: [] }); m.get(k).gs.push(geo); };
+  return {
+    box(w, h, d, mat, x, y, z, { ry = 0, rx = 0, rz = 0, ray = true } = {}) { const g = boxGeo(w, h, d, mat.userData.tile || 1.5); if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); if (ry) g.rotateY(ry); g.translate(x, y, z); put(g, mat, ray); },
+    cyl(r, h, mat, x, y, z, { seg = 12, rx = 0, rz = 0, ray = true, r2 = r } = {}) { const g = new THREE.CylinderGeometry(r, r2, h, seg); if (rx) g.rotateX(rx); if (rz) g.rotateZ(rz); g.translate(x, y, z); put(g, mat, ray); },
+    flush(g, cast = true) {
+      for (const { mat, ray, gs } of m.values()) {
+        const mesh = new THREE.Mesh(gs.length > 1 ? mergeGeometries(gs) : gs[0], mat); mesh.castShadow = cast && !LOWFX; mesh.receiveShadow = true; g.add(mesh);
+        if (ray) worldMeshes.push(mesh); if (gs.length > 1) gs.forEach(x => x.dispose());
+      }
+      m.clear();
+    },
+  };
+}
+// a pallet's runners and deck boards
+function palletParts(B, x, y, z, ray = false) {
+  for (const bz of [-.4, 0, .4]) B.box(1.15, .1, .1, MAT.wood, x, y + .05, z + bz, { ray });
+  for (let s = 0; s < 5; s++) B.box(1.15, .02, .14, MAT.wood, x, y + .11, z - .42 + s * .21, { ray: ray && s === 2 });
+}
+
+// ---------- room plans: furniture laid out the way each kind of space is really used ----------
+const PLAN_KINDS = { warehouse: ['racks', 'racks', 'dock', 'workshop'], office: ['pods', 'pods', 'benches', 'meeting'], ship: ['boxes', 'boxes', 'breakbulk', 'engine'], lab: ['wetlab', 'wetlab', 'specimen', 'ward'], jungle: ['camp', 'clearing', 'ruins'], woods: ['logging', 'forest', 'huntcamp'] };
+// how far wall-side furniture stands off the wall: clear of pilasters, columns and hull frames
+const HUG = { warehouse: .42, office: .46, ship: .3, lab: .06, jungle: .5, woods: .5 };
+// loose pieces dropped in after the plan, so no two rooms come out tidy in the same way
+const LOOSE = { warehouse: ['pallets', 'crate', 'barrels', 'boxes', 'wrapPallet', 'tallCrate', 'crateStack', 'cabinetDown'], office: ['boxes', 'boxes', 'tableFlip', 'deskOver', 'cabinet'], ship: ['barrels', 'crate', 'crateStack', 'pallets', 'tallCrate', 'boxes'], lab: ['gurney', 'boxes', 'cabinet', 'labBench'], jungle: ['crate', 'barrels', 'boulder', 'rocks', 'log', 'stump', 'sandbags'], woods: ['log', 'rocks', 'stump', 'boulder', 'crate', 'barrels'] };
+// how far a piece may be knocked off square (radians): crates and rocks sit crooked, racks and cubicles don't
+const TWIST = { crate: .12, tallCrate: .08, crateStack: .06, barrels: .6, pallets: .1, boxes: .1, wrapPallet: .06, boulder: .6, rocks: .8, stump: 3, log: .2, trunk: 3, gurney: .15, tableFlip: .08, deskOver: .12, sandbags: .04, rubble: 3, woodpile: .05, logPile: .04, forklift: .1, generator: .02 };
+const fpOf = (type, q) => { const [w, d] = FOOT[type]; return q & 1 ? [d, w] : [w, d]; };
+function planRoom(r, prevKind) {
+  const out = [], W = r.w / 2, z0 = r.z0, z1 = r.z1, cz = (z0 + z1) / 2, hug = HUG[THEME] || .4;
+  let gid = 0; const grp = () => ++gid;
+  const opts = PLAN_KINDS[THEME] || PLAN_KINDS.warehouse, fresh = opts.filter(k => k !== prevKind);
+  const kind = r.plan = pick(fresh.length ? fresh : opts);
+  const add = (type, x, z, q = 0, g = grp()) => { out.push({ type, x, z, q, g }); return g; };
+  const addAny = (type, q, spots) => { out.push({ type, q, g: grp(), spots }); };
+  const reps = (n, f) => Array.from({ length: n }, (_, i) => f(i));
+  // pieces side by side along an axis, centred on (x, z), touching
+  const line = (types, x, z, axis, q = 0, g = grp()) => {
+    const k = axis === 'x' ? 0 : 1, fps = types.map(t => fpOf(t, q)); let p = (k ? z : x) - fps.reduce((s, f) => s + f[k], 0) / 2;
+    types.forEach((t, i) => { const l = fps[i][k]; p += l / 2; if (k) add(t, x, p, q, g); else add(t, p, z, q, g); p += l / 2; });
+    return g;
+  };
+  // furniture backed against a side wall, facing into the room
+  const wallRun = (side, types, z) => {
+    const q = side > 0 ? 3 : 1, g = grp(), fps = types.map(t => fpOf(t, q)); let p = z - fps.reduce((s, f) => s + f[1], 0) / 2;
+    types.forEach((t, i) => { const [w, d] = fps[i]; p += d / 2; add(t, side * (W - hug - w / 2), p, q, g); p += d / 2; });
+    return g;
+  };
+  // the bands along both door walls stay open, so every aisle joins up with every door
+  const zA = z0 + 3.2, zB = z1 - 3.2, segs = zB - zA > 14 ? [[zA, cz - 1.3], [cz + 1.3, zB]] : [[zA, zB]];
+  const anywhere = (m = 2.5) => [rand(-W + m, W - m), rand(z0 + m, z1 - m)];
+  if (THEME === 'office') { r.winSides = r.mood.windows ? [-1, 1] : [pick([-1, 1])]; }
+  const solid = r.winSides && r.winSides.length === 1 ? -r.winSides[0] : pick([-1, 1]);
+  if (kind === 'racks') { // pallet racking in long rows, back to back, with a cross aisle halfway down
+    const dbl = Math.random() < .7, rowW = dbl ? 2.2 : 1.1, aisle = rand(2.6, 3.1), P = rowW + aisle;
+    const n = Math.max(1, Math.floor((r.w - 3 + aisle) / P));
+    for (let i = 0; i < n; i++) {
+      const cx = (i - (n - 1) / 2) * P;
+      for (const [a, b] of segs) {
+        const m = Math.floor((b - a) / 2.8); if (m < 1) continue; const g = grp(), s = (a + b) / 2 - (m - 1) * 1.4;
+        for (let k = 0; k < m; k++) { if (Math.random() < .08) continue; const z = s + k * 2.8; if (dbl) { add('rack', cx - .55, z, 3, g); add('rack', cx + .55, z, 1, g); } else add('rack', cx, z, pick([1, 3]), g); }
+      }
+      for (const sx of [-1, 1]) r.lines.push([cx + sx * (rowW / 2 + .2), zA - .3, cx + sx * (rowW / 2 + .2), zB + .3]);
+    }
+    addAny('forklift', pick([1, 3]), reps(5, () => [rand(-W + 2, W - 2), pick([z0 + 1.15, z1 - 1.15])]));
+    for (let i = 0, k = randi(1, 2); i < k; i++) add(pick(['wrapPallet', 'pallets', 'boxes']), ...anywhere(1.5), randi(0, 3));
+  } else if (kind === 'dock') { // a loading floor: goods set down in tidy lots between the columns
+    if (r.w >= 17) for (const sx of [-1, 1]) for (let z = z0 + 4.5; z < z1 - 3; z += 6) add('pillar', sx * r.w / 4, z);
+    const lots = [['wrapPallet', 'wrapPallet'], ['wrapPallet', 'wrapPallet', 'wrapPallet'], ['pallets', 'boxes'], ['tallCrate', 'crate'], ['crateStack', 'tallCrate'], ['barrels', 'barrels'], ['crate', 'crate', 'tallCrate'], ['wrapPallet', 'pallets']];
+    for (let i = 0, k = randi(7, 10); i < k; i++) line(pick(lots), ...anywhere(2), pick(['x', 'z']));
+    if (Math.random() < .55) { // whoever holds the place has sandbagged a firing line facing the way in
+      const z = z0 + r.d * rand(.4, .6), x = rand(-W / 3, W / 3); add('sandbags', x - 2, z); add(pick(['sandbags', 'barrier', 'halfWall']), x + 2, z);
+    }
+    addAny('forklift', pick([0, 2]), reps(5, () => anywhere(2.5)));
+  } else if (kind === 'workshop') { // shelving and lockers along the walls, benches and drums in the middle
+    wallRun(solid, reps(randi(3, 5), () => 'shelf'), z0 + r.d * rand(.35, .65));
+    wallRun(-solid, reps(randi(2, 4), () => pick(['lockers', 'cabinet', 'cabinet', 'cabinetDown'])), z0 + r.d * rand(.3, .7));
+    if (r.w >= 17) for (let z = z0 + 4.5; z < z1 - 3; z += 6) add('pillar', 0, z);
+    for (let i = 0, k = randi(4, 6); i < k; i++) line(pick([['desk', 'deskOver'], ['desk', 'cabinetDown'], ['barrels', 'crate'], ['tallCrate', 'crate'], ['rubble'], ['halfWall'], ['pallets', 'pallets'], ['crateStack']]), ...anywhere(3), pick(['x', 'z']));
+  } else if (kind === 'pods') { // cubicles in pods of four, panels meeting in the middle, aisles between
+    const aisle = rand(2, 2.5), P = 4.4 + aisle, nx = Math.max(1, Math.floor((r.w - 3.6 + aisle) / P)), nz = Math.max(1, Math.floor((r.d - 5.6 + aisle) / P));
+    for (let i = 0; i < nx; i++) for (let j = 0; j < nz; j++) {
+      const cx = (i - (nx - 1) / 2) * P, pz = cz + (j - (nz - 1) / 2) * P, g = grp(), half = Math.random() < .2;
+      for (const [sx, sz, q] of [[1, 1, 0], [1, -1, 1], [-1, -1, 2], [-1, 1, 3]]) if (!(half && sz < 0) && Math.random() > .08) add('cubicle', cx + sx * 1.1, pz + sz * 1.1, q, g);
+    }
+    wallRun(solid, reps(randi(3, 6), () => pick(['cabinet', 'cabinet', 'cabinetDown'])), z0 + r.d * rand(.25, .5));
+    if (Math.random() < .6) wallRun(solid, Math.random() < .5 ? ['copier'] : ['vending', 'vending'], z0 + r.d * rand(.65, .8));
+    if (Math.random() < .4) wallRun(solid, ['serverRack', 'serverRack', 'serverRack'], z0 + r.d * rand(.15, .85));
+  } else if (kind === 'benches') { // bench desks facing each other in islands, screens on the ends
+    const cols = clamp(Math.floor((r.w - 7) / 1.6), 2, 4), L = cols * 1.6 + 1, ni = r.w >= 2 * L + 6.2 ? 2 : 1, nr = Math.max(1, Math.floor((zB - zA + 2.8) / 4.4));
+    for (let j = 0; j < nr; j++) for (let k = 0; k < ni; k++) {
+      const z = cz + (j - (nr - 1) / 2) * 4.4, ix = ni > 1 ? (k ? 1 : -1) * (L / 2 + 1.3) : rand(-.5, .5), g = grp();
+      for (let c = 0; c < cols; c++) { const x = ix + (c - (cols - 1) / 2) * 1.6; if (Math.random() > .08) add('workDesk', x, z - .4, 2, g); if (Math.random() > .08) add('workDesk', x, z + .4, 0, g); }
+      for (const sx of [-1, 1]) if (Math.random() < .6) add('partition', ix + sx * (cols * .8 + .25), z, 1, g);
+    }
+    wallRun(solid, reps(randi(3, 5), () => pick(['cabinet', 'cabinet', 'cabinetDown', 'lockers'])), z0 + r.d * rand(.3, .7));
+  } else if (kind === 'meeting') { // meeting tables behind screens, desks along the glass, cabinets on the far wall
+    const n = r.d > 17 ? 2 : 1;
+    for (let k = 0; k < n; k++) {
+      const z = n > 1 ? cz + (k ? 1 : -1) * r.d * .22 : cz + rand(-1, 1), x = rand(-W / 4, W / 4), g = add('conference', x, z, 1);
+      for (const sx of [-1, 1]) if (Math.random() < .55) line(['partition', 'partition'], x + sx * 2.5, z, 'z', 1, g);
+    }
+    for (const s of r.winSides) wallRun(s, reps(randi(2, 4), () => 'workDesk'), z0 + r.d * rand(.3, .7));
+    if (r.winSides.length === 1) wallRun(solid, reps(randi(2, 5), () => pick(['cabinet', 'cabinet', 'copier', 'lockers'])), z0 + r.d * rand(.3, .7));
+    if (Math.random() < .5) add('tableFlip', rand(-W / 2, W / 2), z0 + r.d * rand(.3, .45));
+    if (Math.random() < .6) line(['boxes', 'boxes'], ...anywhere(3), pick(['x', 'z']));
+  } else if (kind === 'boxes') { // a container hold: boxes in rows, lashed together in blocks of two or three
+    const pair = r.w >= 18, bw = pair ? 4.88 : 2.44, aisle = rand(2.6, 3.2), n = Math.max(1, Math.floor((r.w - 2.4 + aisle) / (bw + aisle)));
+    for (let i = 0; i < n; i++) {
+      const cx = (i - (n - 1) / 2) * (bw + aisle), wide = pair && Math.random() < .75;
+      for (const [a, b] of segs) {
+        const m = Math.min(3, Math.floor((b - a) / 3)); if (m < 1) continue; const g = grp(), s = (a + b) / 2 - (m - 1) * 1.5;
+        for (let k = 0; k < m; k++) { const z = s + k * 3, q = pick([0, 2]); if (wide) { add('container', cx - 1.22, z, q, g); add('container', cx + 1.22, z, pick([0, 2]), g); } else add('container', cx, z, q, g); }
+      }
+      for (const sx of [-1, 1]) r.lines.push([cx + sx * (bw / 2 + .25), zA - .3, cx + sx * (bw / 2 + .25), zB + .3]);
+    }
+    for (let i = 0, k = randi(1, 3); i < k; i++) line(pick([['barrels', 'barrels'], ['crate', 'crate'], ['pallets']]), rand(-W + 2, W - 2), pick([z0 + 1.6, z1 - 1.6]), 'x');
+  } else if (kind === 'breakbulk') { // loose cargo: crates, drums and pallets stowed in lashed groups
+    const lots = [['crateStack', 'tallCrate'], ['crate', 'crate', 'crate'], ['barrels', 'barrels', 'barrels'], ['pallets', 'boxes'], ['tallCrate', 'tallCrate'], ['container'], ['crateStack', 'crate'], ['wrapPallet', 'wrapPallet']];
+    for (let i = 0, k = randi(7, 10); i < k; i++) line(pick(lots), ...anywhere(2), pick(['x', 'z']));
+    wallRun(solid, reps(randi(2, 3), () => 'cabinetDown'), z0 + r.d * rand(.3, .7));
+  } else if (kind === 'engine') { // machinery space: generator sets down the middle, lockers and drums on the walls
+    const xs = r.w >= 18 ? [-r.w / 5, r.w / 5] : [rand(-1, 1)], m = Math.max(1, Math.floor((zB - zA + 1.6) / 4.1));
+    for (const x of xs) for (let k = 0; k < m; k++) add('generator', x, cz + (k - (m - 1) / 2) * 4.1, pick([1, 3]));
+    wallRun(solid, reps(randi(2, 3), () => pick(['lockers', 'lockers', 'cabinet'])), z0 + r.d * rand(.3, .7));
+    wallRun(-solid, reps(randi(2, 4), () => pick(['cabinetDown', 'barrels', 'barrels'])), z0 + r.d * rand(.3, .7));
+    for (let i = 0, k = randi(1, 2); i < k; i++) line(['barrels', 'barrels'], ...anywhere(2.5), 'x');
+  } else if (kind === 'wetlab') { // lab benches back to back in islands, fume cupboards and freezers on the walls
+    const L = r.w >= 19 ? 4.8 : 2.4, ni = Math.max(1, Math.floor((r.w - 4.8 + 2.4) / (L + 2.4))), nr = Math.max(1, Math.floor((zB - zA + 2.6) / 4.4));
+    for (let j = 0; j < nr; j++) for (let i = 0; i < ni; i++) {
+      const x = (i - (ni - 1) / 2) * (L + 2.4), z = cz + (j - (nr - 1) / 2) * 4.4, g = grp();
+      for (const dx of L > 3 ? [-1.2, 1.2] : [0]) { add('labBench', x + dx, z - .45, 2, g); add('labBench', x + dx, z + .45, 0, g); }
+    }
+    wallRun(solid, reps(randi(2, 3), () => 'fumeHood'), z0 + r.d * rand(.3, .7));
+    wallRun(-solid, reps(randi(2, 4), () => pick(['fridge', 'fridge', 'cabinet'])), z0 + r.d * rand(.3, .7));
+  } else if (kind === 'specimen') { // specimen tanks in pairs down two lines, the racks that run them on the wall
+    for (const x of r.w >= 19 ? [-r.w / 4, 0, r.w / 4] : [-r.w / 5, r.w / 5]) for (let z = zA + .6; z + 2.4 < zB + .6; z += 4.4) line(['cryoTank', 'cryoTank'], x, z + 1.2, 'z');
+    wallRun(solid, reps(randi(3, 4), () => 'serverRack'), z0 + r.d * rand(.3, .7));
+    wallRun(-solid, reps(randi(2, 3), () => pick(['fridge', 'cabinet'])), z0 + r.d * rand(.3, .7));
+    for (let i = 0, k = randi(1, 2); i < k; i++) add('gurney', ...anywhere(3), randi(0, 3));
+  } else if (kind === 'ward') { // beds along both walls with privacy screens between, a station in the middle
+    for (const s of [-1, 1]) for (let z = zA - .8; z < zB + .8; z += rand(2.8, 3.2)) { if (Math.random() < .15) continue; const g = grp(); add('gurney', s * (W - hug - 1), z, 0, g); add('partition', s * (W - hug - 1.3), z + .625, 0, g); }
+    line(['labBench', 'labBench'], rand(-1, 1), cz + rand(-1, 1), 'x', pick([0, 2]));
+    for (let i = 0, k = randi(1, 2); i < k; i++) add(pick(['cabinet', 'fridge', 'gurney']), ...anywhere(4), randi(0, 3));
+  } else if (kind === 'camp' || kind === 'huntcamp') { // tents in a line, a supply dump, a dug-in position facing the way in
+    const s = pick([-1, 1]);
+    for (let z = zA - .4; z < zB + .4; z += rand(4.3, 5.3)) if (Math.random() < .85) add('tent', s * (W - hug - 1.25), z, pick([0, 2]));
+    line(kind === 'camp' ? ['crate', 'tallCrate', 'barrels'] : ['crate', 'barrels'], -s * W * .45, rand(z0 + 4, z1 - 4), 'z');
+    if (kind === 'camp') {
+      const x = rand(-W / 3, W / 3), z = z0 + r.d * rand(.35, .5), g = add('sandbags', x, z); add('sandbags', x + 1.675, z + .925, 1, g);
+      for (let i = 0, k = randi(2, 3); i < k; i++) add(pick(['trunk', 'boulder', 'trunk']), ...anywhere(2.5));
+    } else {
+      line(['woodpile', 'woodpile'], ...anywhere(3), 'x');
+      for (let i = 0, k = randi(2, 4); i < k; i++) add(pick(['log', 'boulder', 'rocks', 'stump']), ...anywhere(2.5), randi(0, 1));
+    }
+  } else if (kind === 'ruins') { // the footings of an old building, half the walls fallen, a tree growing through
+    const RW = Math.round(Math.min(r.w - 6, rand(8, 11)) / 2.8) * 2.8, RD = Math.round(Math.min(r.d - 7, rand(6, 9)) / 2.8) * 2.8;
+    const cx = rand(-(W - 3 - RW / 2), W - 3 - RW / 2), rz = cz + rand(-1, 1), g = grp();
+    for (const sz of [-1, 1]) for (let i = 0; i < RW / 2.8 - .1; i++) if (Math.random() < .7) add('halfWall', cx - RW / 2 + 1.4 + i * 2.8, rz + sz * RD / 2, 0, g);
+    for (const sx of [-1, 1]) for (let i = 0; i < RD / 2.8 - .1; i++) if (Math.random() < .65) add('halfWall', cx + sx * (RW / 2 + .22), rz - RD / 2 + 1.4 + i * 2.8, 1, g);
+    add('rubble', cx + rand(-1, 1), rz + rand(-1, 1));
+    if (Math.random() < .5) add('trunk', cx + rand(-RW / 4, RW / 4), rz + rand(-RD / 4, RD / 4));
+    for (let i = 0, k = randi(3, 4); i < k; i++) add(pick(['boulder', 'rocks', 'log', 'trunk', 'stump']), ...anywhere(2.5), randi(0, 1));
+  } else if (kind === 'logging') { // felled trunks stacked for hauling, split firewood, a clear-cut full of stumps
+    for (let i = 0, k = randi(2, 3); i < k; i++) add('logPile', ...anywhere(3), randi(0, 1));
+    line(['woodpile', 'woodpile'], ...anywhere(3), 'x');
+    const [sx, sz] = anywhere(4); for (let i = 0, k = randi(4, 7); i < k; i++) add('stump', sx + rand(-3.5, 3.5), sz + rand(-3, 3));
+    line(['barrels', 'crate'], ...anywhere(2.5), pick(['x', 'z']));
+    add('log', ...anywhere(2.5), randi(0, 1));
+  } else { // clearing / forest: rocks, deadfall and big trees in natural clumps
+    const clumps = THEME === 'woods' ? [['boulder', 'rocks'], ['log'], ['log', 'stump'], ['boulder'], ['rocks'], ['woodpile'], ['stump', 'stump'], ['boulder', 'boulder']] : [['boulder', 'rocks'], ['log'], ['log', 'stump'], ['trunk'], ['trunk'], ['boulder'], ['rocks', 'stump'], ['crate', 'barrels']];
+    for (let i = 0, k = randi(6, 9); i < k; i++) line(pick(clumps), ...anywhere(2), pick(['x', 'z']), randi(0, 1));
+  }
+  return out;
+}
+// a painted line on the floor between two points
+function floorLine(ax, az, bx, bz, wd = .1) {
+  const len = Math.hypot(bx - ax, bz - az), m = new THREE.Mesh(new THREE.PlaneGeometry(wd, len), PM.line);
+  m.rotation.set(-Math.PI / 2, 0, Math.atan2(bx - ax, bz - az)); m.position.set((ax + bx) / 2, .003, (az + bz) / 2); m.receiveShadow = true; level.add(m);
+}
+const clearOf = (r, x, z, rad) => !r.cover.some(p => Math.abs(p.x - x) < p.w / 2 + rad && Math.abs(p.z - z) < p.d / 2 + rad);
+// fire extinguishers, electrical panels and conduit on the walls between the fittings already there
+function wallDetails(r) {
+  if (THEME !== 'warehouse' && THEME !== 'ship') return;
+  const B = pbatch(), step = THEME === 'warehouse' ? 4 : THEME === 'ship' ? 2.4 : 5, first = THEME === 'warehouse' ? 5 : THEME === 'ship' ? 2.4 : 2.5;
+  for (const s of [-1, 1]) {
+    for (let z = r.z0 + first; z < r.z1 - 1.5; z += step) {
+      if (Math.random() < .55 || !clearOf(r, s * (r.w / 2 - .3), z, .5)) continue;
+      const x = s * (r.w / 2 - .05);
+      if (Math.random() < .55) { // extinguisher on a bracket with its sign above
+        B.cyl(.085, .48, PM.red, x - s * .1, 1.04, z, { seg: 12, ray: false }); B.cyl(.03, .08, PM.rubber, x - s * .1, 1.32, z, { seg: 8, ray: false });
+        B.box(.02, .08, .14, MAT.trim, x - s * .015, 1.1, z, { ray: false }); B.box(.01, .3, .2, PM.red, x - s * .006, 1.62, z, { ray: false });
+      } else { // a breaker panel with conduit running up to the ceiling
+        B.box(.14, .62, .46, PM.panel, x - s * .07, 1.45, z, { ray: false }); B.box(.01, .5, .02, MAT.trim, x - s * .145, 1.45, z + .16, { ray: false });
+        B.cyl(.025, r.h - 1.76, MAT.galv, x - s * .04, (r.h + 1.76) / 2, z - .12, { seg: 8, ray: false }); B.cyl(.025, r.h - 1.76, MAT.galv, x - s * .04, (r.h + 1.76) / 2, z + .1, { seg: 8, ray: false });
+      }
+    }
+  }
+  B.flush(level, false);
+}
+// lit exit signs over the doors in the office tower and the lab
+function exitSigns() {
+  if (THEME !== 'office' && THEME !== 'lab') return;
+  for (const d of doors) for (const s of [-1, 1]) { const m = new THREE.Mesh(new THREE.BoxGeometry(.42, .16, .04), PM.exit); m.position.set(d.x + .78, d.h + .3, d.z + s * .27); if (s < 0) m.rotation.y = Math.PI; level.add(m); }
 }
 
 function scatter(room, count, geo, mat, fn) {
@@ -1937,13 +2297,14 @@ function decorateRoom(r, L) {
   scatter(r, 14, new THREE.PlaneGeometry(.21, .3), MAT.paper, (o) => { o.position.set(rand(-r.w / 2 + .5, r.w / 2 - .5), .006, rand(r.z0 + .5, r.z1 - .5)); o.rotation.set(-Math.PI / 2 + rand(-.05, .05), 0, rand(0, 6.28)); });
   scatter(r, 6, new THREE.BoxGeometry(.6, .02, .6), MAT.ceil, (o) => { o.position.set(rand(-r.w / 2 + 1, r.w / 2 - 1), .03, rand(r.z0 + 1, r.z1 - 1)); o.rotation.set(rand(-.15, .15), rand(0, 3), rand(-.15, .15)); });
   // a burning barrel against a side wall: warm flickering light, flames and rising smoke
-  if (!r.mood.pulse && Math.random() < .5) {
-    const s2 = Math.random() < .5 ? -1 : 1, x = s2 * (r.w / 2 - 1.05), z = rand(r.z0 + 3, r.z1 - 3), g = new THREE.Group(); g.position.set(x, 0, z); level.add(g);
+  if (!r.mood.pulse && Math.random() < .5) for (let t = 0; t < 8; t++) {
+    const s2 = Math.random() < .5 ? -1 : 1, x = s2 * (r.w / 2 - 1.05), z = rand(r.z0 + 3, r.z1 - 3); if (!clearOf(r, x, z, .8)) continue;
+    const g = new THREE.Group(); g.position.set(x, 0, z); level.add(g);
     cyl(g, .29, .88, MAT.rustRed, 0, .44, 0); for (const ry of [.29, .59]) cyl(g, .3, .03, MAT.rustRed, 0, ry, 0, { ray: false });
     const ember = new THREE.Mesh(new THREE.CircleGeometry(.27, 16), new THREE.MeshBasicMaterial({ color: new THREE.Color(3, .9, .25) })); ember.rotation.x = -Math.PI / 2; ember.position.y = .84; g.add(ember);
     const light = new THREE.PointLight(0xff7a30, 30, 11, 1.7); light.position.set(-s2 * .3, 1.4, 0); g.add(light);
     propCol(x, z, .66, .66, .9);
-    r.fire = { p: new V3(x, .9, z), light, acc: 0, ember };
+    r.fire = { p: new V3(x, .9, z), light, acc: 0, ember }; break;
   }
   // torn plastic sheeting hanging from the ceiling, stirring in the draught
   for (let i = 0, n = randi(0, 2); i < n; i++) {
@@ -2027,7 +2388,8 @@ function decorateOffice(r) {
   // skirting along both long walls
   for (const s of [-1, 1]) addBox(s * (r.w / 2 - .015), .06, cz, .03, .12, r.d, OFF.base, { collide: false, cast: false, ray: false });
   // floor-to-ceiling windows down one side (both under the city-glow mood), looking out over the city
-  const winSides = r.mood.windows ? [-1, 1] : [pick([-1, 1])], windowsZ = [];
+  const winSides = r.winSides || (r.mood.windows ? [-1, 1] : [pick([-1, 1])]), windowsZ = [];
+  if (r.i === 0) { const U = OFF.city.uniforms; U.uH.value = 40 + ((floorN - 1) % OPF) * 16 + rand(0, 8); U.uSeed.value = rand(0, 50); U.uPix.value = 2 * Math.tan(camera.fov * Math.PI / 360) / (innerHeight * renderer.getPixelRatio()); }
   for (const s of winSides) {
     const x = s * (r.w / 2 - .03), wy0 = .45, wy1 = r.h - .35, n = Math.floor((r.d - 2) / 1.6), z0 = cz - n * 1.6 / 2, off = Math.random();
     for (let k = 0; k < n; k++) {
@@ -2055,13 +2417,14 @@ function decorateOffice(r) {
   for (let z = r.z0 + 4; z < r.z1 - 2; z += 5) for (const s of [-1, 1]) if (!(s === winSides[0] || r.mood.windows)) addBox(s * (r.w / 2 - .2), r.h / 2, z, .4, r.h, .5, MAT.wall);
   // potted plants in the corners and a water cooler
   for (const [sx, sz] of [[-1, r.z0 + .7], [1, r.z1 - .7], [pick([-1, 1]), cz + rand(-3, 3)]]) {
-    const x = sx * (r.w / 2 - .6), g = new THREE.Group(); g.position.set(x, 0, sz); level.add(g);
+    const x = sx * (r.w / 2 - .6); if (!clearOf(r, x, sz, .35)) continue;
+    const g = new THREE.Group(); g.position.set(x, 0, sz); level.add(g);
     cyl(g, .22, .45, OFF.pot, 0, .225, 0, { seg: 12, ray: false });
     for (let k = 0; k < 9; k++) { const leaf = new THREE.Mesh(new THREE.PlaneGeometry(.16, .7), OFF.leaf); leaf.position.set(0, .75, 0); leaf.rotation.set(rand(-.6, .6), k * .7, rand(-.5, .5)); leaf.geometry.translate(0, .15, 0); g.add(leaf); }
     propCol(x, sz, .44, .44, .5);
   }
-  { const s = pick([-1, 1]), x = s * (r.w / 2 - .45), z = rand(r.z0 + 2, r.z1 - 2), g = new THREE.Group(); g.position.set(x, 0, z); level.add(g);
-    part(g, .32, 1.0, .32, OFF.grey, 0, .5, 0, { ray: false }); cyl(g, .13, .42, OFF.water, 0, 1.22, 0, { seg: 14, ray: false }); propCol(x, z, .34, .34, 1.4); }
+  for (let t = 0; t < 8; t++) { const s = pick([-1, 1]), x = s * (r.w / 2 - .45), z = rand(r.z0 + 2, r.z1 - 2); if (!clearOf(r, x, z, .35)) continue; const g = new THREE.Group(); g.position.set(x, 0, z); level.add(g);
+    part(g, .32, 1.0, .32, OFF.grey, 0, .5, 0, { ray: false }); cyl(g, .13, .42, OFF.water, 0, 1.22, 0, { seg: 14, ray: false }); propCol(x, z, .34, .34, 1.4); break; }
   // papers everywhere, a few ceiling tiles down, some cabling hanging out of the gaps
   scatter(r, 40, new THREE.PlaneGeometry(.21, .3), MAT.paper, o => { o.position.set(rand(-r.w / 2 + .5, r.w / 2 - .5), .006, rand(r.z0 + .5, r.z1 - .5)); o.rotation.set(-Math.PI / 2 + rand(-.05, .05), 0, rand(0, 6.28)); });
   scatter(r, 4, new THREE.BoxGeometry(.6, .02, .6), MAT.ceil, o => { o.position.set(rand(-r.w / 2 + 1, r.w / 2 - 1), .03, rand(r.z0 + 1, r.z1 - 1)); o.rotation.set(rand(-.15, .15), rand(0, 3), rand(-.15, .15)); });
@@ -2194,31 +2557,49 @@ function buildLevel(L) {
     if (A) A.exitDoor = doors[doors.length - 1]; else stage = buildStaging(doors[doors.length - 1]);
     B.entryDoor = doors[doors.length - 1];
   }
-  // cover
+  // cover: each room is laid out for what it is (racking aisles, cubicle pods, container rows, a ward, a camp...), then a few loose pieces break up the order
+  propMats();
+  const lastRoom = rooms[rooms.length - 1], exAt = rand(-lastRoom.w / 4, lastRoom.w / 4);
+  let prevKind = null;
   for (const r of rooms) {
-    const placed = [];
-    const n = lowCeil ? randi(11, 15) : randi(9, 13), full = FULL[THEME] || FULL.warehouse;
-    for (let k = 0, tries = 0; k < n && tries < 100; tries++) {
-      // the first two pieces in every room are tall enough to duck behind; the rest is a mix
-      const type = k >= 2 && k < 4 || k >= 4 && Math.random() < .2 ? pick(full).replace('shelfFull', 'shelf') : woods ? (k < 2 ? pick(['boulder', 'woodpile', 'woodpile', 'sandbags', 'tallCrate']) : pick(['log', 'log', 'rocks', 'stump', 'stump', 'boulder', 'woodpile', 'crate', 'barrels', 'pallets', 'tallCrate']))
-        : jungle ? (k < 2 ? pick(['boulder', 'boulder', 'sandbags', 'tallCrate', 'trunk']) : pick(['log', 'log', 'boulder', 'rocks', 'stump', 'trunk', 'crate', 'crate', 'barrels', 'pallets', 'sandbags', 'tallCrate', 'boxes']))
-        : ship ? (k < 2 ? pick(['container', 'crateStack', 'tallCrate', 'sandbags']) : pick(['container', 'barrels', 'barrels', 'pallets', 'crate', 'crate', 'tallCrate', 'crateStack', 'cabinetDown', 'boxes']))
-        : lab ? (k < 2 ? pick(['cryoTank', 'labBench', 'serverRack', 'boxes']) : pick(['labBench', 'labBench', 'labBench', 'gurney', 'gurney', 'cabinet', 'cabinetDown', 'serverRack', 'cryoTank', 'boxes', 'pillar']))
-        : office ? (k < 2 ? pick(['cubicle', 'cubicle', 'tableFlip', 'vending', 'serverRack', 'boxes']) : pick(['workDesk', 'workDesk', 'workDesk', 'cubicle', 'cubicle', 'cabinet', 'cabinet', 'cabinetDown', 'copier', 'conference', 'tableFlip', 'boxes', 'pillar', 'serverRack', 'vending', 'deskOver']))
-        : k < 2 ? pick(TALL) : pick(['desk', 'deskOver', 'cabinet', 'cabinetDown', 'barrels', 'pallets', 'crate', 'crate', 'rubble', 'barrier', 'pillar', 'shelf', ...TALL]);
-      const rot = type !== 'pillar' && Math.random() < .5;
-      let [w, d] = FOOT[type]; if (rot) [w, d] = [d, w];
-      const x = rand(-r.w / 2 + 1.6, r.w / 2 - 1.6), zz = rand(r.z0 + 2.2, r.z1 - 2.2);
-      if (r.i === 0 && zz < r.z0 + 5 && Math.abs(x) < 3) continue;
-      if ([r.entryDoor, r.exitDoor].some(dr => dr && Math.abs(x - dr.x) < 2.8 && Math.abs(zz - dr.z) < 3.2)) continue;
-      if (placed.some(p => Math.abs(p.x - x) < (p.w + w) / 2 + 1.5 && Math.abs(p.z - zz) < (p.d + d) / 2 + 1.5)) continue;
-      placed.push({ x, z: zz, w, d });
-      const res = buildProp(type, x, zz, rot, r); if (res.D) res.D.cover = placed[placed.length - 1];
-      k++;
+    const placed = [], doorsHere = [r.entryDoor, r.exitDoor].filter(Boolean), keep = [];
+    if (r === lastRoom) keep.push([exAt, lastRoom.z1 - 2.6, 1.5]);
+    if (bossFloor && r === lastRoom) keep.push([0, r.z0 + r.d * .72, 3]);
+    r.lines = []; r.cover = placed;
+    const fits = (x, z, w, d, g) => {
+      if (Math.abs(x) + w / 2 > r.w / 2 - .02 || z - d / 2 < r.z0 + .3 || z + d / 2 > r.z1 - .3) return false;
+      const wallGap = r.w / 2 - Math.abs(x) - w / 2; if (wallGap > .7 && wallGap < 1.4) return false; // no dead-end slots behind furniture
+      if (doorsHere.some(dr => Math.abs(x - dr.x) < w / 2 + 1.7 && Math.abs(z - dr.z) < d / 2 + 2.4)) return false;
+      if (r.i === 0 && z - d / 2 < r.z0 + 5 && Math.abs(x) < 3 + w / 2) return false;
+      if (keep.some(([kx, kz, kr]) => Math.abs(x - kx) < w / 2 + kr && Math.abs(z - kz) < d / 2 + kr)) return false;
+      // pieces in one group may touch; separate groups keep a walkway between them
+      return !placed.some(p => { const gap = p.g === g ? -.01 : 1.4; return Math.abs(p.x - x) < (p.w + w) / 2 + gap && Math.abs(p.z - z) < (p.d + d) / 2 + gap; });
+    };
+    const groups = new Map();
+    const put = (type, x, z, q, g) => {
+      const [w, d] = fpOf(type, q); if (!fits(x, z, w, d, g)) return null;
+      const c = { x, z, w, d, g }; placed.push(c);
+      const res = buildProp(type, x, z, q, r); c.h = res.h; if (res.D) res.D.cover = c;
+      const tw = TWIST[type]; if (tw) (groups.get(g) || groups.set(g, []).get(g)).push([res.g, tw]);
+      return c;
+    };
+    const plan = planRoom(r, prevKind); prevKind = r.plan;
+    for (const it of plan) {
+      if (it.spots) { for (const [x, z] of it.spots) if (put(it.type, x, z, it.q, it.g)) break; }
+      else put(it.type, it.x, it.z, it.q, it.g);
     }
-    r.cover = placed;
+    // a few loose pieces, and at least two things a standing man can hide behind
+    const loose = LOOSE[THEME] || LOOSE.warehouse, full = (FULL[THEME] || FULL.warehouse).map(t => t.replace('shelfFull', 'shelf')), gBase = 1000;
+    for (let k = 0, want = randi(1, 3), t = 0; k < want && t < 60; t++) if (put(pick(loose), rand(-r.w / 2 + 1.6, r.w / 2 - 1.6), rand(r.z0 + 2.2, r.z1 - 2.2), randi(0, 3), gBase + t)) k++;
+    for (let t = 0; placed.filter(p => p.h >= 1.9).length < 2 && t < 80; t++) put(pick(full), rand(-r.w / 2 + 1.6, r.w / 2 - 1.6), rand(r.z0 + 2.2, r.z1 - 2.2), randi(0, 1), gBase + 100 + t);
+    for (let t = 0; placed.length < 8 && t < 80; t++) put(pick(loose), rand(-r.w / 2 + 1.6, r.w / 2 - 1.6), rand(r.z0 + 2.2, r.z1 - 2.2), randi(0, 3), gBase + 200 + t);
+    // knock loose things a little off square; pieces in a tidy group only barely
+    for (const list of groups.values()) for (const [o, tw] of list) o.rotation.y += rand(-tw, tw) * (list.length > 1 ? .35 : 1);
+    for (const [ax, az, bx, bz] of r.lines) floorLine(ax, az, bx, bz);
     decorateRoom(r, L);
+    wallDetails(r);
   }
+  exitSigns();
   // lights
   for (const r of rooms) {
     const cz = (r.z0 + r.z1) / 2, m = r.mood;
@@ -2298,7 +2679,7 @@ function buildLevel(L) {
   }
   // extraction pad (hidden until floor clear)
   const last = rooms[rooms.length - 1];
-  const ex = new THREE.Group(); ex.position.set(rand(-last.w / 4, last.w / 4), 0, last.z1 - 2.6);
+  const ex = new THREE.Group(); ex.position.set(exAt, 0, last.z1 - 2.6);
   const ring = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.25, 48), new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 1.6, 0.9), transparent: true, side: THREE.DoubleSide }));
   ring.rotation.x = -Math.PI / 2; ring.position.y = .02; ex.add(ring);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, last.h, 32, 1, true), new THREE.MeshBasicMaterial({ color: new THREE.Color(.25, .8, .45), transparent: true, opacity: .18, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide }));
@@ -6378,7 +6759,7 @@ async function warmUp() {
   last = performance.now(); requestAnimationFrame(frame);
   setTimeout(() => { $('boot').classList.add('done'); clearInterval(tipT); setTimeout(() => $('boot').hidden = true, 800); }, 350);
 })();
-window.__kh = { get state() { return state; }, soldier: () => SOLDIER, VMS, inspectVM: (k = 'rifle', ry = Math.PI / 2, d = 1, rx = 0, foc = null) => { const g = VMS[k].g.clone(); g.visible = true; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(0, foc ? 0 : -.05, -d)); g.rotation.set(rx, yaw + ry, 0, 'YXZ'); if (foc) { g.updateMatrixWorld(); g.position.sub(new V3(...foc).applyQuaternion(g.quaternion)); } if (window.__marks) for (const [p, c] of window.__marks) { const m = new THREE.Mesh(new THREE.SphereGeometry(.005, 8, 6), new THREE.MeshBasicMaterial({ color: c, depthTest: false })); m.renderOrder = 99; m.position.fromArray(p); g.add(m); } scene.add(g); vm.visible = false; window.__vmHide = true; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); },  NAV, navPath, los: (a, b) => lineOfSight(new V3(...a), new V3(...b)), props: () => props, debris: () => debris, hitProp, blastProps, P, stats, W, stabTarget, fire: on => { mouseDown = on; }, inspectEnemy: (ry = 0, d = 2.2) => { const e = enemies.find(e => !e.dead); camera.updateMatrixWorld(); camera.localToWorld(e.g.position.set(0, 0, -d)); e.g.position.y = 0; e.yaw = yaw + Math.PI + ry; e.alerted = false; e.vel.set(0, 0, 0); window.__IE = e; return e.g.position.toArray(); }, inspect: (k = 'rifle', ry = Math.PI / 2, hi = false, d = .75, dx = 0) => { const g = hi ? buildRifle(k, true, true) : GUNPROTO[k].clone(); if (window.__insp) scene.remove(window.__insp); window.__insp = g; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(dx, -.05, -d)); g.rotation.set(0, yaw + ry, 0); scene.add(g); vm.visible = false; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); }, decal: (x, y, z, nx, ny, nz, sz, k) => addDecal(new V3(x, y, z), new V3(nx, ny, nz), sz, k), decalCount: () => level.children.filter(o => o.geometry === decalGeo).length, decalInfo: () => level.children.filter(o => o.geometry === decalGeo).slice(0, 3).map(o => ({ p: o.position.toArray().map(v => +v.toFixed(2)), s: o.scale.x, vis: o.visible, mat: o.material.type, map: !!o.material.map, ro: o.renderOrder })), shoot: n => { for (let i = 0; i < n; i++) { W.ammo = 30; fire(); } }, hurt: (n, who) => damagePlayer(n, new V3(P.pos.x, 1, P.pos.z + 1), who), enemies: () => enemies, rooms: () => rooms, ups, touch, killAll: () => enemies.forEach(e => !e.dead && killEnemy(e)), obj: () => obj, npcs: () => npcs, bossFor: L => bossFor(L), kill: e => killEnemy(e), setSeed: v => { runSeed = v; }, eshoot: (e, d) => enemyShoot(e, d), los: (a, b) => lineOfSight(a, b), breach: () => breach(), ext: () => extraction, spawn(t, d = 8) { const e = spawnEnemy(roomAt(P.pos.z), floorN, t); e.g.position.set(P.pos.x - Math.sin(yaw) * d, 0, P.pos.z - Math.cos(yaw) * d); rebuildTargets(); return e; }, complete: () => completeFloor(), arm(k) { LO.slots[0] = { k, ammo: magFor(WEAPONS[k]) }; LO.cur = 0; W.ammo = LO.slots[0].ammo; W.reload = 0; showVM(WEAPONS[k].model); }, reloadAt(u, empty) { if (W.reload <= 0) { W.ammo = empty ? 0 : 1; startReload(); } W.reload = W.rT * (1 - u); window.__rlU = u; }, view(y, p, x, z) { yaw = y; pitch = p; if (x !== undefined) { P.pos.x = x; P.pos.z = z; } }, give(k, n) { ups[k] = n; if (k === 'hp') { P.maxHp = baseMaxHp() + 60 * n; P.hp = P.maxHp; } renderMuts(); }, meta: () => meta, earn: n => { stats.bm += n; }, LO, WEAPONS, nades, get enemyThrows() { return enemyThrows; }, groundGuns: () => groundGuns, switchTo, takeGun, tryThrow, spawnNade, say, ads: on => { P.adsHold = on; }, floor: n => { floorN = n; startFloor(); }, setDaily: on => { daily = on ? { date: todayKey() } : null; }, runScore, renderBoard, pose: (crouch, flinch, aim) => { const e = window.__IE; e.poseLock = { c: crouch, f: flinch, a: aim }; }, walkPose: (vx, vz) => { const e = window.__IE; e.walkLock = vx == null ? null : { vx, vz, p: e.g.position.clone() }; }, freeze: on => { window.__frozen = on; }, killAs: (kind, head, t) => { const e = window.__IE; e.poseLock = null; e.knock.set(0, 0, 0); e.lastKind = kind; e.lastHead = !!head; killEnemy(e); e.deathFreeze = t; e.deathKind = kind === 'frag' ? 'blast' : e.deathKind; return e.deathKind; }, blind: k => { P.blindK = k; P.blindT = 3; }, drag, toggleDrag, poolLight, bodyPt, learnFloor, computeAdapt, intelText, get AD() { return AD; }, setAD: o => { AD = Object.assign({ shadows: 0, close: 0, spread: 0, cover: 0, decoy: 0, lights: 0 }, o); }, startReplay, openOps, doneFloor, get mode() { return mode; }, submitDaily, get syncSecret() { return syncSecret; }, get callsign() { return callsign; }, get supaReady() { return supaReady; }, step: sec => { for (let t = 0; t < sec && state === 'playing'; t += 1 / 30) { camera.updateMatrixWorld(); tick(1 / 30); } }  };
+window.__kh = { get state() { return state; }, soldier: () => SOLDIER, VMS, inspectVM: (k = 'rifle', ry = Math.PI / 2, d = 1, rx = 0, foc = null) => { const g = VMS[k].g.clone(); g.visible = true; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(0, foc ? 0 : -.05, -d)); g.rotation.set(rx, yaw + ry, 0, 'YXZ'); if (foc) { g.updateMatrixWorld(); g.position.sub(new V3(...foc).applyQuaternion(g.quaternion)); } if (window.__marks) for (const [p, c] of window.__marks) { const m = new THREE.Mesh(new THREE.SphereGeometry(.005, 8, 6), new THREE.MeshBasicMaterial({ color: c, depthTest: false })); m.renderOrder = 99; m.position.fromArray(p); g.add(m); } scene.add(g); vm.visible = false; window.__vmHide = true; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); },  NAV, navPath, los: (a, b) => lineOfSight(new V3(...a), new V3(...b)), props: () => props, debris: () => debris, hitProp, blastProps, P, stats, W, stabTarget, fire: on => { mouseDown = on; }, inspectEnemy: (ry = 0, d = 2.2) => { const e = enemies.find(e => !e.dead); camera.updateMatrixWorld(); camera.localToWorld(e.g.position.set(0, 0, -d)); e.g.position.y = 0; e.yaw = yaw + Math.PI + ry; e.alerted = false; e.vel.set(0, 0, 0); window.__IE = e; return e.g.position.toArray(); }, inspect: (k = 'rifle', ry = Math.PI / 2, hi = false, d = .75, dx = 0) => { const g = hi ? buildRifle(k, true, true) : GUNPROTO[k].clone(); if (window.__insp) scene.remove(window.__insp); window.__insp = g; camera.updateMatrixWorld(); camera.localToWorld(g.position.set(dx, -.05, -d)); g.rotation.set(0, yaw + ry, 0); scene.add(g); vm.visible = false; const l = new THREE.PointLight(0xffffff, 6, 4); camera.localToWorld(l.position.set(.4, .5, -.2)); scene.add(l); }, decal: (x, y, z, nx, ny, nz, sz, k) => addDecal(new V3(x, y, z), new V3(nx, ny, nz), sz, k), decalCount: () => level.children.filter(o => o.geometry === decalGeo).length, decalInfo: () => level.children.filter(o => o.geometry === decalGeo).slice(0, 3).map(o => ({ p: o.position.toArray().map(v => +v.toFixed(2)), s: o.scale.x, vis: o.visible, mat: o.material.type, map: !!o.material.map, ro: o.renderOrder })), shoot: n => { for (let i = 0; i < n; i++) { W.ammo = 30; fire(); } }, hurt: (n, who) => damagePlayer(n, new V3(P.pos.x, 1, P.pos.z + 1), who), enemies: () => enemies, rooms: () => rooms, ups, touch, killAll: () => enemies.forEach(e => !e.dead && killEnemy(e)), obj: () => obj, npcs: () => npcs, bossFor: L => bossFor(L), kill: e => killEnemy(e), setSeed: v => { runSeed = v; }, eshoot: (e, d) => enemyShoot(e, d), los: (a, b) => lineOfSight(a, b), breach: () => breach(), ext: () => extraction, spawn(t, d = 8) { const e = spawnEnemy(roomAt(P.pos.z), floorN, t); e.g.position.set(P.pos.x - Math.sin(yaw) * d, 0, P.pos.z - Math.cos(yaw) * d); rebuildTargets(); return e; }, complete: () => completeFloor(), arm(k) { LO.slots[0] = { k, ammo: magFor(WEAPONS[k]) }; LO.cur = 0; W.ammo = LO.slots[0].ammo; W.reload = 0; showVM(WEAPONS[k].model); }, reloadAt(u, empty) { if (W.reload <= 0) { W.ammo = empty ? 0 : 1; startReload(); } W.reload = W.rT * (1 - u); window.__rlU = u; }, view(y, p, x, z) { yaw = y; pitch = p; if (x !== undefined) { P.pos.x = x; P.pos.z = z; } }, give(k, n) { ups[k] = n; if (k === 'hp') { P.maxHp = baseMaxHp() + 60 * n; P.hp = P.maxHp; } renderMuts(); }, meta: () => meta, earn: n => { stats.bm += n; }, LO, WEAPONS, nades, get enemyThrows() { return enemyThrows; }, groundGuns: () => groundGuns, switchTo, takeGun, tryThrow, spawnNade, say, ads: on => { P.adsHold = on; }, floor: n => { floorN = n; startFloor(); }, setDaily: on => { daily = on ? { date: todayKey() } : null; }, runScore, renderBoard, pose: (crouch, flinch, aim) => { const e = window.__IE; e.poseLock = { c: crouch, f: flinch, a: aim }; }, walkPose: (vx, vz) => { const e = window.__IE; e.walkLock = vx == null ? null : { vx, vz, p: e.g.position.clone() }; }, freeze: on => { window.__frozen = on; }, killAs: (kind, head, t) => { const e = window.__IE; e.poseLock = null; e.knock.set(0, 0, 0); e.lastKind = kind; e.lastHead = !!head; killEnemy(e); e.deathFreeze = t; e.deathKind = kind === 'frag' ? 'blast' : e.deathKind; return e.deathKind; }, blind: k => { P.blindK = k; P.blindT = 3; }, drag, toggleDrag, poolLight, bodyPt, learnFloor, computeAdapt, intelText, get AD() { return AD; }, setAD: o => { AD = Object.assign({ shadows: 0, close: 0, spread: 0, cover: 0, decoy: 0, lights: 0 }, o); }, startReplay, openOps, doneFloor, colliders: () => colliders, get NAVG() { return NAV; }, buildNav, get mode() { return mode; }, submitDaily, get syncSecret() { return syncSecret; }, get callsign() { return callsign; }, get supaReady() { return supaReady; }, step: sec => { for (let t = 0; t < sec && state === 'playing'; t += 1 / 30) { camera.updateMatrixWorld(); tick(1 / 30); } }  };
 </script>
 
 
