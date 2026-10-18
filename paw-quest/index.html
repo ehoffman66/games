@@ -106,7 +106,11 @@ p{margin:0;font-size:18px;line-height:1.4}
 .lvb.boss{background:linear-gradient(#ff9a8a,#e5484d);color:#fff;-webkit-text-stroke:1px var(--ink)}.lvb.boss.done{background:linear-gradient(#8ceaa5,#3fbd66)}.lvb .crown{position:absolute;top:-15px;left:50%;transform:translateX(-50%);font-size:18px;-webkit-text-stroke:0}
 .powbar{position:fixed;left:50%;top:max(112px,calc(env(safe-area-inset-top,0px) + 104px));transform:translateX(-50%);display:flex;align-items:center;gap:10px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:5px 14px;box-shadow:0 4px 0 var(--ink);font-family:var(--font-d);font-weight:700;font-size:16px;z-index:5;white-space:nowrap}
 .powbar .track{width:90px;height:12px;border:2px solid var(--ink);border-radius:999px;background:#e8ecf5;overflow:hidden}.powbar .track i{display:block;height:100%;background:var(--pc,#ffd23a);transition:width .25s linear}
-.powbar.ending{animation:powblink .3s steps(2) infinite}@keyframes powblink{50%{opacity:.45}}
+.powbar.ending{animation:powblink .3s steps(2) infinite}
+.airbar{position:fixed;left:50%;top:max(112px,calc(env(safe-area-inset-top,0px) + 104px));transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:var(--paper);border:3px solid var(--ink);border-radius:999px;padding:5px 14px;box-shadow:0 4px 0 var(--ink);font-family:var(--font-d);font-weight:700;font-size:16px;z-index:5;white-space:nowrap}
+.airbar .track{width:110px;height:12px;border:2px solid var(--ink);border-radius:999px;background:#e8ecf5;overflow:hidden}.airbar .track i{display:block;height:100%;background:#4fc3f7;transition:width .2s linear}
+.airbar.low{animation:powblink .4s steps(2) infinite}.airbar.low .track i{background:#ff6a6a}
+.powbar:not([hidden]) ~ .airbar{top:max(160px,calc(env(safe-area-inset-top,0px) + 152px))}@keyframes powblink{50%{opacity:.45}}
 .toasts{position:fixed;left:50%;top:max(160px,calc(env(safe-area-inset-top,0px) + 152px));transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:8px;z-index:40;pointer-events:none}
 .toast{display:flex;align-items:center;gap:10px;background:linear-gradient(#fffbe6,#ffe9a8);border:3px solid var(--ink);border-radius:18px;padding:8px 16px 8px 10px;box-shadow:0 5px 0 var(--ink);font-family:var(--font-d);font-weight:700;animation:toastIn .5s cubic-bezier(.2,1.6,.4,1) both}
 .toast .em{font-size:30px;line-height:1}.toast small{display:block;font-size:12px;letter-spacing:.06em;opacity:.7}.toast.out{animation:toastOut .4s ease-in both}
@@ -235,6 +239,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 <button class="panbtn" id="panL" hidden aria-label="Look left">&#8249;</button><button class="panbtn" id="panR" hidden aria-label="Look right">&#8250;</button>
 
 <div class="powbar" id="hPow" hidden><span id="hPowName"></span><span class="track"><i id="hPowBar"></i></span></div>
+<div class="airbar" id="hAir" hidden aria-label="Air"><span>🫧 Air</span><span class="track"><i id="hAirBar"></i></span></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 <div class="rothint" aria-hidden="true">📱↻ Turn your phone sideways<br>for a bigger view</div>
 <div class="bossbar" id="hBoss" hidden><span id="hBossName"></span><span class="hp" id="hBossHp"></span></div>
@@ -261,8 +266,8 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
       <button class="btn white" id="tMake">Make it yours</button>
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
-    <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 51</p>
+    <p class="hint">93 levels in 11 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
+    <p class="ver" id="tVer">Version 52</p>
   </div>
 </section>
 
@@ -428,28 +433,31 @@ const THEMES = {
   beach: {name:'Seashell Beach', sky:['#2fa8ee','#86d3f8','#fff0c8'], grass:'#f6e2a4', grassL:'#fff6d2', grassD:'#e0c27a', dirt:'#e2b96f', dirt2:'#cfa25a', plat:'#c98f55', fruit:'peach', critter:'crab', blades:false},
   forest:{name:'Firefly Forest', sky:['#1a1442','#38296e','#7a4f9a'], grass:'#4fae6a', grassL:'#86d98f', grassD:'#2f7a4c', dirt:'#5b4033', dirt2:'#46302a', plat:'#97744f', fruit:'cherry', critter:'shroom', blades:true},
   snow:  {name:'Snowy Peaks', sky:['#5f9fdc','#b5d8f4','#f0f8ff'], grass:'#ffffff', grassL:'#ffffff', grassD:'#c3d8ee', dirt:'#7d8fb3', dirt2:'#67779c', plat:'#c98f55', fruit:'cupcake', critter:'penguin', blades:false, snow:true},
+  sea:   {name:'Sunken Reef', sky:['#0b3f73','#1a78b0','#4fc0e0'], grass:'#ecd9a6', grassL:'#fff0c8', grassD:'#c9b07a', dirt:'#b99a66', dirt2:'#9c7f52', plat:'#c98f55', fruit:'star', critter:'crab', bossCritter:'octo', blades:false, sea:true},
   sky:   {name:'Cloud Kingdom', sky:['#6f9cff','#b7b0ff','#ffd6ea'], grass:'#ffffff', grassL:'#ffffff', grassD:'#e3d9ff', dirt:'#fbf8ff', dirt2:'#ece6ff', plat:'#ffd0e6', fruit:'star', critter:'puff', blades:false, cloud:true}
 };
 const WORLDS = ['meadow','beach','forest','snow','sky'];
 function rng(seed){ let x = seed >>> 0; return () => { x = (Math.imul(x, 1664525) + 1013904223) >>> 0; return x / 4294967296; }; }
 const PER_LAND = 9;
-const BOSSES = {meadow:'King Slime', beach:'Captain Pinch', forest:'Old Toadstool', snow:'Emperor Waddles', sky:'Thunder Puff'};
+const BOSSES = {meadow:'King Slime', beach:'Captain Pinch', forest:'Old Toadstool', snow:'Emperor Waddles', sky:'Thunder Puff', sea:'Captain Inky'};
 // lands 1-5 have 9 levels each; lands 6-10 (v46) revisit the five places at a new time of day, 8 harder levels each
-const RAY_COL = { meadow: 'rgba(255,244,200,.26)', beach: 'rgba(255,250,228,.22)', snow: 'rgba(255,246,228,.2)', forest: 'rgba(170,185,255,.2)', sky: 'rgba(255,226,244,.2)' };
+const RAY_COL = { sea: 'rgba(200,245,255,.3)', meadow: 'rgba(255,244,200,.26)', beach: 'rgba(255,250,228,.22)', snow: 'rgba(255,246,228,.2)', forest: 'rgba(170,185,255,.2)', sky: 'rgba(255,226,244,.2)' };
 // tint is multiplied over the 3D picture (#tint) to set the time of day
 const LANDS = [...WORLDS.map(t => ({theme:t, name:THEMES[t].name, n:PER_LAND, boss:BOSSES[t]})),
   {theme:'meadow', name:'Sunset Meadow', n:8, boss:'Queen Slime', tint:'#ffb27a', tint2:'#ffe0b8'},
   {theme:'beach', name:'Coral Cove', n:8, boss:'Admiral Snap', tint:'#ffb8c6', tint2:'#ffe4e8'},
   {theme:'forest', name:'Moonlit Woods', n:8, boss:'Grand Toadstool', tint:'#8f9fff', tint2:'#c8d0ff'},
   {theme:'snow', name:'Crystal Glacier', n:8, boss:'Empress Waddles', tint:'#a8dcff', tint2:'#dff3ff'},
-  {theme:'sky', name:'Starry Skies', n:8, boss:'Storm Puff', tint:'#a98af0', tint2:'#e2d0ff'}];
-const OLD_LEVELS = WORLDS.length*PER_LAND, LEVELS_NEW = LANDS.slice(WORLDS.length).reduce((a, l) => a + l.n, 0);
+  {theme:'sky', name:'Starry Skies', n:8, boss:'Storm Puff', tint:'#a98af0', tint2:'#e2d0ff'},
+  // v52: an underwater land added at the end; it opens once Seashell Beach's boss is beaten (level 18) instead of after all 85
+  {theme:'sea', name:'Sunken Reef', n:8, boss:'Captain Inky', tint:'#8fc4ee', tint2:'#bfe4ff', d0:6, d1:15, unlockAfter:2*PER_LAND - 1}];
+const OLD_LEVELS = WORLDS.length*PER_LAND, LEVELS_NEW = LANDS.slice(WORLDS.length, WORLDS.length*2).reduce((a, l) => a + l.n, 0);
 function makeLevels(){
   const out = [];
   let n0 = -1;
   LANDS.forEach((land, wi) => { const th = land.theme; for (let li = 0; li < land.n; li++){
     // d is the difficulty on the old 0–19 scale, so 45 levels ramp up as smoothly as 20 did; the new lands go from 15 to 22
-    n0++; const d = n0 < OLD_LEVELS ? Math.round(n0*19/(OLD_LEVELS - 1)*10)/10 : Math.round((15 + (n0 - OLD_LEVELS)*7/(LEVELS_NEW - 1))*10)/10, boss = li === land.n - 1, R = rng(1234 + n0*977);
+    n0++; const d = land.d0 != null ? Math.round((land.d0 + li*(land.d1 - land.d0)/(land.n - 1))*10)/10 : n0 < OLD_LEVELS ? Math.round(n0*19/(OLD_LEVELS - 1)*10)/10 : Math.round((15 + (n0 - OLD_LEVELS)*7/(LEVELS_NEW - 1))*10)/10, boss = li === land.n - 1, R = rng(1234 + n0*977);
     const pool = ['coins','flat','plat','qblock','crit','gap','crit','gap'];
     if (d >= 1) pool.push('stairs','highplat','critpair');
     if (d >= 2) pool.push('spring','flyer');
@@ -465,6 +473,7 @@ function makeLevels(){
     // land-specific features: ponds to swim in, icy slides on the snow, updrafts in the sky
     if (th === 'beach') pool.push('swim','swim'); if (th === 'meadow' && d >= 1) pool.push('swim');
     if (th === 'snow') pool.push('ice','ice'); if (th === 'sky') pool.push('wind','wind');
+    if (th === 'sea') pool.push('bubbles','bubbles','reef');
     const n = boss ? 14 + Math.round(d*0.6) : 26 + Math.min(26, Math.round(d*1.4));
     const easy = new Set(['coins','flat','qblock','plat']);
     const segs = ['start']; let last = '';
@@ -494,8 +503,12 @@ function makeLevels(){
     if (bk === 'startbone') segs[0] = 'startbone'; else segs.splice(Math.floor(segs.length*(0.3 + RB()*0.4)), 0, bk);
     // a dollar bill (worth 100 coins, once per level) in a hard spot: off a spring over a pit, or on top of a lone pillar
     if (!boss){ const RD = rng(7171 + n0*89), dk = ['dollarspring', 'dollarperch', 'dollarspring', 'dollarperch', 'dollarhigh'][(n0*3 + Math.floor(RD()*5)) % 5]; segs.splice(Math.floor(segs.length*(0.55 + RD()*0.3)), 0, dk); }
+    // underwater: a bubble vent every few stretches so nobody runs out of air
+    if (th === 'sea') for (let k = 4; k < segs.length - 2; k += 6) if (segs[k] !== 'arena') segs.splice(k, 0, 'vent');
+    // v52: Apollo waits somewhere early in about half the dry-land levels; hop on for a ride
+    const RA = rng(5150 + n0*61); if (th !== 'sea' && !boss && d >= 1 && RA() < .5) segs.splice(Math.max(2, Math.floor(segs.length*(0.1 + RA()*0.2))), 0, 'ridedog');
     segs.push('flat2', 'end');
-    out.push({theme:th, world:wi, num:li + 1, segs, d, boss, powers, land:land.name, bossName:land.boss, tint:land.tint && `linear-gradient(180deg, ${land.tint}, ${land.tint2} 75%)`});
+    out.push({theme:th, world:wi, num:li + 1, segs, d, boss, powers, land:land.name, bossName:land.boss, unlockAfter: li === 0 ? land.unlockAfter : undefined, tint:land.tint && `linear-gradient(180deg, ${land.tint}, ${land.tint2} 75%)`});
   } });
   return out;
 }
@@ -549,6 +562,12 @@ function buildLevel(spec){
     wind(){ col(); for (let i = 0; i < 6; i++){ const c = col(false); c[G-1] = 'w'; if (i === 2 || i === 3) c[G-6] = 'o'; } col(); },
     // a green pipe that leads to a bonus room
     pipe(){ for (let i = 0; i < 6; i++){ const c = col(); if (i === 2 || i === 3){ c[G-1] = 'Q'; c[G-2] = 'Q'; } } },
+    // Apollo waiting for a rider
+    ridedog(){ for (let i = 0; i < 7; i++){ const c = col(); if (i === 3) c[G-1] = 'H'; } },
+    // underwater: a clam that blows a column of air bubbles, loose air bubbles to grab, and a coral arch with coins through it
+    vent(){ for (let i = 0; i < 5; i++){ const c = col(); if (i === 2) c[G-1] = 'v'; } },
+    bubbles(){ for (let i = 0; i < 7; i++){ const c = col(); if (i === 3) c[G-5] = 'a'; if (i === 1 || i === 5) c[G-3] = 'o'; } },
+    reef(){ col(); for (let i = 0; i < 6; i++){ const c = col(); if (i === 0 || i === 5) for (let k = 1; k <= 3; k++) c[G-k] = 'S'; if (i >= 1 && i <= 4){ c[G-4] = '='; c[G-1] = 'o'; } if (i === 2) c[G-6] = 'a'; } col(); },
     power(){ for (let i = 0; i < 6; i++){ const c = col(); if (i === 2) c[G-3] = 'U'; if (i === 4) c[G-1] = 'o'; } },
     arena(){ for (let i = 0; i < 24; i++){ const c = col(); if (i === 16) c[G-1] = 'X'; } },
     clouds(){ col(); for (let i = 0; i < 6; i++){ const c = col(false); if (i === 0) c[G-2] = 'C'; if (i === 3) c[G-3] = 'C'; if (i === 1 || i === 4) c[G-5] = 'o'; } col(); }
@@ -564,7 +583,7 @@ function buildLevel(spec){
   }
   const W = cols.length;
   const grid = []; for (let r = 0; r < ROWS; r++){ grid.push([]); for (let c = 0; c < W; c++) grid[r].push(cols[c][r]); }
-  const L = {grid, W, boss:null, bone:null, dollar:null, items:[], pows:{}, ice:new Set(), winds:new Set(), shots:[], room:null, pipes:[], coins:[], fruits:[], critters:[], movers:[], springs:[], flyers:[], dog:null, check:null, start:{x:64,y:0}};
+  const L = {grid, W, rides:[], vents:[], airs:[], chest:null, boss:null, bone:null, dollar:null, items:[], pows:{}, ice:new Set(), winds:new Set(), shots:[], room:null, pipes:[], coins:[], fruits:[], critters:[], movers:[], springs:[], flyers:[], dog:null, check:null, start:{x:64,y:0}};
   const cs = 55 + (spec.d || 0)*3, fsp = 0.9 + (spec.d || 0)*0.035;
   for (let r = 0; r < ROWS; r++) for (let c = 0; c < W; c++){
     const ch = grid[r][c]; const x = c*T, y = r*T;
@@ -579,12 +598,16 @@ function buildLevel(spec){
     else if (ch === 'c'){ L.critters.push({x:x+3, y:(r+1)*T-22, w:26, h:22, vx:-cs, vy:0, alive:true, squish:0, onGround:false}); grid[r][c] = ' '; }
     else if (ch === 'K'){ L.check = {x:x+16, y:(r+1)*T, hit:false}; grid[r][c] = ' '; }
     else if (ch === 'D'){ L.dog = {x:x+16, y:(r+1)*T}; grid[r][c] = ' '; }
+    else if (ch === 'H'){ L.rides.push({x:x + 1, y:(r+1)*T - 26, w:30, h:26, vx:0, vy:0, wait:0, onGround:false}); grid[r][c] = ' '; }
+    else if (ch === 'v'){ L.vents.push({x:x + 16, y:(r+1)*T}); grid[r][c] = ' '; }
+    else if (ch === 'a'){ L.airs.push({x:x + 16, y:y + 16, got:false, t:0}); grid[r][c] = ' '; }
     else if (ch === 'P'){ L.start = {x:x+5, y:(r+1)*T-42}; grid[r][c] = ' '; }
     else if (ch === 'M'){ L.movers.push({kind:'h', w:64, h:14, ax:x, bx:x + 96, ay:y + 8, by:y + 8, t:c*0.7, sp:1.15}); grid[r][c] = ' '; }
     else if (ch === 'V'){ L.movers.push({kind:'v', w:64, h:14, ax:x, bx:x, ay:G*T - 18, by:(G-5)*T, t:c*0.5, sp:0.95}); grid[r][c] = ' '; }
     else if (ch === 'C'){ L.movers.push({kind:'c', w:72, h:16, ax:x - 4, bx:x - 4, ay:y + 8, by:y + 8, t:0, sp:0}); grid[r][c] = ' '; }
     else if (ch === 'J'){ L.springs.push({x:x + 4, y:(r+1)*T - 16, w:24, h:16, sq:0}); grid[r][c] = ' '; }
     else if (ch === 'X'){ const w = Math.min(6, spec.world || 0), hp = 3 + Math.floor(w/2);
+      if (spec.theme === 'sea') L.chest = {x:x + 3*T, y:(r+1)*T, open:0};
       L.boss = {x:x - 30, y:(r+1)*T - 66, w:78, h:66, vy:0, dir:-1, sp:75 + w*14, hop:560 + w*35, hopT:1.4, hp, max:hp, inv:0, alive:true, squish:0, onGround:false, awake:false, ax:x - 15*T, bx:x + 7*T, name:spec.bossName || BOSSES[spec.theme]}; grid[r][c] = ' '; }
     else if (ch === 'b'){ L.flyers.push({x:x, y:y + 6, cx:x, y0:y + 6, w:26, h:20, t:c, sp:fsp, alive:true, squish:0, face:1}); grid[r][c] = ' '; }
   }
@@ -1382,6 +1405,7 @@ function startLevel(li, ki, ck){
   L.p = {x:L.start.x, y:L.start.y, w:22, h:42, vx:0, vy:0, onGround:false, face:1, inv:0, coyote:0, anim:0, sq:0, jt:9, flip:false, runT:0, on:null};
   L.safe = {x:L.start.x, y:L.start.y};
   parts = []; camX = 0; input.l = input.r = input.j = input.jp = false;
+  L.under = !!THEMES[L.theme].sea; L.air = 1; L.ride = null; airHud();
   getLayers(L.theme); $('hBoss').hidden = true; L.pow = null; L.balls = []; L.throwT = 0; L.airJumps = 0; L.hurtN = 0; $('hPow').hidden = true; delete $('hPow').dataset.k;
   state = 'level'; show(null);
   hud.hidden = false; pad.hidden = false; vBar.hidden = true;
@@ -1517,6 +1541,7 @@ function stepPipes(p, dt){
 }
 function hurt(p, fromX){
   if (p.inv > 0 || hasPow('star')) return;
+  if (L.ride){ dismount(p, fromX); return; }
   p.inv = 1.4; p.vy = -330; p.vx = (p.x + p.w/2 < fromX ? -1 : 1) * 260;
   sfx.hurt(); if (loseHeart(p)) return;
   parts.push({type:'text', x:p.x + 11, y:p.y - 8, text: L.hearts === 1 ? 'Last heart!' : 'Ouch!', life:1});
@@ -1538,19 +1563,22 @@ function step(dt){
   p.on = null; p.jt += dt;
   const dir = (input.r ? 1 : 0) - (input.l ? 1 : 0);
   if (dir) p.face = dir;
-  const tc = Math.floor((p.x + p.w/2)/T), tr = Math.floor((p.y + p.h*0.55)/T), inWater = tr >= 0 && tr < ROWS && L.grid[tr][tc] === 'W';
-  const onIce = p.onGround && L.ice.has(tc), running = input.run || input.runT;
-  const top = (running ? 300 : 210)*(inWater ? .7 : 1)*(onIce && dir ? 1.45 : 1)*(hasPow('star') ? 1.3 : 1);
+  const tc = Math.floor((p.x + p.w/2)/T), tr = Math.floor((p.y + p.h*0.55)/T), inWater = L.under || (tr >= 0 && tr < ROWS && L.grid[tr][tc] === 'W');
+  const onIce = p.onGround && L.ice.has(tc), running = input.run || input.runT, rd = L.ride;
+  const top = (running ? 300 : 210)*(inWater ? (L.under ? .85 : .7) : 1)*(onIce && dir ? 1.45 : 1)*(hasPow('star') ? 1.3 : 1)*(rd ? 1.35 : 1);
   if (p.inv < 1.1) p.vx += (dir*top - p.vx) * Math.min(1, dt*(onIce ? 2.2 : p.onGround ? 14 : inWater ? 5 : 8));
   if (onIce && Math.abs(p.vx) > 250 && Math.random() < dt*20) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:Math.random()*6, life:.3});
   if (input.jp){ L.jb = .15; input.jp = false; }
   L.jb -= dt; p.coyote = p.onGround ? .1 : p.coyote - dt;
-  if (inWater && L.jb > 0){ p.vy = -470; L.jb = 0; p.onGround = false; sfx.swim(); for (let i = 0; i < 4; i++) parts.push({type:'bubble', x:p.x + 11 + (Math.random() - .5)*16, y:p.y + 20, vy:-60 - Math.random()*40, life:.9}); }
-  if (p.onGround) L.airJumps = 0;
+  if (inWater && L.jb > 0){ p.vy = L.under ? -420 : -470; L.jb = 0; p.onGround = false; sfx.swim(); for (let i = 0; i < 4; i++) parts.push({type:'bubble', x:p.x + 11 + (Math.random() - .5)*16, y:p.y + 20, vy:-60 - Math.random()*40, life:.9}); }
+  if (p.onGround){ L.airJumps = 0; if (rd) rd.air = 0; }
+  // riding Apollo: he can jump again in mid-air
+  if (rd && L.jb > 0 && p.coyote <= 0 && !inWater && rd.air < 1){ rd.air = 1; L.jb = 0; p.vy = -720; p.jt = 0; p.flip = false; sfx.spring(); for (let i = 0; i < 8; i++) parts.push({type:'dust', x:p.x + 11, y:p.y + p.h, vx:Math.cos(i*0.8)*110, vy:Math.sin(i*0.8)*40 + 30, life:.4, max:.4, r:5}); }
   // wing jump: one extra jump in the air
   if (L.jb > 0 && p.coyote <= 0 && !inWater && hasPow('jump') && (L.airJumps || 0) < 1){ L.airJumps = 1; L.jb = 0; p.vy = -820; p.jt = 0; p.flip = true; sfx.spring(); for (let i = 0; i < 8; i++) parts.push({type:'star', x:p.x + 11, y:p.y + p.h, vx:Math.cos(i*0.8)*120, vy:Math.sin(i*0.8)*60 + 60, life:.4}); }
-  if (L.jb > 0 && p.coyote > 0){ p.vy = hasPow('jump') ? -980 : -700; if (hasPow('jump')) for (let i = 0; i < 5; i++) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:i*1.26, life:.35}); L.jb = 0; p.coyote = 0; p.onGround = false; p.jt = 0; p.flip = true; sfx.jump(); dust(p.x + 11, p.y + p.h, 4); }
-  if (inWater){ p.vy = Math.min(p.vy + 700*dt, 150); if (!L.wasWater){ sfx.splash(); for (let i = 0; i < 8; i++) parts.push({type:'star', x:p.x + 11, y:(G-1)*T, vx:(Math.random() - .5)*200, vy:-150 - Math.random()*150, life:.4}); } if (Math.random() < dt*3) parts.push({type:'bubble', x:p.x + 11, y:p.y + 10, vy:-50, life:.9}); }
+  if (L.jb > 0 && p.coyote > 0){ p.vy = hasPow('jump') ? -980 : rd ? -790 : -700; if (hasPow('jump')) for (let i = 0; i < 5; i++) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:i*1.26, life:.35}); L.jb = 0; p.coyote = 0; p.onGround = false; p.jt = 0; p.flip = true; sfx.jump(); dust(p.x + 11, p.y + p.h, 4); }
+  if (L.under && p.y < 6){ p.y = 6; p.vy = Math.max(p.vy, 0); }
+  if (inWater){ p.vy = Math.min(p.vy + (L.under ? 620 : 700)*dt, 150); if (!L.wasWater){ sfx.splash(); for (let i = 0; i < 8; i++) parts.push({type:'star', x:p.x + 11, y:(G-1)*T, vx:(Math.random() - .5)*200, vy:-150 - Math.random()*150, life:.4}); } if (Math.random() < dt*3) parts.push({type:'bubble', x:p.x + 11, y:p.y + 10, vy:-50, life:.9}); }
   else p.vy = Math.min(p.vy + 1900*dt, hasPow('jump') && input.j && p.vy > 0 ? 130 : 900);
   L.wasWater = inWater;
   // updrafts push up harder than gravity until you are well above the pit
@@ -1583,6 +1611,8 @@ function step(dt){
   const pcx = p.x + p.w/2, pcy = p.y + p.h/2;
   if (L.winds.size && Math.random() < dt*26){ const cols = [...L.winds].filter(c => Math.abs(c*T - pcx) < viewW); if (cols.length){ const c = cols[Math.floor(Math.random()*cols.length)]; parts.push({type:'wind', x:c*T + Math.random()*T, y:VIEW_H + 10, vy:-380 - Math.random()*120, life:1.1}); } }
   stepPipes(p, dt);
+  if (L.under) stepAir(p, dt);
+  if (L.rides.length || rd) stepRide(p, dt);
   L.items.forEach(it => { if (it.got) return; if (it.out < 1){ it.out = Math.min(1, it.out + dt*3); it.y = it.y0 - it.out*18; }
     if (it.out >= .6 && Math.abs(it.x - pcx) < 26 && Math.abs(it.y - pcy) < 34){ it.got = true; givePower(it.kind, it.x, it.y); } });
   if (L.pow && L.pow.t > 0){ const was = L.pow.t; L.pow.t -= dt; if (L.pow.t <= 0){ parts.push({type:'text', x:pcx, y:p.y - 16, text:POWERS[L.pow.kind].name + ' wore off', life:1.2}); sfx.bump(); }
@@ -1618,10 +1648,11 @@ function step(dt){
     }
   });
   if (L.boss) stepBoss(L.boss, p, dt);
+  if (L.chest && L.chest.open) L.chest.open = Math.min(3, L.chest.open + dt);
   stepShots(p, dt);
   const ck = L.check; if (ck && !ck.hit && pcx > ck.x - 6){ ck.hit = true; L.ckGot = L.got; L.ckScore = L.score; sfx.fruit(); parts.push({type:'text', x:ck.x, y:ck.y - 96, text:'Checkpoint!', life:1.4}); for (let i = 0; i < 10; i++) parts.push({type:'star', x:ck.x, y:ck.y - 70, vx:Math.cos(i*0.63)*140, vy:Math.sin(i*0.63)*140 - 80, life:.7}); }
   const d = L.dog;
-  if (pcx > d.x - 30 && !(L.room && pcx > L.room.c0*T - 2*T) && p.y + p.h > d.y - 90 && !(L.boss && L.boss.alive)){ L.won = .001; sfx.win(); }
+  if (pcx > d.x - 30 && !(L.room && pcx > L.room.c0*T - 2*T) && p.y + p.h > d.y - 90 && !(L.boss && L.boss.alive)){ L.won = .001; sfx.win(); if (L.ride){ L.ride = null; d.x = pcx + 34; } $('hAir').hidden = true; }
   parts.forEach(q => tickPart(q, dt));
   parts = parts.filter(q => q.life > 0);
 }
@@ -1650,6 +1681,7 @@ function stepBoss(B, p, dt){
     if (th === 'beach'){ B.charge = {t:.7, dir:toward}; parts.push({type:'text', x:bx, y:B.y - 20, text:'Snip snap!', life:1}); }
     else if (th === 'forest'){ [-1, 0, 1].forEach(k => L.shots.push({kind:'spore', x:bx, y:B.y + 10, vx:toward*(150 + k*90), vy:-520 - Math.abs(k)*60, r:11, g:1300, life:4})); sfx.boss2(); }
     else if (th === 'snow'){ const dx = pcx - bx; [0, 1].forEach(k => L.shots.push({kind:'snow', x:bx, y:B.y + 10, vx:dx/1.0*(0.8 + k*0.35), vy:-560, r:12, g:1100, life:4})); sfx.boss2(); }
+    else if (th === 'sea'){ const dx = pcx - bx, dy = (p.y + p.h/2) - (B.y + 20), dd = Math.hypot(dx, dy) || 1; [-0.35, 0, 0.35].slice(0, 2 + Math.min(1, hurtN)).forEach(a => { const c = Math.cos(a), s2 = Math.sin(a), ux = dx/dd, uy = dy/dd; L.shots.push({kind:'ink', x:bx, y:B.y + 20, vx:(ux*c - uy*s2)*170, vy:(ux*s2 + uy*c)*170, r:12, g:0, life:4}); }); parts.push({type:'text', x:bx, y:B.y - 20, text:'Splurt!', life:1}); sfx.boss2(); }
     else if (th === 'sky'){ const n = 1 + Math.min(2, hurtN); for (let k = 0; k < n; k++) L.shots.push({kind:'zap', x:pcx + (k - (n - 1)/2)*90, y:0, phase:0, t:.95 + k*.12, life:3}); sfx.zap(); }
     else if (th === 'meadow' && L.critters.filter(c => c.alive && c.mini).length < 3){ const c = {x:bx - 13, y:B.y + 30, w:26, h:22, vx:toward*90, vy:-420, alive:true, squish:0, onGround:false, mini:true}; L.critters.push(c); parts.push({type:'text', x:bx, y:B.y - 20, text:'Splat!', life:1}); sfx.bump(); }
   }
@@ -1668,9 +1700,52 @@ function stepBoss(B, p, dt){
     else hurt(p, B.x + B.w/2);
   }
 }
+// ---------- riding Apollo (v52) ----------
+// touch him to hop on: faster, higher jumps, a second jump in the air, and he sniffs out the golden bone.
+// getting hurt knocks you off instead of costing a heart; he waits nearby so you can climb back on
+function stepRide(p, dt){
+  const pcx = p.x + p.w/2, rd = L.ride, dn = save.dog.name;
+  L.rides.forEach(r => { if (r.taken) return; r.wait = Math.max(0, r.wait - dt);
+    r.vy = Math.min(r.vy + 1900*dt, 900); r.vx *= Math.pow(0.02, dt); if (moveX(r, r.vx*dt)) r.vx = 0; moveY(r, r.vy*dt, false);
+    if (r.y > VIEW_H + 40){ r.x = L.safe.x - 6; r.y = L.safe.y - 30; r.vy = 0; }
+    if (!rd && r.wait <= 0 && p.inv <= 0 && !L.won && Math.abs(r.x + r.w/2 - pcx) < 26 && Math.abs(r.y + r.h - (p.y + p.h)) < 46){
+      r.taken = true; L.ride = {air:0, sniffT:0, told:false}; p.vy = Math.min(p.vy, -250); sfx.oneup(); award('rider');
+      parts.push({type:'text', x:pcx, y:p.y - 18, text:'Giddy up, ' + dn + '!', life:1.4}); for (let i = 0; i < 10; i++) parts.push({type:'star', x:pcx, y:p.y + 30, vx:Math.cos(i*0.63)*150, vy:Math.sin(i*0.63)*150 - 60, life:.6}); } });
+  if (L.ride){ const r = L.ride;
+    if (Math.abs(p.vx) > 150 && p.onGround && Math.random() < dt*14) dust(p.x + 11 - p.face*14, p.y + p.h, 1, .7);
+    // sniffing: golden paw prints lead toward the golden bone, and he digs a hidden one out of its block
+    const bn = L.bone; if (bn && !bn.got){ const dx = bn.x - pcx;
+      if (Math.abs(dx) < 30*T){ r.sniffT -= dt; if (!r.told){ r.told = true; parts.push({type:'text', x:pcx, y:p.y - 34, text:'Sniff sniff! A golden bone!', life:1.8}); }
+        if (r.sniffT <= 0){ r.sniffT = .35; const k = Math.sign(dx) || 1, dist = Math.min(Math.abs(dx), 50 + Math.random()*110), f = dist/Math.max(1, Math.abs(dx)); parts.push({type:'paw', x:pcx + k*dist, y:(p.y + 26) + (bn.y - (p.y + 26))*f, rot:k, life:1.1}); } }
+      if (bn.hidden && Math.abs(dx) < 5*T){ for (let rr2 = 0; rr2 < ROWS; rr2++) for (let c = 0; c < L.W; c++) if (L.grid[rr2][c] === 'Y'){ L.grid[rr2][c] = 'B'; L.bumpAt = {c, r:rr2, t:.18}; }
+        bn.hidden = false; sfx.spring(); parts.push({type:'text', x:bn.x, y:bn.y - 22, text:dn + ' found it!', life:1.6}); for (let i = 0; i < 10; i++) parts.push({type:'star', x:bn.x, y:bn.y, vx:Math.cos(i*0.63)*140, vy:Math.sin(i*0.63)*140 - 60, life:.6}); } } }
+}
+function dismount(p, fromX){
+  const away = p.x + p.w/2 < fromX ? -1 : 1, pcx = p.x + p.w/2;
+  L.ride = null; p.inv = 1.4; p.vy = -460; p.vx = away*240; sfx.hurt();
+  L.rides.push({x:pcx - 15, y:p.y + p.h - 26, w:30, h:26, vx:-away*200, vy:-200, wait:1.3, onGround:false});
+  parts.push({type:'text', x:pcx, y:p.y - 10, text:'Whoa! Hop back on!', life:1.3});
+}
+// ---------- underwater air (v52): it runs down slowly; clams with bubble columns and floating bubbles fill it back up ----------
+const AIR_SECS = 32;
+function airHud(){ const el = $('hAir'), on = !!(L && L.under && state === 'level' && !L.won); if (el.hidden === on) el.hidden = !on; if (!on) return;
+  const w = Math.round(L.air*100); if (airHud.w !== w){ airHud.w = w; $('hAirBar').style.width = w + '%'; } el.classList.toggle('low', L.air < .3); }
+function stepAir(p, dt){
+  const pcx = p.x + p.w/2, was = L.air;
+  if (!L.won) L.air -= dt/AIR_SECS*(L.helper ? .6 : 1);
+  L.vents.forEach(v => { if (Math.abs(v.x - pcx) > viewW) return;
+    if (Math.random() < dt*9) parts.push({type:'bubble', x:v.x + (Math.random() - .5)*20, y:v.y - 14, vy:-110 - Math.random()*70, life:2.6, big:Math.random() < .4});
+    if (Math.abs(v.x - pcx) < 28 && p.y + p.h > v.y - 6*T && p.y < v.y){ if (L.air < .97 && Math.random() < dt*8) sfx.swim(); L.air = 1; p.vy = Math.max(p.vy - 1500*dt, -280); } });
+  L.airs.forEach(a => { if (a.got){ a.t -= dt; if (a.t <= 0) a.got = false; return; }
+    if (Math.abs(a.x - pcx) < 26 && Math.abs(a.y - (p.y + p.h/2)) < 32){ a.got = true; a.t = 8; L.air = Math.min(1, L.air + .5); sfx.swim(); parts.push({type:'text', x:a.x, y:a.y - 18, text:'Air!', life:.8}); for (let i = 0; i < 6; i++) parts.push({type:'bubble', x:a.x, y:a.y, vy:-80 - Math.random()*60, life:.8}); } });
+  if (was >= .3 && L.air < .3){ sfx.hurry(); parts.push({type:'text', x:pcx, y:p.y - 24, text:'Need air! Find bubbles', life:1.6}); }
+  if (L.air <= 0){ L.air = 1; p.inv = 1.4; sfx.hurt(); parts.push({type:'text', x:pcx, y:p.y - 10, text:'Out of air!', life:1.3}); for (let i = 0; i < 10; i++) parts.push({type:'bubble', x:pcx, y:p.y + 20, vy:-60 - Math.random()*80, life:1}); if (loseHeart(p)) return; }
+  airHud();
+}
 function hitBoss(B){
   if (!B.alive) return; B.hp--; B.inv = 1.1; sfx.stomp(); parts.push({type:'ring', x:B.x + B.w/2, y:B.y + 20, life:.4}); for (let i = 0; i < 8; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 10, vx:Math.cos(i*0.8)*160, vy:Math.sin(i*0.8)*160 - 80, life:.6});
-        if (B.hp <= 0){ B.alive = false; B.squish = 1.4; L.got += 20; addScore(5000, B.x + B.w/2, B.y - 10, 'Boss beaten! 5000'); sfx.fruit(); for (let i = 0; i < 16; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 20, vx:Math.cos(i*0.4)*220, vy:Math.sin(i*0.4)*220 - 120, life:.9}); }
+        if (B.hp <= 0){ B.alive = false; B.squish = 1.4; L.got += 20; addScore(5000, B.x + B.w/2, B.y - 10, 'Boss beaten! 5000'); sfx.fruit();
+          if (L.chest){ const ch = L.chest; ch.open = .001; L.got += 50; updHud(); setTimeout(() => sfx.buy(), 400); parts.push({type:'text', x:ch.x, y:ch.y - 90, text:'Sunken treasure! +50 coins', life:2.4}); for (let i = 0; i < 24; i++) parts.push({type:'coin', x:ch.x + (Math.random() - .5)*30, y:ch.y - 30, vx:(Math.random() - .5)*260, vy:-380 - Math.random()*260, life:1.6}); } for (let i = 0; i < 16; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 20, vx:Math.cos(i*0.4)*220, vy:Math.sin(i*0.4)*220 - 120, life:.9}); }
         else { addScore(1000, B.x + B.w/2, B.y - 10); if (L.theme === 'meadow') [-1, 1].forEach(k => L.critters.push({x:B.x + B.w/2 - 13, y:B.y + 20, w:26, h:22, vx:k*110, vy:-480, alive:true, squish:0, onGround:false, mini:true})); }
   bossHud();
 }
@@ -1688,7 +1763,7 @@ function stepShots(p, dt){
 }
 function tickPart(q, dt){
   q.life -= dt;
-  if (q.type === 'coin'){ q.y += q.vy*dt; q.vy += 900*dt; }
+  if (q.type === 'coin'){ q.y += q.vy*dt; q.vy += 900*dt; q.x += (q.vx || 0)*dt; }
   else if (q.type === 'heart'){ q.y += q.vy*dt; }
   else if (q.type === 'text') q.y -= 30*dt;
   else if (q.type === 'bubble' || q.type === 'wind'){ q.y += q.vy*dt; if (q.type === 'bubble') q.x += Math.sin(q.life*12)*0.6; }
@@ -1712,6 +1787,7 @@ const STICKERS = [
   ['pstar', '🌟', 'Star power', 'Grab a star shield'],
   ['pmagnet', '🧲', 'Coin magnet', 'Grab a coin magnet'],
   ['pball', '🎾', 'Ball blaster', 'Grab a ball blaster'],
+  ['rider', '🐕', 'Dog rider', 'Ride Apollo through a level'],
   ['shop5', '🛍️', 'Shopper', 'Buy 5 things in the village'],
   ['dollar1', '💵', 'Money finder', 'Grab a dollar bill'],
   ['dollars10', '💰', 'Piggy bank', 'Collect 10 dollar bills'],
@@ -1723,7 +1799,7 @@ const STICKERS = [
   ['showdog', '🎪', 'Show dog', 'Teach your dog every trick'],
   ['bestfriend', '💖', 'Best friends', 'Make your dog 100% happy'],
   ['all45', '🌈', 'Paw Quest champion', 'Beat the first 45 levels'],
-  ['all85', '🌟', 'Super champion', 'Beat all 85 levels']
+  ['all85', '🌟', 'Super champion', 'Beat every level']
 ];
 let toastQ = [], toastBusy = false;
 // device settings (graphics, button size) live outside the save slots; helper mode is per kid in the save
@@ -2044,14 +2120,19 @@ function renderLevel(){
   const hop = L.won ? Math.abs(Math.sin(L.won*9))*14 : 0;
   cp(g, d.x, d.y - 20, 46); g.fillStyle = rg(g, d.x, d.y - 20, 4, 46, 'rgba(255,240,170,.45)', 'rgba(255,240,170,0)'); g.fill();
   ep(g, d.x + 4, d.y, 20 - hop*0.4, 4); g.fillStyle = 'rgba(20,20,50,.22)'; g.fill();
-  drawDog(g, save.dog, d.x, d.y - hop, clock, p.x + 11 < d.x ? -1 : 1, !!L.won || near);
-  if (near && !L.won){ g.save(); prep(g); const by = d.y - 74 + Math.sin(clock*3)*2; rr(g, d.x - 28, by, 56, 24, 10); fs(g, '#fff', 2); g.beginPath(); g.moveTo(d.x - 6, by + 24); g.lineTo(d.x + 2, by + 32); g.lineTo(d.x + 6, by + 24); g.fillStyle = '#fff'; g.fill(); g.fillStyle = OL; g.font = '600 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Woof!', d.x, by + 17); g.restore(); }
+  if (!L.ride) drawDog(g, save.dog, d.x, d.y - hop, clock, p.x + 11 < d.x ? -1 : 1, !!L.won || near);
+  if (near && !L.won && !L.ride){ g.save(); prep(g); const by = d.y - 74 + Math.sin(clock*3)*2; rr(g, d.x - 28, by, 56, 24, 10); fs(g, '#fff', 2); g.beginPath(); g.moveTo(d.x - 6, by + 24); g.lineTo(d.x + 2, by + 32); g.lineTo(d.x + 6, by + 24); g.fillStyle = '#fff'; g.fill(); g.fillStyle = OL; g.font = '600 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Woof!', d.x, by + 17); g.restore(); }
+  L.vents.forEach(v => { ep(g, v.x, v.y - 5, 18, 7); fs(g, '#e9a3c0', 1.6); ep(g, v.x, v.y - 12, 16, 6); fs(g, '#f7c6da', 1.6); });
+  if (L.chest){ const ch = L.chest; rr(g, ch.x - 22, ch.y - 30, 44, 30, 4); fs(g, '#8a5a32', 1.8); g.save(); g.translate(ch.x - 22, ch.y - 30); g.rotate(-Math.min(1, ch.open*2)*1.2); rr(g, 0, -12, 44, 12, [8, 8, 0, 0]); fs(g, '#a06a3a', 1.8); g.restore(); if (ch.open) { cp(g, ch.x, ch.y - 30, 20); g.fillStyle = 'rgba(255,220,90,.6)'; g.fill(); } }
+  L.rides.forEach(r => { if (r.taken) return; ep(g, r.x + r.w/2 + 4, r.y + r.h, 20, 4); g.fillStyle = 'rgba(20,20,50,.22)'; g.fill(); drawDog(g, save.dog, r.x + r.w/2, r.y + r.h, clock, p.x + 11 < r.x + r.w/2 ? -1 : 1, Math.abs(p.x - r.x) < 200); });
   shadowAt(p.x + 11, p.y + p.h, 12);
-  if (!(p.inv > 0 && p.inv < 1.0 && Math.floor(clock*16) % 2)) drawKidSprite(g, L.kid, kidFrame(p), p.x + 11, p.y + p.h, p.face);
+  if (L.ride) drawDog(g, save.dog, p.x + 11, p.y + p.h, clock*2, p.face, true);
+  if (!(p.inv > 0 && p.inv < 1.0 && Math.floor(clock*16) % 2)) drawKidSprite(g, L.kid, kidFrame(p), p.x + 11, p.y + p.h - (L.ride ? 16 : 0), p.face);
   drawParts();
   g.restore();
   if (th.snow){ for (let i = 0; i < 70; i++){ const sx = ((h2(i, 51)*viewW*1.3 + Math.sin(clock*0.8 + i)*20 - camX*(0.3 + h2(i, 52)*0.5)) % viewW + viewW) % viewW, sy = ((h2(i, 53)*viewH + clock*(18 + h2(i, 54)*26)) % viewH); circle(g, sx, sy, 1 + h2(i, 55)*2, 'rgba(255,255,255,.85)'); } }
   if (th.cloud){ for (let i = 0; i < 16; i++){ const sx = ((h2(i, 61)*viewW*1.4 - camX*0.6) % viewW + viewW) % viewW, sy = h2(i, 62)*viewH*0.7; g.globalAlpha = .5 + Math.sin(clock*3 + i)*.4; sparkle(g, sx, sy, 2 + h2(i, 63)*2.5, '#fff7c0'); } g.globalAlpha = 1; }
+  if (th.sea){ g.fillStyle = lg(g, 0, 0, 0, viewH, 'rgba(30,120,190,.28)', 'rgba(10,60,120,.42)'); g.fillRect(0, 0, viewW, viewH); }
   drawVignette();
 }
 function kidFrame(p){
@@ -2102,7 +2183,8 @@ function drawParts(){
     else if (q.type === 'ring'){ const k = 1 - q.life/.35; g.beginPath(); g.ellipse(q.x, q.y, 8 + k*26, 3 + k*8, 0, 0, Math.PI*2); g.lineWidth = 3*(1 - k) + .5; g.strokeStyle = '#fff'; g.stroke(); }
     else if (q.type === 'star'){ star(g, q.x, q.y, 5, 2.2, '#ffe14a', clock*8); g.lineWidth = 1; g.strokeStyle = OL; g.stroke(); }
     else if (q.type === 'confetti'){ g.save(); g.translate(q.x, q.y); g.rotate(q.rot); g.fillStyle = q.col; g.fillRect(-3, -1.8, 6, 3.6); g.restore(); }
-    else if (q.type === 'bubble'){ g.beginPath(); g.arc(q.x, q.y, 4, 0, Math.PI*2); g.fillStyle = 'rgba(220,245,255,.35)'; g.fill(); g.lineWidth = 1.4; g.strokeStyle = 'rgba(255,255,255,.9)'; g.stroke(); }
+    else if (q.type === 'paw'){ g.save(); g.translate(q.x, q.y); g.rotate(q.rot*Math.PI/2); g.globalAlpha = Math.min(.9, q.life*1.4); g.fillStyle = '#ffd23a'; g.strokeStyle = OL; g.lineWidth = 1.2; ep(g, 0, 2, 5, 4.2); g.fill(); g.stroke(); [[-5, -4], [-1.8, -7], [1.8, -7], [5, -4]].forEach(([x, y]) => { ep(g, x, y, 1.9, 2.3); g.fill(); g.stroke(); }); g.restore(); }
+    else if (q.type === 'bubble'){ g.beginPath(); g.arc(q.x, q.y, q.big ? 7 : 4, 0, Math.PI*2); g.fillStyle = 'rgba(220,245,255,.35)'; g.fill(); g.lineWidth = 1.4; g.strokeStyle = 'rgba(255,255,255,.9)'; g.stroke(); }
     else if (q.type === 'wind'){ g.globalAlpha = Math.min(.55, q.life*.6); g.beginPath(); g.moveTo(q.x, q.y); g.quadraticCurveTo(q.x + 6, q.y + 20, q.x, q.y + 44); g.lineWidth = 2.4; g.strokeStyle = '#ffffff'; g.lineCap = 'round'; g.stroke(); }
     else if (q.type === 'heart'){ const x = q.x, y = q.y; g.beginPath(); g.moveTo(x, y + 5); g.bezierCurveTo(x - 9, y - 2, x - 5, y - 9, x, y - 4); g.bezierCurveTo(x + 5, y - 9, x + 9, y - 2, x, y + 5); g.fillStyle = '#ff6f8a'; g.fill(); g.lineWidth = 1.3; g.strokeStyle = OL; g.stroke(); }
     g.globalAlpha = 1;
@@ -2215,10 +2297,14 @@ function followCam(){
 // arrows over pipes, the helper's bubble, lightning warnings: drawn on the 2D layer in both renderers
 function levelOverlay(){
   const p = L.p;
+  // floating air bubbles underwater
+  L.airs.forEach((a, i) => { if (a.got || Math.abs(a.x - p.x) > viewW) return; const y = a.y + Math.sin(clock*2.4 + i)*5, r = 13 + Math.sin(clock*4 + i)*1.2; g.save(); g.beginPath(); g.arc(a.x, y, r, 0, Math.PI*2); g.fillStyle = rg(g, a.x - 4, y - 4, 1, r, 'rgba(255,255,255,.55)', 'rgba(160,225,255,.18)'); g.fill(); g.lineWidth = 2.2; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke(); g.beginPath(); g.arc(a.x - 2, y - 2, r*0.62, 3.5, 4.5); g.lineWidth = 2.5; g.stroke(); g.restore(); });
+  // the waiting Apollo asks for a rider
+  if (!L.ride) L.rides.forEach(r => { if (r.wait > 0 || Math.abs(r.x - p.x) > 260) return; const x = r.x + r.w/2, by = r.y - 52 + Math.sin(clock*3)*2; g.save(); prep(g); rr(g, x - 38, by, 76, 24, 10); fs(g, '#fff', 2); g.beginPath(); g.moveTo(x - 6, by + 24); g.lineTo(x + 2, by + 32); g.lineTo(x + 6, by + 24); g.fillStyle = '#fff'; g.fill(); g.fillStyle = OL; g.font = '600 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Hop on!', x, by + 17); g.restore(); });
   L.pipes.forEach(q => { if (Math.abs(q.x - p.x) > viewW) return; const y = q.y - 26 + Math.sin(clock*4)*4; g.save(); g.globalAlpha = .85; g.beginPath(); g.moveTo(q.x - 9, y - 8); g.lineTo(q.x + 9, y - 8); g.lineTo(q.x, y + 4); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke(); g.restore(); });
   if (L.bubbleT > 0){ g.save(); g.globalAlpha = Math.min(1, L.bubbleT*2)*.8; g.beginPath(); g.arc(p.x + 11, p.y + 22, 34, 0, Math.PI*2); g.fillStyle = 'rgba(190,235,255,.25)'; g.fill(); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke(); g.beginPath(); g.arc(p.x + 1, p.y + 10, 8, 3.6, 4.6); g.stroke(); g.restore(); }
   (L.balls || []).forEach(b => { if (!R3 || R3.failed || !R3.kidsReady){ circle(g, b.x, b.y, b.r, '#d4f53c'); g.lineWidth = 1.5; g.strokeStyle = OL; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 2*Math.PI); g.stroke(); } });
-  L.shots.forEach(s => { if (!R3 || R3.failed || !R3.kidsReady){ if (s.kind === 'zap' && s.phase === 1){ g.fillStyle = '#fff6a0'; g.fillRect(s.x - 6, 0, 12, G*T); } else if (s.kind !== 'zap') circle(g, s.x, s.y, s.r, s.kind === 'snow' ? '#ffffff' : '#c58bff'); }
+  L.shots.forEach(s => { if (!R3 || R3.failed || !R3.kidsReady){ if (s.kind === 'zap' && s.phase === 1){ g.fillStyle = '#fff6a0'; g.fillRect(s.x - 6, 0, 12, G*T); } else if (s.kind !== 'zap') circle(g, s.x, s.y, s.r, s.kind === 'snow' ? '#ffffff' : s.kind === 'ink' ? '#3a2a5a' : '#c58bff'); }
     if (s.kind === 'zap' && s.phase === 0){ g.save(); g.globalAlpha = .5 + Math.sin(clock*30)*.4; g.beginPath(); g.ellipse(s.x, G*T - 2, 26, 7, 0, 0, Math.PI*2); g.fillStyle = '#ffe14a'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke(); g.restore(); } });
 }
 function renderLevel3D(){
@@ -2230,7 +2316,7 @@ function renderLevel3D(){
   if (L.theme === 'forest'){ for (let i = 0; i < 22; i++){ const fx = (i*173) % (L.W*T) + Math.sin(clock + i)*20, fy = 110 + Math.sin(clock*1.3 + i)*40 + (i*37 % 90); const a = .4 + Math.sin(clock*4 + i*2)*.35; g.globalAlpha = Math.max(0, a); cp(g, fx, fy, 9); g.fillStyle = rg(g, fx, fy, 0, 9, 'rgba(255,250,150,.9)', 'rgba(255,250,150,0)'); g.fill(); circle(g, fx, fy, 1.8, '#fffde0'); g.globalAlpha = 1; } }
   levelOverlay();
   const d = L.dog, near = Math.abs(p.x - d.x) < 220;
-  if (near && !L.won){ g.save(); prep(g); const by = d.y - 84 + Math.sin(clock*3)*2; rr(g, d.x - 28, by, 56, 24, 10); fs(g, '#fff', 2); g.beginPath(); g.moveTo(d.x - 6, by + 24); g.lineTo(d.x + 2, by + 32); g.lineTo(d.x + 6, by + 24); g.fillStyle = '#fff'; g.fill(); g.fillStyle = OL; g.font = '600 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Woof!', d.x, by + 17); g.restore(); }
+  if (near && !L.won && !L.ride){ g.save(); prep(g); const by = d.y - 84 + Math.sin(clock*3)*2; rr(g, d.x - 28, by, 56, 24, 10); fs(g, '#fff', 2); g.beginPath(); g.moveTo(d.x - 6, by + 24); g.lineTo(d.x + 2, by + 32); g.lineTo(d.x + 6, by + 24); g.fillStyle = '#fff'; g.fill(); g.fillStyle = OL; g.font = '600 13px Fredoka, sans-serif'; g.textAlign = 'center'; g.fillText('Woof!', d.x, by + 17); g.restore(); }
   drawParts();
   g.restore();
   if (th.snow){ for (let i = 0; i < 70; i++){ const sx = ((h2(i, 51)*viewW*1.3 + Math.sin(clock*0.8 + i)*20 - camX*(0.3 + h2(i, 52)*0.5)) % viewW + viewW) % viewW, sy = ((h2(i, 53)*viewH + clock*(18 + h2(i, 54)*26)) % viewH); circle(g, sx, sy, 1 + h2(i, 55)*2, 'rgba(255,255,255,.85)'); } }
@@ -2265,7 +2351,7 @@ requestAnimationFrame(frame);
 // ---------- screens ----------
 const hud = $('hud'), pad = $('pad'), vBar = $('vBar');
 const SCREENS = ['sHome', 'sPet', 'sSet', 'sStick', 'sSaves', 'sTitle','sLevels','sShop','sMake','sDone','sOver','sPause','sWard'];
-function show(id){ SCREENS.forEach(s => $(s).hidden = s !== id); if (id){ $('hBoss').hidden = true; $('hPow').hidden = true; } else if (L){ bossHud(); powHud(); } }
+function show(id){ SCREENS.forEach(s => $(s).hidden = s !== id); if (id || !L){ $('hBoss').hidden = true; $('hPow').hidden = true; $('hAir').hidden = true; } else { bossHud(); powHud(); airHud(); } }
 function toVillage(){ petBtnName(); if (R3) R3.dogToy = (save.pet || {}).toy || null; quietAward = true; try { checkStickers(); } finally { quietAward = false; } state = 'village'; L = null; parts = []; show(null); hud.hidden = true; pad.hidden = true; vBar.hidden = false; $('vCoins').textContent = save.coins; $('vBones').textContent = boneCount(); panUI(); }
 function titleText(){ $('tSub').textContent = `${save.dog.name} keeps wandering off! Help ${save.kids[0].name} and ${save.kids[1].name} find ${save.dog.name} in five silly lands, then spend your coins fixing up the village.`; }
 titleText();
@@ -2339,7 +2425,9 @@ function themeThumb(cvs, key){
   drawFruit(c, th.fruit, 98, 40, 0);
   drawDog(c, save.dog, 138, 72, 0, -1, true);
 }
-function unlocked(i){ return i === 0 || save.done.includes(i) || save.done.includes(i - 1) || save.done.some(j => j > i); }
+// the lands after the first ten (the reef) open from their own unlockAfter level, so they form their own chain
+const lvGroup = i => LEVELS[i].world >= WORLDS.length*2 ? 1 : 0;
+function unlocked(i){ const ua = LEVELS[i].unlockAfter, gp = lvGroup(i); return i === 0 || save.done.includes(i) || (ua != null && save.done.includes(ua)) || (save.done.includes(i - 1) && lvGroup(i - 1) === gp) || save.done.some(j => j > i && lvGroup(j) === gp); }
 function openLevels(){
   const list = $('lvlList'); list.innerHTML = '';
   { const n = boneCount(), extra = Math.floor(n/BONES_PER_HEART), left = (extra + 1)*BONES_PER_HEART <= LEVELS.length ? (extra + 1)*BONES_PER_HEART - n : 0;
@@ -2348,7 +2436,10 @@ function openLevels(){
     const w = document.createElement('div'); w.className = 'world';
     w.innerHTML = `<canvas></canvas><div class="wbody"><span class="wname">Land ${wi + 1}: ${esc(land.name)}</span><div class="lvrow"></div></div>`;
     const tc = w.querySelector('canvas'); themeThumb(tc, th);
-    if (land.tint){ const c = tc.getContext('2d'); c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'multiply'; const gr = c.createLinearGradient(0, 0, 0, tc.height); gr.addColorStop(0, land.tint); gr.addColorStop(0.75, land.tint2); c.fillStyle = gr; c.fillRect(0, 0, tc.width, tc.height); c.restore(); }
+    if (land.theme === 'sea'){ const c = tc.getContext('2d'); c.save(); c.setTransform(1, 0, 0, 1, 0, 0); const W2 = tc.width, H2 = tc.height; c.globalCompositeOperation = 'multiply'; const gr = c.createLinearGradient(0, 0, 0, H2); gr.addColorStop(0, '#2f6fb8'); gr.addColorStop(1, '#7fc8e8'); c.fillStyle = gr; c.fillRect(0, 0, W2, H2); c.globalCompositeOperation = 'source-over';
+      for (let k = 0; k < 7; k++){ const x = W2*(0.06 + k*0.15), hh = H2*(0.35 + (k*37 % 5)*0.08); c.strokeStyle = '#3f9a3a'; c.lineWidth = Math.max(2, W2/90); c.beginPath(); for (let y = 0; y <= hh; y += 4) c.lineTo(x + Math.sin(y*0.12 + k)*W2*0.015, H2*0.82 - y); c.stroke(); }
+      for (let k = 0; k < 9; k++){ c.beginPath(); c.arc(W2*((k*0.37) % 1), H2*(0.15 + (k*0.23) % 0.6), W2/70 + (k % 3), 0, 2*Math.PI); c.strokeStyle = 'rgba(255,255,255,.8)'; c.lineWidth = 1.5; c.stroke(); } c.restore(); }
+    else if (land.tint){ const c = tc.getContext('2d'); c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'multiply'; const gr = c.createLinearGradient(0, 0, 0, tc.height); gr.addColorStop(0, land.tint); gr.addColorStop(0.75, land.tint2); c.fillStyle = gr; c.fillRect(0, 0, tc.width, tc.height); c.restore(); }
     const row = w.querySelector('.lvrow');
     LEVELS.forEach((lv, i) => {
       if (lv.world !== wi) return;
