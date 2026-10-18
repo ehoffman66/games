@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en"><head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="icon" type="image/png" href="icon-192.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -199,6 +199,10 @@ h2 { font-size: clamp(30px, 5vw, 48px); margin: 0; letter-spacing: .02em; text-w
 #touch { position: fixed; inset: 0; display: none; touch-action: none; -webkit-touch-callout: none; }
 html.touch body.playing #touch { display: block; }
 html.touch #stage { touch-action: none; }
+/* phones: a double tap on a menu or the end screen must not zoom the page */
+html.touch * { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+/* iOS zooms in on any text box under 16px when it's tapped, and stays zoomed */
+html.touch #codeIn, html.touch #callIn { font-size: 16px; }
 .joy { position: absolute; width: 120px; height: 120px; margin: -60px 0 0 -60px; border-radius: 50%; border: 2px solid rgba(233,231,225,.35); background: rgba(7,8,10,.25); opacity: 0; pointer-events: none; }
 .joy.on { opacity: 1; }
 .joy .knob { position: absolute; left: 35px; top: 35px; width: 50px; height: 50px; border-radius: 50%; background: rgba(233,231,225,.55); }
@@ -680,7 +684,7 @@ html.touch .slots { display: none; }
 </script>
 <script type="module">
 // bump on every published version: shown on the loading screen, menu, pause screen and HUD
-const KH_VERSION = 53;
+const KH_VERSION = 54;
 for (const el of document.querySelectorAll('.ver')) el.textContent = 'v' + KH_VERSION;
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -6613,6 +6617,9 @@ const touch = { joyId: null, jx0: 0, jy0: 0, joyX: 0, joyY: 0, look: new Map(), 
 const HOLD_MS = 350;
 if (IS_TOUCH) {
   document.documentElement.classList.add('touch');
+  // no page zoom on a phone: pinches, double taps and text boxes could zoom in and leave every screen cut off at the edges
+  { const vp = document.querySelector('meta[name=viewport]'); if (vp && !/maximum-scale/.test(vp.content)) vp.content += ',maximum-scale=1'; }
+  for (const k of ['gesturestart', 'gesturechange']) document.addEventListener(k, e => e.preventDefault(), { passive: false });
   const tz = $('touch'), joy = $('joy'), knob = $('knob');
   const R = 56;
   tz.addEventListener('pointerdown', ev => {
