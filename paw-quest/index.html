@@ -262,7 +262,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 50</p>
+    <p class="ver" id="tVer">Version 51</p>
   </div>
 </section>
 
@@ -1368,6 +1368,7 @@ let HEARTS_MAX = 5;
 function startLevel(li, ki, ck){
   const spec = LEVELS[li]; L = buildLevel(spec); L.li = li; L.theme = spec.theme; L.kid = ki; L.got = 0; L.won = 0; L.jb = 0; L.hearts = startHearts(); HEARTS_MAX = L.hearts + 2; L.slots = L.hearts; L.score = 0; L.chain = 0; L.hurried = false;
   if (L.dollar && (save.dollars || {})[li]) L.dollar.got = L.dollar.old = true;
+  if (L.bone && (save.bones || {})[li]) L.bone.got = L.bone.old = true; // Erik: each golden bone can only be found once
   L.coinTot = L.coins.length + L.grid.reduce((n, row) => n + row.filter(ch => ch === '?').length, 0); L.coinGot = 0;
   L.helper = !!save.kids[ki].helper; L.timeMax = Math.ceil((L.W*T/210*2.2 + 45)/10)*10*(L.helper ? 1.5 : 1); L.time = L.timeMax;
   if (L.helper){ L.hearts += 2; HEARTS_MAX += 2; L.slots = L.hearts; L.critters.forEach(c => c.vx *= .75); L.flyers.forEach(f => f.sp *= .75); if (L.boss){ L.boss.hp = L.boss.max = Math.max(2, L.boss.hp - 1); L.boss.sp *= .8; } }
@@ -1897,7 +1898,7 @@ function finishLevel(){
   document.getElementById('dTitle').textContent = L.boss ? `You beat ${L.boss.name} and found ${save.dog.name}!` : `You found ${save.dog.name}!`;
   document.getElementById('dText').textContent = `${save.kids[L.kid].name} collected ${L.got} coins in ${LEVELS[L.li].land} ${LEVELS[L.li].world + 1}-${LEVELS[L.li].num}, plus ${bonus} for finding ${save.dog.name}. Spend them in the village shop.`;
   if (dig) $('dText').textContent += ` ${save.dog.name} was so happy and dug up ${dig} bonus coins.`;
-  if (L.bone && L.bone.got) $('dText').textContent += ` You found the golden bone too!`;
+  if (L.bone && L.bone.got && !L.bone.old) $('dText').textContent += ` You found the golden bone too!`;
   if (L.dollar && L.dollar.fresh) $('dText').textContent += ` And a dollar bill worth 100 coins!`;
   { const pc = coinPct(); save.pct = save.pct || {}; const prevP = save.pct[L.li] || 0; if (pc > prevP) save.pct[L.li] = pc; persist();
     $('dText').textContent += pc === 100 ? ` Every single coin: 100%!` : ` Coins found: ${pc}% (${L.coinGot} of ${L.coinTot})` + (prevP > pc ? `, your best is ${prevP}%.` : '.'); }
