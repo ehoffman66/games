@@ -150,7 +150,6 @@ p{margin:0;font-size:18px;line-height:1.4}
 .tabs button[aria-selected=true]{background:#ffd23a}
 .panbtn{position:fixed;top:50%;transform:translateY(-50%);width:52px;height:52px;border-radius:50%;border:3px solid var(--ink);background:rgba(255,255,255,.85);font-size:28px;font-weight:800;cursor:pointer;box-shadow:0 4px 0 var(--ink);z-index:5;color:var(--ink)}
 #panL{left:12px}#panR{right:12px}
-.make{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
 .who-edit{border:3px solid var(--ink);border-radius:18px;padding:12px;display:flex;flex-direction:column;gap:8px;background:var(--paper-2);min-width:0}
 .who-edit canvas{align-self:center;width:100px;height:110px;border-radius:14px;background:radial-gradient(circle at 50% 45%,#ffffff,#d7e8ff)}
 .who-edit label{font-weight:800;font-size:14px;letter-spacing:.05em;text-transform:uppercase}
@@ -232,7 +231,6 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     <button class="btn" id="vWard">Dress up</button>
     <button class="btn" id="vPet">Apollo</button>
     <button class="btn" id="vStick">Stickers</button>
-    <button class="btn white" id="vMake">Make it yours</button>
   </div>
 </div>
 
@@ -263,11 +261,10 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     <p id="tSub"></p>
     <div class="row center">
       <button class="btn green" id="tPlay">Play</button>
-      <button class="btn white" id="tMake">Make it yours</button>
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">93 levels in 11 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 52</p>
+    <p class="ver" id="tVer">Version 53</p>
   </div>
 </section>
 
@@ -333,14 +330,6 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
   </div>
 </section>
 
-<section class="screen" id="sMake" hidden>
-  <div class="card">
-    <h2>Make it yours</h2>
-    <div class="make" id="makeList"></div>
-    <div class="row"><button class="btn green" id="makeDone">Done</button></div>
-  </div>
-</section>
-
 <section class="screen ward home" id="sHome" hidden>
   <div class="card" id="hmCard">
     <div class="wtop"><h2>Our house</h2><div class="coinpill"><span class="coin-ico"></span><span id="hmCoins">0</span></div></div>
@@ -355,7 +344,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 <section class="screen ward" id="sWard" hidden>
   <div class="wspin" id="wSpin"><button class="btn white small icon" id="wL" aria-label="Turn left">&#8634;</button><button class="btn white small icon" id="wR" aria-label="Turn right">&#8635;</button></div>
   <div class="card" id="wCard">
-    <div class="wtop"><h2>Wardrobe</h2><div class="coinpill"><span class="coin-ico"></span><span id="wCoins">0</span></div></div>
+    <div class="wtop"><h2>Dress up</h2><div class="coinpill"><span class="coin-ico"></span><span id="wCoins">0</span></div></div>
     <div class="wkids" id="wKids"></div>
     <div class="tabs" id="wTabs" role="tablist" style="margin:0"></div>
     <div class="wgrid" id="wGrid"></div>
@@ -2350,7 +2339,7 @@ requestAnimationFrame(frame);
 
 // ---------- screens ----------
 const hud = $('hud'), pad = $('pad'), vBar = $('vBar');
-const SCREENS = ['sHome', 'sPet', 'sSet', 'sStick', 'sSaves', 'sTitle','sLevels','sShop','sMake','sDone','sOver','sPause','sWard'];
+const SCREENS = ['sHome', 'sPet', 'sSet', 'sStick', 'sSaves', 'sTitle','sLevels','sShop','sDone','sOver','sPause','sWard'];
 function show(id){ SCREENS.forEach(s => $(s).hidden = s !== id); if (id || !L){ $('hBoss').hidden = true; $('hPow').hidden = true; $('hAir').hidden = true; } else { bossHud(); powHud(); airHud(); } }
 function toVillage(){ petBtnName(); if (R3) R3.dogToy = (save.pet || {}).toy || null; quietAward = true; try { checkStickers(); } finally { quietAward = false; } state = 'village'; L = null; parts = []; show(null); hud.hidden = true; pad.hidden = true; vBar.hidden = false; $('vCoins').textContent = save.coins; $('vBones').textContent = boneCount(); panUI(); }
 function titleText(){ $('tSub').textContent = `${save.dog.name} keeps wandering off! Help ${save.kids[0].name} and ${save.kids[1].name} find ${save.dog.name} in five silly lands, then spend your coins fixing up the village.`; }
@@ -2363,7 +2352,7 @@ function useSlot(n, fresh){
   syncLooks(); portraitCache.clear(); titleText(); titleButtons();
 }
 function newGame(){
-  for (let n = 1; n <= NSLOTS; n++) if (!hasProgress(rawSlot(n)) && !(n === slot && hasProgress(save))){ useSlot(n, true); openMake('title'); return; }
+  for (let n = 1; n <= NSLOTS; n++) if (!hasProgress(rawSlot(n)) && !(n === slot && hasProgress(save))){ useSlot(n, true); openWard(0, 'title'); return; }
   openSaves('All ' + NSLOTS + ' save slots are full. Delete one to start a new game.');
 }
 let delArm = 0;
@@ -2380,7 +2369,7 @@ function openSaves(msg){
         delArm = 0; try { localStorage.removeItem(slotKey(n)); localStorage.setItem(slotKey(n) + '-del', String(Date.now())); } catch(e) {} cloudSoon(); if (n === slot){ save = clone(defaults); syncLooks(); portraitCache.clear(); titleText(); titleButtons(); } openSaves(`Game ${n} was deleted.`); };
     } else {
       row.innerHTML = `<div class="info"><b>Game ${n}</b><span>Empty</span></div><div class="acts"><button class="btn white small">New game</button></div>`;
-      row.querySelector('button').onclick = () => { delArm = 0; useSlot(n, true); openMake('title'); };
+      row.querySelector('button').onclick = () => { delArm = 0; useSlot(n, true); openWard(0, 'title'); };
     }
     list.appendChild(row);
   }
@@ -2389,12 +2378,10 @@ function openSaves(msg){
 $('tNew').onclick = newGame;
 $('tSaves').onclick = () => { delArm = 0; openSaves(); };
 $('sBack').onclick = () => { delArm = 0; titleButtons(); show('sTitle'); };
-$('tMake').onclick = () => openMake('title');
 $('vPlay').onclick = openLevels;
 $('vShop').onclick = openShop;
 $('vStick').onclick = openStickers;
 $('stBack').onclick = toVillage;
-$('vMake').onclick = () => openMake('village');
 $('hHome').onclick = () => { if (L && !L.won){ save.coins += L.got; persist(); } toVillage(); };
 $('hPause').onclick = pauseGame;
 $('pResume').onclick = resumeGame;
@@ -2498,7 +2485,7 @@ function openShop(){
     const cvs = d.querySelector('canvas'); cvs.width = 192; cvs.height = 144; const c = cvs.getContext('2d'); c.scale(2, 2); const t = hatThumbFor(id); if (t) c.drawImage(t, 6, 1, 84, 70);
     const btn = document.createElement('button'); btn.className = 'btn small' + (own ? ' white' : ' green');
     btn.textContent = own ? 'Try it on' : save.coins >= price ? 'Buy' : `Need ${price - save.coins} more`; btn.disabled = !own && save.coins < price;
-    btn.onclick = () => { if (!own){ save.coins -= price; save.hats.push(id); save.buys = (save.buys || 0) + 1; persist(); sfx.buy(); checkStickers(); openShop(); } else { lookOf(wardKid).hat = id; persist(); wardTab = 'Hats'; openWard(wardKid, 'village'); } };
+    btn.onclick = () => { if (!own){ save.coins -= price; save.hats.push(id); save.buys = (save.buys || 0) + 1; persist(); sfx.buy(); checkStickers(); openShop(); } else { if (wardKid < 0) wardKid = 0; lookOf(wardKid).hat = id; persist(); wardTab = 'Hats'; openWard(wardKid, 'village'); } };
     d.appendChild(btn); list.appendChild(d);
   });
   CATALOG.filter(it => it.cat === shopCat).forEach(it => {
@@ -2522,7 +2509,6 @@ function openShop(){
   vBar.hidden = true; panUI(); show('sShop');
 }
 
-let makeFrom = 'title';
 function swatches(colors, cur, onPick, label){
   const wrap = document.createElement('div'); wrap.className = 'sws'; wrap.setAttribute('role', 'group'); wrap.setAttribute('aria-label', label);
   colors.forEach(col => { const b = document.createElement('button'); b.className = 'sw'; b.style.background = col; b.setAttribute('aria-label', label + ' ' + col); b.setAttribute('aria-pressed', col === cur); b.onclick = () => { wrap.querySelectorAll('.sw').forEach(x => x.setAttribute('aria-pressed', x === b)); onPick(col); }; wrap.appendChild(b); });
@@ -2534,29 +2520,6 @@ function options(opts, cur, onPick){
   return wrap;
 }
 function field(box, text, el){ const l = document.createElement('label'); l.textContent = text; box.appendChild(l); box.appendChild(el); }
-function openMake(from){
-  makeFrom = from; const list = $('makeList'); list.innerHTML = '';
-  save.kids.forEach((k, ki) => {
-    const box = document.createElement('div'); box.className = 'who-edit';
-    const cvs = document.createElement('canvas'); box.appendChild(cvs); portrait(cvs, ki, 100, 110); portraitJobs.push(() => portrait(cvs, ki, 100, 110));
-    const inp = document.createElement('input'); inp.id = 'kidname' + ki; inp.maxLength = 12; inp.value = k.name; inp.oninput = () => { k.name = inp.value.trim() || defaults.kids[ki].name; };
-    field(box, 'Name', inp);
-    const dress = document.createElement('button'); dress.className = 'btn small'; dress.textContent = 'Dress up'; dress.onclick = () => { k.name = inp.value.trim() || k.name; openWard(ki, 'make'); }; box.appendChild(dress);
-    list.appendChild(box);
-  });
-  const d = save.dog, box = document.createElement('div'); box.className = 'who-edit';
-  const cvs = document.createElement('canvas'); box.appendChild(cvs);
-  const redraw = () => { cvs.width = 200; cvs.height = 220; const c = cvs.getContext('2d'); c.scale(2, 2); c.save(); c.translate(40, 84); c.scale(2, 2); drawDog(c, d, 0, 0, 0, 1, true); c.restore(); };
-  redraw();
-  const inp = document.createElement('input'); inp.id = 'dogname'; inp.maxLength = 12; inp.value = d.name; inp.oninput = () => { d.name = inp.value.trim() || 'Apollo'; };
-  field(box, 'Dog name', inp);
-  field(box, 'Fur', swatches(FUR, d.fur, v => { d.fur = v; redraw(); }, 'Fur color'));
-  field(box, 'Coat', options([['doodle','Curly'],['smooth','Smooth']], d.coat || 'smooth', v => { d.coat = v; redraw(); }));
-  field(box, 'Ears', options([['floppy','Floppy'],['pointy','Pointy']], d.ears, v => { d.ears = v; redraw(); }));
-  list.appendChild(box);
-  vBar.hidden = true; show('sMake');
-}
-$('makeDone').onclick = () => { persist(); titleText(); if (makeFrom === 'title'){ titleButtons(); show('sTitle'); } else toVillage(); };
 // ---------- wardrobe: hair colour, outfits and hats (hats cost coins) ----------
 const HAIR3D = [[null,'Original'],['#141414','Black'],['#3b2414','Dark brown'],['#6b4226','Brown'],['#a0522d','Chestnut'],['#d9a05b','Honey'],['#f1d27a','Blond'],['#f4efe2','Platinum'],['#d9663a','Ginger'],['#e5484d','Red'],['#ff6fb5','Pink'],['#b07cff','Purple'],['#3e8ed0','Blue'],['#3ec5c5','Teal'],['#22c55e','Green']];
 const OUTFITS = [
@@ -2651,7 +2614,7 @@ function renderHome3D(){
 }
 $('vHome').onclick = openHome;
 // X close button on every pop-up: it presses that screen's own back/done button, which then isn't needed at the bottom
-[['sSet', 'setBack'], ['sPet', 'petBack'], ['sStick', 'stBack'], ['sSaves', 'sBack'], ['sLevels', 'lBack'], ['sShop', 'shopDone'], ['sMake', 'makeDone'], ['sWard', 'wDone'], ['sHome', 'hmDone']].forEach(([sid, bid]) => {
+[['sSet', 'setBack'], ['sPet', 'petBack'], ['sStick', 'stBack'], ['sSaves', 'sBack'], ['sLevels', 'lBack'], ['sShop', 'shopDone'], ['sWard', 'wDone'], ['sHome', 'hmDone']].forEach(([sid, bid]) => {
   const card = $(sid).querySelector('.card'), back = $(bid), x = document.createElement('button');
   x.className = 'xbtn'; x.type = 'button'; x.setAttribute('aria-label', 'Close'); x.textContent = '✕'; x.onclick = () => back.click();
   card.classList.add('hasx'); card.prepend(x); back.hidden = true;
@@ -2673,7 +2636,9 @@ function drawWard(){
   syncLooks();
   $('wCoins').textContent = save.coins;
   const kb = $('wKids'); kb.innerHTML = '';
-  save.kids.forEach((k, i) => { const b = document.createElement('button'); b.className = 'opt'; b.textContent = k.name; b.setAttribute('aria-pressed', i === wardKid); b.onclick = () => { wardKid = i; wardTry = null; drawWard(); }; kb.appendChild(b); });
+  save.kids.forEach((k, i) => { const b = document.createElement('button'); b.className = 'opt'; b.textContent = k.name; b.setAttribute('aria-pressed', i === wardKid); b.onclick = () => { wardKid = i; wardTry = null; if (DOG_TABS.includes(wardTab) && wardTab !== 'Name') wardTab = 'Hats'; drawWard(); }; kb.appendChild(b); });
+  { const b = document.createElement('button'); b.className = 'opt'; b.textContent = '🐾 ' + save.dog.name; b.setAttribute('aria-pressed', wardKid < 0); b.onclick = () => { wardKid = -1; wardTry = null; if (!DOG_TABS.includes(wardTab)) wardTab = 'Fur'; drawWard(); }; kb.appendChild(b); }
+  if (wardKid < 0) return drawWardDog();
   const tabs = $('wTabs'); tabs.innerHTML = '';
   ['Hats','Outfits','Hair','Celebrate','Name'].forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === wardTab); b.onclick = () => { wardTab = t; wardTry = null; drawWard(); }; tabs.appendChild(b); });
   const grid = $('wGrid'), look = lookOf(wardKid); grid.innerHTML = '';
@@ -2722,13 +2687,33 @@ function drawWard(){
     bb.appendChild(btn);
   }
 }
+// Apollo's page in Dress up: fur, coat, ears and name
+const DOG_TABS = ['Fur','Coat','Ears','Name'];
+const FUR_NAMES = ['Black','Caramel','Cream','Chocolate','Grey','Golden','White'];
+function drawWardDog(){
+  const d = save.dog; if (!DOG_TABS.includes(wardTab)) wardTab = 'Fur';
+  const tabs = $('wTabs'); tabs.innerHTML = '';
+  DOG_TABS.forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === wardTab); b.onclick = () => { wardTab = t; drawWard(); }; tabs.appendChild(b); });
+  const grid = $('wGrid'); grid.innerHTML = '';
+  const tile = (pressed, onclick) => { const b = document.createElement('button'); b.className = 'wt'; b.setAttribute('aria-pressed', pressed); b.onclick = () => { onclick(); persist(); drawWard(); }; grid.appendChild(b); return b; };
+  if (wardTab === 'Fur') FUR.forEach((c, i) => { const b = tile(d.fur === c, () => d.fur = c); b.innerHTML = `<span class="hairsw" style="background:${c}"></span><span>${FUR_NAMES[i]}</span>`; });
+  else if (wardTab === 'Coat') [['doodle','Curly','〰️'],['smooth','Smooth','🐕']].forEach(([v, n, ico]) => { const b = tile((d.coat || 'smooth') === v, () => d.coat = v); b.innerHTML = `<span class="celico" aria-hidden="true">${ico}</span><span>${n}</span>`; });
+  else if (wardTab === 'Ears') [['floppy','Floppy','🐶'],['pointy','Pointy','🦊']].forEach(([v, n, ico]) => { const b = tile(d.ears === v, () => d.ears = v); b.innerHTML = `<span class="celico" aria-hidden="true">${ico}</span><span>${n}</span>`; });
+  else {
+    const box = document.createElement('div'); box.className = 'who-edit'; box.style.gridColumn = '1/-1';
+    const inp = document.createElement('input'); inp.maxLength = 12; inp.value = d.name; inp.oninput = () => { d.name = inp.value.trim() || 'Apollo'; persist(); titleText(); petBtnName(); $('wKids').lastChild.textContent = '🐾 ' + d.name; };
+    field(box, 'Dog name', inp); grid.appendChild(box);
+  }
+  if ((wardTab === 'Fur' || wardTab === 'Ears') && d.coat === 'doodle' && R3 && R3.dogReady){ const tip = document.createElement('p'); tip.className = 'small'; tip.style.gridColumn = '1/-1'; tip.textContent = `A curly ${d.name} keeps a fluffy look of its own. Pick Smooth under Coat to see these colours and ears.`; grid.prepend(tip); }
+  $('wBuyBox').innerHTML = ''; $('wMsg').textContent = '';
+}
 function renderWard3D(){
   wardSpin += wardSpinV*Math.min(0.05, dtLast)*2.4;
   if (!wardDrag && !wardSpinV) wardSpin += Math.min(0.05, dtLast)*0.25;
   const wide = viewW/viewH > 1, card = $('wCard').getBoundingClientRect();
   const cx = wide ? Math.max(0.22, (card.left/2)/window.innerWidth) : 0.5, cy = wide ? 0.5 : Math.min(0.5, (card.top/2 + 10)/window.innerHeight);
   const zoom = wide ? 1 : Math.max(0.55, Math.min(1, card.top/window.innerHeight*1.15));
-  R3.renderWardrobe(wardKid, previewLook(), viewW, viewH, clock, wardSpin, cx, cy, zoom, wardTab === 'Celebrate' ? { id: celebOf(wardKid), t: clock - wardCelebT0 } : null);
+  R3.renderWardrobe(wardKid, wardKid < 0 ? null : previewLook(), viewW, viewH, clock, wardSpin, cx, cy, zoom, wardKid >= 0 && wardTab === 'Celebrate' ? { id: celebOf(wardKid), t: clock - wardCelebT0 } : null);
   g.clearRect(0, 0, viewW, viewH);
 }
 let wardDrag = null;
@@ -2740,7 +2725,7 @@ let wardDrag = null;
   const hold = (id, d) => { const b = $(id); b.addEventListener('pointerdown', e => { e.preventDefault(); wardSpinV = d; }); ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, () => wardSpinV = 0)); };
   hold('wL', -1); hold('wR', 1);
 })();
-$('wDone').onclick = () => { wardTry = null; persist(); syncLooks(); portraitCache.clear(); if (wardFrom === 'make'){ state = 'village'; openMake(makeFrom); } else toVillage(); };
+$('wDone').onclick = () => { wardTry = null; persist(); syncLooks(); portraitCache.clear(); if (wardFrom === 'title'){ state = 'title'; titleText(); titleButtons(); show('sTitle'); } else toVillage(); };
 $('vWard').onclick = () => openWard(wardKid, 'village');
 syncLooks(); titleButtons();
 window.PQ = {get state(){ return state; }, go: { toVillage, pauseGame, resumeGame, finishLevel, outOfHearts, openSettings, openSaves }, openWard, set wardSpin(v){ wardSpin = v; }, set god(v){ godMode = v; }, set pan(v){ vPan = v; }, get L(){ return L; }, levels: LEVELS.length, spec: i => LEVELS[i], startLevel, save: () => save, bump: (c, r) => bump(c, r), mus: () => MUS.name, openStickers, award, step: n => { for (let i = 0; i < n && state === "level"; i++) step(1/120); }};
