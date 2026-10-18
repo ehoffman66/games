@@ -152,6 +152,12 @@ p{margin:0;font-size:18px;line-height:1.4}
 .opt[aria-pressed="true"]{background:var(--sun)}
 #pad{position:fixed;left:0;right:0;bottom:0;display:flex;justify-content:space-between;align-items:flex-end;padding-bottom:max(14px,env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));z-index:10;pointer-events:none}
 #pad .grp{display:flex;gap:14px;pointer-events:auto}
+#pad .pocket{display:flex;gap:8px;pointer-events:auto;align-self:flex-end;margin-bottom:4px}
+.pslot{width:54px;height:54px;border-radius:16px;border:3px dashed rgba(42,35,64,.45);background:rgba(255,255,255,.35);display:grid;place-items:center;font-size:30px;padding:0;touch-action:none}
+.pslot.full{border:3px solid var(--ink);background:radial-gradient(circle at 40% 30%,#fff,var(--pc,#ffd23a));box-shadow:0 4px 0 var(--ink);cursor:pointer;animation:pbob 1.6s ease-in-out infinite}
+.pslot.new{animation:pnew .5s ease-out 3}@keyframes pnew{50%{transform:scale(1.25)}}@keyframes pbob{50%{transform:translateY(-3px)}}
+.padb.throw{background:radial-gradient(circle at 40% 30%,#fff,#c6f03c);font-size:17px;width:78px;height:78px}
+@media (max-width:700px){.pslot{width:44px;height:44px;font-size:24px;border-radius:13px}#pad .pocket{gap:5px}.padb.throw{width:62px;height:62px;font-size:14px}}
 .padb{width:78px;height:78px;border-radius:50%;border:4px solid var(--ink);background:radial-gradient(circle at 40% 30%,rgba(255,255,255,.95),rgba(220,232,255,.75));display:grid;place-items:center;touch-action:none;cursor:pointer;box-shadow:inset 0 -4px 0 rgba(0,0,0,.08),0 5px 0 rgba(42,35,64,.85)}
 .padb.on{background:radial-gradient(circle at 40% 30%,#fff3b0,#ffc22e);transform:translateY(3px);box-shadow:0 2px 0 rgba(42,35,64,.85)}
 .padb svg{width:38px;height:38px}
@@ -236,7 +242,8 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     <button class="padb" id="bL" aria-label="Move left"><svg viewBox="0 0 24 24"><path d="M16 4 6 12l10 8z" fill="#2a2340" stroke="#2a2340" stroke-width="2" stroke-linejoin="round"/></svg></button>
     <button class="padb" id="bR" aria-label="Move right"><svg viewBox="0 0 24 24"><path d="m8 4 10 8-10 8z" fill="#2a2340" stroke="#2a2340" stroke-width="2" stroke-linejoin="round"/></svg></button>
   </div>
-  <div class="grp"><button class="padb run" id="bRun" aria-label="Run">Run</button><button class="padb" id="bJ">Jump</button></div>
+  <div class="pocket" id="pocket" aria-label="Power-up pocket"></div>
+  <div class="grp"><button class="padb throw" id="bThrow" hidden>Throw</button><button class="padb run" id="bRun" aria-label="Run">Run</button><button class="padb" id="bJ">Jump</button></div>
 </div>
 
 <section class="screen" id="sTitle">
@@ -249,7 +256,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 48</p>
+    <p class="ver" id="tVer">Version 49</p>
   </div>
 </section>
 
@@ -467,10 +474,10 @@ function makeLevels(){
     if (!boss) segs.splice(Math.floor(segs.length/2), 0, 'flat2', 'check');
     if (d < 10) segs.splice(Math.floor(segs.length*0.8), 0, 'fruit');
     // power blocks: one per level (two in long ones), each hands out super jump, a star shield or a coin magnet
-    const RP = rng(9191 + n0*53), pk = ['jump', 'star', 'magnet'];
+    const RP = rng(9191 + n0*53), pk = ['jump', 'star', 'magnet', 'ball'];
     segs.splice(Math.floor(segs.length*(0.2 + RP()*0.15)), 0, 'power');
     if (n > 34 || boss) segs.splice(Math.floor(segs.length*(0.6 + RP()*0.15)), 0, 'power');
-    const powers = segs.filter(x => x === 'power').map(() => pk[Math.floor(RP()*3)]);
+    const powers = segs.filter(x => x === 'power').map(() => pk[Math.floor(RP()*4)]);
     // a secret pipe to a bonus coin room in about half the regular levels
     if (!boss && d >= 1 && R() < .55) segs.splice(Math.floor(segs.length*(0.45 + R()*0.3)), 0, 'pipe');
     if (boss) segs.push('flat2', 'fruit', 'check', 'arena');
@@ -1321,7 +1328,7 @@ window.addEventListener('keydown', () => { if (!musicStarted){ musicStarted = tr
 // ---------- input ----------
 const input = {l:false, r:false, j:false, jp:false, d:false, run:false, runT:false};
 const KEYS = {ArrowLeft:'l', a:'l', A:'l', ArrowRight:'r', d:'r', D:'r', ArrowUp:'j', w:'j', W:'j', ' ':'j', ArrowDown:'d', s:'d', S:'d', Shift:'run'};
-window.addEventListener('keydown', e => { if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && (state === 'level' || state === 'paused')){ e.preventDefault(); state === 'level' ? pauseGame() : resumeGame(); return; } const k = KEYS[e.key]; if (!k || state !== 'level') return; e.preventDefault(); if (k === 'j' && !input.j) input.jp = true; input[k] = true; });
+window.addEventListener('keydown', e => { if ((e.key === 'p' || e.key === 'P' || e.key === 'Escape') && (state === 'level' || state === 'paused')){ e.preventDefault(); state === 'level' ? pauseGame() : resumeGame(); return; } if (state === 'level' && ['1', '2', '3'].includes(e.key)){ usePocket(+e.key - 1); return; } if (state === 'level' && 'fFxXeE'.includes(e.key) && e.key.length === 1){ e.preventDefault(); throwBall(); return; } const k = KEYS[e.key]; if (!k || state !== 'level') return; e.preventDefault(); if (k === 'j' && !input.j) input.jp = true; input[k] = true; });
 window.addEventListener('keyup', e => { const k = KEYS[e.key]; if (k) input[k] = false; });
 function bindPad(id, key){
   const el = document.getElementById(id); const ids = new Set();
@@ -1342,6 +1349,7 @@ bindPad('bJ', 'j');
   grp.addEventListener('contextmenu', e => e.preventDefault());
   // run is a toggle so little hands only need one thumb on the right
   $('bRun').addEventListener('pointerdown', e => { e.preventDefault(); input.runT = !input.runT; $('bRun').classList.toggle('on', input.runT); });
+  $('bThrow').addEventListener('pointerdown', e => { e.preventDefault(); throwBall(); });
 })();
 
 // ---------- level runtime ----------
@@ -1366,12 +1374,12 @@ function startLevel(li, ki, ck){
   L.p = {x:L.start.x, y:L.start.y, w:22, h:42, vx:0, vy:0, onGround:false, face:1, inv:0, coyote:0, anim:0, sq:0, jt:9, flip:false, runT:0, on:null};
   L.safe = {x:L.start.x, y:L.start.y};
   parts = []; camX = 0; input.l = input.r = input.j = input.jp = false;
-  getLayers(L.theme); $('hBoss').hidden = true; L.pow = null; L.hurtN = 0; $('hPow').hidden = true; delete $('hPow').dataset.k;
+  getLayers(L.theme); $('hBoss').hidden = true; L.pow = null; L.balls = []; L.throwT = 0; L.airJumps = 0; L.hurtN = 0; $('hPow').hidden = true; delete $('hPow').dataset.k;
   state = 'level'; show(null);
   hud.hidden = false; pad.hidden = false; vBar.hidden = true;
   document.getElementById('hName').innerHTML = `${esc(save.kids[ki].name)} · ${spec.world + 1}-${spec.num}` + (L.helper ? '<span class="helperpill">Helper</span>' : '');
   input.runT = false; $('bRun').classList.remove('on'); applyPrefs();
-  updHud();
+  updHud(); drawPocket();
 }
 const HEART_SVG = on => `<svg viewBox="0 0 24 22" aria-hidden="true"><path d="M12 21 2.6 11.6A5.6 5.6 0 0 1 12 3.8a5.6 5.6 0 0 1 9.4 7.8Z" fill="${on ? '#ff4d6d' : '#ffffff'}" stroke="#2a2340" stroke-width="2.4" stroke-linejoin="round"/></svg>`;
 function updHud(){
@@ -1441,13 +1449,49 @@ function bump(c, r){
     for (let i = 0; i < 8; i++) parts.push({type:'spark', x:c*T + 16, y:r*T - 4, a:i*0.785, life:.45});
   } else { sfx.bump(); L.bumpAt = {c, r, t:.12}; }
 }
-const POWERS = { jump: {name:'Super jump', secs:15, col:'#5cc8ff', ico:'🦴'}, star: {name:'Star shield', secs:8, col:'#ffd23a', ico:'⭐'}, magnet: {name:'Coin magnet', secs:12, col:'#ff5a6a', ico:'🧲'} };
+// v49 power-ups: wing jump = high jump + double jump + float, super star = invincible, faster and pit-proof,
+// mega magnet = pulls coins, fruit, bones and dollars from far away, ball blaster = throw tennis balls at critters and bosses
+const POWERS = { jump: {name:'Wing jump', secs:20, col:'#5cc8ff', ico:'🪽', tip:'Jump again in the air! Hold jump to float.'}, star: {name:'Super star', secs:12, col:'#ffd23a', ico:'⭐', tip:'Nothing can hurt you!'},
+  magnet: {name:'Mega magnet', secs:20, col:'#ff5a6a', ico:'🧲', tip:'Treats fly to you!'}, ball: {name:'Ball blaster', secs:20, col:'#c6f03c', ico:'🎾', tip:'Tap Throw to throw balls!'} };
+const POCKET_MAX = 3;
+// power-ups go into the kid's pocket (kept between levels) and are used by tapping them; with a full pocket they start straight away
+const pocket = () => { const k = save.kids[L ? L.kid : 0]; if (!Array.isArray(k.pocket)) k.pocket = []; return k.pocket; };
 function givePower(kind, x, y){
-  L.pow = {kind, t: POWERS[kind].secs}; sfx.power(); addScore(1000, x, y - 20, POWERS[kind].name + '!');
+  sfx.power(); addScore(1000, x, y - 20, POWERS[kind].name + '!');
   for (let i = 0; i < 12; i++) parts.push({type:'star', x, y, vx:Math.cos(i*0.52)*170, vy:Math.sin(i*0.52)*170 - 60, life:.6});
-  award('p' + kind); powHud();
+  award('p' + kind);
+  const pk = pocket(); if (pk.length < POCKET_MAX){ pk.push(kind); persist(); parts.push({type:'text', x, y:y - 44, text:'Saved in your pocket!', life:1.4}); drawPocket(true); }
+  else usePower(kind);
 }
-function powHud(){ const el = $('hPow'), pw = L && L.pow; if (!pw || pw.t <= 0 || state !== 'level'){ el.hidden = true; return; } el.hidden = false;
+function usePower(kind){
+  L.pow = {kind, t: POWERS[kind].secs}; L.airJumps = 0; sfx.power(); powHud(); drawPocket();
+  const p = L.p; parts.push({type:'text', x:p.x + 11, y:p.y - 30, text:POWERS[kind].tip, life:2}); for (let i = 0; i < 10; i++) parts.push({type:'star', x:p.x + 11, y:p.y + 20, vx:Math.cos(i*0.63)*150, vy:Math.sin(i*0.63)*150 - 60, life:.5});
+}
+function usePocket(i){ if (state !== 'level' || !L || L.won) return; const pk = pocket(); if (!pk[i]) return; const [kind] = pk.splice(i, 1); persist(); usePower(kind); }
+function drawPocket(flash){
+  const el = $('pocket'), pk = L ? pocket() : []; el.innerHTML = '';
+  for (let i = 0; i < POCKET_MAX; i++){ const b = document.createElement('button'); b.className = 'pslot' + (pk[i] ? ' full' : '') + (flash && i === pk.length - 1 ? ' new' : ''); const P = POWERS[pk[i]];
+    b.innerHTML = P ? `<span>${P.ico}</span>` : ''; b.setAttribute('aria-label', P ? `Use ${P.name} (key ${i + 1})` : 'Empty pocket'); if (P) b.style.setProperty('--pc', P.col);
+    b.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); usePocket(i); }); el.appendChild(b); }
+  $('bThrow').hidden = !hasPow('ball');
+}
+function throwBall(){
+  if (!hasPow('ball') || state !== 'level' || L.won) return; if ((L.throwT || 0) > 0) return; L.throwT = .28;
+  const p = L.p; L.balls.push({x:p.x + 11 + p.face*14, y:p.y + 16, vx:p.face*520 + p.vx*0.4, vy:-260, r:9, life:2.2, bounces:0}); sfx.jump();
+}
+function stepBalls(dt){
+  L.throwT = Math.max(0, (L.throwT || 0) - dt);
+  L.balls.forEach(b => { b.life -= dt; b.vy = Math.min(b.vy + 1500*dt, 900); b.x += b.vx*dt;
+    if (solid(Math.floor((b.x + Math.sign(b.vx)*b.r)/T), Math.floor(b.y/T))){ b.vx *= -1; b.x += b.vx*dt*2; }
+    b.y += b.vy*dt; if (b.vy > 0 && solid(Math.floor(b.x/T), Math.floor((b.y + b.r)/T))){ b.y = Math.floor((b.y + b.r)/T)*T - b.r; b.vy = -420; if (++b.bounces > 4) b.life = 0; }
+    if (b.y > VIEW_H + 60) b.life = 0;
+    const hit = o => b.x > o.x - b.r && b.x < o.x + o.w + b.r && b.y > o.y - b.r && b.y < o.y + o.h + b.r;
+    for (const c of [...L.critters, ...L.flyers]) if (c.alive && hit(c)){ c.alive = false; c.squish = .6; L.got++; sfx.stomp(); addScore(300, c.x + 13, c.y - 8); b.life = 0; for (let i = 0; i < 6; i++) parts.push({type:'star', x:c.x + 13, y:c.y + 10, vx:Math.cos(i*1.05)*140, vy:Math.sin(i*1.05)*140 - 60, life:.5}); break; }
+    const B = L.boss; if (b.life > 0 && B && B.alive && B.awake && hit(B)){ b.life = 0; hitBoss(B); }
+  });
+  L.balls = L.balls.filter(b => b.life > 0);
+}
+function powHud(){ const el = $('hPow'), pw = L && L.pow; $('bThrow').hidden = !hasPow('ball'); if (!pw || pw.t <= 0 || state !== 'level'){ el.hidden = true; return; } el.hidden = false;
   const P = POWERS[pw.kind], sec = Math.ceil(pw.t); if (el.dataset.k !== pw.kind){ el.dataset.k = pw.kind; el.style.setProperty('--pc', P.col); $('hPowName').textContent = P.ico + ' ' + P.name; }
   $('hPowBar').style.width = (pw.t/P.secs*100).toFixed(1) + '%'; el.classList.toggle('ending', pw.t < 2.5); }
 const hasPow = k => L && L.pow && L.pow.t > 0 && L.pow.kind === k;
@@ -1488,15 +1532,18 @@ function step(dt){
   if (dir) p.face = dir;
   const tc = Math.floor((p.x + p.w/2)/T), tr = Math.floor((p.y + p.h*0.55)/T), inWater = tr >= 0 && tr < ROWS && L.grid[tr][tc] === 'W';
   const onIce = p.onGround && L.ice.has(tc), running = input.run || input.runT;
-  const top = (running ? 300 : 210)*(inWater ? .7 : 1)*(onIce && dir ? 1.45 : 1);
+  const top = (running ? 300 : 210)*(inWater ? .7 : 1)*(onIce && dir ? 1.45 : 1)*(hasPow('star') ? 1.3 : 1);
   if (p.inv < 1.1) p.vx += (dir*top - p.vx) * Math.min(1, dt*(onIce ? 2.2 : p.onGround ? 14 : inWater ? 5 : 8));
   if (onIce && Math.abs(p.vx) > 250 && Math.random() < dt*20) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:Math.random()*6, life:.3});
   if (input.jp){ L.jb = .15; input.jp = false; }
   L.jb -= dt; p.coyote = p.onGround ? .1 : p.coyote - dt;
   if (inWater && L.jb > 0){ p.vy = -470; L.jb = 0; p.onGround = false; sfx.swim(); for (let i = 0; i < 4; i++) parts.push({type:'bubble', x:p.x + 11 + (Math.random() - .5)*16, y:p.y + 20, vy:-60 - Math.random()*40, life:.9}); }
-  if (L.jb > 0 && p.coyote > 0){ p.vy = hasPow('jump') ? -900 : -700; if (hasPow('jump')) for (let i = 0; i < 5; i++) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:i*1.26, life:.35}); L.jb = 0; p.coyote = 0; p.onGround = false; p.jt = 0; p.flip = true; sfx.jump(); dust(p.x + 11, p.y + p.h, 4); }
+  if (p.onGround) L.airJumps = 0;
+  // wing jump: one extra jump in the air
+  if (L.jb > 0 && p.coyote <= 0 && !inWater && hasPow('jump') && (L.airJumps || 0) < 1){ L.airJumps = 1; L.jb = 0; p.vy = -820; p.jt = 0; p.flip = true; sfx.spring(); for (let i = 0; i < 8; i++) parts.push({type:'star', x:p.x + 11, y:p.y + p.h, vx:Math.cos(i*0.8)*120, vy:Math.sin(i*0.8)*60 + 60, life:.4}); }
+  if (L.jb > 0 && p.coyote > 0){ p.vy = hasPow('jump') ? -980 : -700; if (hasPow('jump')) for (let i = 0; i < 5; i++) parts.push({type:'spark', x:p.x + 11, y:p.y + p.h, a:i*1.26, life:.35}); L.jb = 0; p.coyote = 0; p.onGround = false; p.jt = 0; p.flip = true; sfx.jump(); dust(p.x + 11, p.y + p.h, 4); }
   if (inWater){ p.vy = Math.min(p.vy + 700*dt, 150); if (!L.wasWater){ sfx.splash(); for (let i = 0; i < 8; i++) parts.push({type:'star', x:p.x + 11, y:(G-1)*T, vx:(Math.random() - .5)*200, vy:-150 - Math.random()*150, life:.4}); } if (Math.random() < dt*3) parts.push({type:'bubble', x:p.x + 11, y:p.y + 10, vy:-50, life:.9}); }
-  else p.vy = Math.min(p.vy + 1900*dt, 900);
+  else p.vy = Math.min(p.vy + 1900*dt, hasPow('jump') && input.j && p.vy > 0 ? 130 : 900);
   L.wasWater = inWater;
   // updrafts push up harder than gravity until you are well above the pit
   if (L.winds.has(tc) && p.y > (G-6)*T){ p.vy = Math.max(-340, p.vy - 2900*dt); p.coyote = 0; }
@@ -1522,7 +1569,7 @@ function step(dt){
   if (Math.ceil(L.time) !== L.lastT){ L.lastT = Math.ceil(L.time); updTime(); }
   if (p.onGround || (p.coyote > 0.04 && p.vy >= 0)){ p.flip = false; p.runT += Math.abs(p.vx)*dt/210*13; }
   if (p.onGround){ const rb = Math.floor((p.y + p.h + 2) / T); if (solid(Math.floor((p.x + 1)/T), rb) && solid(Math.floor((p.x + p.w - 1)/T), rb)) L.safe = {x:p.x, y:p.y}; }
-  if (p.y > VIEW_H + 80 && L.helper){ p.x = L.safe.x; p.y = L.safe.y - 2; p.vx = p.vy = 0; p.inv = 1.2; L.bubbleT = 1.2; sfx.swim(); parts.push({type:'text', x:p.x + 11, y:p.y - 14, text:'Bubble rescue!', life:1.2}); }
+  if (p.y > VIEW_H + 80 && (L.helper || hasPow('star'))){ p.x = L.safe.x; p.y = L.safe.y - 2; p.vx = p.vy = 0; p.inv = 1.2; L.bubbleT = 1.2; sfx.swim(); parts.push({type:'text', x:p.x + 11, y:p.y - 14, text:'Bubble rescue!', life:1.2}); }
   if (L.bubbleT > 0){ L.bubbleT -= dt; if (Math.random() < dt*12) parts.push({type:'bubble', x:p.x + 11 + (Math.random() - .5)*40, y:p.y + 20 + (Math.random() - .5)*40, vy:-40, life:.6}); }
   if (p.y > VIEW_H + 80){ sfx.hurt(); if (loseHeart(p)) return; p.x = L.safe.x; p.y = L.safe.y - 2; p.vx = p.vy = 0; p.inv = 1.2; parts.push({type:'text', x:p.x + 11, y:p.y - 10, text: L.hearts === 1 ? 'Last heart!' : 'Whoops!', life:1.2}); for (let i = 0; i < 8; i++) parts.push({type:'spark', x:p.x + 11, y:p.y + 20, a:i*0.8, life:.5}); }
   const pcx = p.x + p.w/2, pcy = p.y + p.h/2;
@@ -1533,7 +1580,8 @@ function step(dt){
   if (L.pow && L.pow.t > 0){ const was = L.pow.t; L.pow.t -= dt; if (L.pow.t <= 0){ parts.push({type:'text', x:pcx, y:p.y - 16, text:POWERS[L.pow.kind].name + ' wore off', life:1.2}); sfx.bump(); }
     if (Math.floor(was*4) !== Math.floor(L.pow.t*4)) powHud();
     if (L.pow.kind === 'star' && Math.random() < dt*30) parts.push({type:'star', x:pcx + (Math.random() - .5)*30, y:pcy + (Math.random() - .5)*40, vx:(Math.random() - .5)*60, vy:-40, life:.4});
-    if (L.pow.kind === 'magnet') L.coins.forEach(k => { if (k.got) return; const dx = pcx - k.x, dy = pcy - k.y, dd = Math.hypot(dx, dy); if (dd < 170 && dd > 1){ const sp = Math.min(dd, (260 + (170 - dd)*4)*dt); k.x += dx/dd*sp; k.y += dy/dd*sp; } }); }
+    if (L.pow.kind === 'magnet') [...L.coins, ...L.fruits, L.dollar, L.bone].forEach(k => { if (!k || k.got || k.hidden) return; const dx = pcx - k.x, dy = pcy - k.y, dd = Math.hypot(dx, dy); if (dd < 330 && dd > 1){ const sp = Math.min(dd, (380 + (330 - dd)*4)*dt); k.x += dx/dd*sp; k.y += dy/dd*sp; } }); }
+  if (L.balls.length || L.throwT) stepBalls(dt);
   L.coins.forEach(k => { if (!k.got && Math.abs(k.x - pcx) < 20 && Math.abs(k.y - pcy) < 28){ k.got = true; L.got++; L.coinGot++; L.score += 200; updHud(); sfx.coin(); for (let i = 0; i < 5; i++) parts.push({type:'spark', x:k.x, y:k.y, a:i*1.26 + Math.random(), life:.4}); } });
   const dl = L.dollar; if (dl && !dl.got && Math.abs(dl.x - pcx) < 26 && Math.abs(dl.y - pcy) < 34){ dl.got = dl.fresh = true; save.dollars = save.dollars || {}; save.dollars[L.li] = 1; persist(); L.got += 100; L.score += 5000; updHud(); sfx.buy(); sfx.coin();
     parts.push({type:'text', x:dl.x, y:dl.y - 18, text:'A dollar! +100 coins', life:2}); for (let i = 0; i < 14; i++) parts.push({type:'star', x:dl.x, y:dl.y, vx:Math.cos(i*0.45)*170, vy:Math.sin(i*0.45)*170 - 60, life:.8}); checkStickers(); }
@@ -1607,12 +1655,16 @@ function stepBoss(B, p, dt){
   if (p.x < B.x + B.w - 8 && p.x + p.w > B.x + 8 && p.y < B.y + B.h && p.y + p.h > B.y + 6){
     if (p.vy > 0 && p.y + p.h - B.y < 30){
       p.vy = -640; p.jt = 0; p.flip = true;
-      if (B.inv <= 0){ B.hp--; B.inv = 1.1; sfx.stomp(); parts.push({type:'ring', x:B.x + B.w/2, y:B.y + 20, life:.4}); for (let i = 0; i < 8; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 10, vx:Math.cos(i*0.8)*160, vy:Math.sin(i*0.8)*160 - 80, life:.6});
+      if (B.inv <= 0){ hitBoss(B); }
+    } else if (hasPow('star')){ if (B.inv <= 0) hitBoss(B); p.vx = (pcx < B.x + B.w/2 ? -1 : 1)*300; p.vy = -420; }
+    else hurt(p, B.x + B.w/2);
+  }
+}
+function hitBoss(B){
+  if (!B.alive) return; B.hp--; B.inv = 1.1; sfx.stomp(); parts.push({type:'ring', x:B.x + B.w/2, y:B.y + 20, life:.4}); for (let i = 0; i < 8; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 10, vx:Math.cos(i*0.8)*160, vy:Math.sin(i*0.8)*160 - 80, life:.6});
         if (B.hp <= 0){ B.alive = false; B.squish = 1.4; L.got += 20; addScore(5000, B.x + B.w/2, B.y - 10, 'Boss beaten! 5000'); sfx.fruit(); for (let i = 0; i < 16; i++) parts.push({type:'star', x:B.x + B.w/2, y:B.y + 20, vx:Math.cos(i*0.4)*220, vy:Math.sin(i*0.4)*220 - 120, life:.9}); }
         else { addScore(1000, B.x + B.w/2, B.y - 10); if (L.theme === 'meadow') [-1, 1].forEach(k => L.critters.push({x:B.x + B.w/2 - 13, y:B.y + 20, w:26, h:22, vx:k*110, vy:-480, alive:true, squish:0, onGround:false, mini:true})); }
-        bossHud(); }
-    } else hurt(p, B.x + B.w/2);
-  }
+  bossHud();
 }
 function stepShots(p, dt){
   if (!L.shots.length) return;
@@ -1651,6 +1703,7 @@ const STICKERS = [
   ['pjump', '🪽', 'Super jumper', 'Grab a super jump power-up'],
   ['pstar', '🌟', 'Star power', 'Grab a star shield'],
   ['pmagnet', '🧲', 'Coin magnet', 'Grab a coin magnet'],
+  ['pball', '🎾', 'Ball blaster', 'Grab a ball blaster'],
   ['shop5', '🛍️', 'Shopper', 'Buy 5 things in the village'],
   ['dollar1', '💵', 'Money finder', 'Grab a dollar bill'],
   ['dollars10', '💰', 'Piggy bank', 'Collect 10 dollar bills'],
@@ -2155,6 +2208,7 @@ function levelOverlay(){
   const p = L.p;
   L.pipes.forEach(q => { if (Math.abs(q.x - p.x) > viewW) return; const y = q.y - 26 + Math.sin(clock*4)*4; g.save(); g.globalAlpha = .85; g.beginPath(); g.moveTo(q.x - 9, y - 8); g.lineTo(q.x + 9, y - 8); g.lineTo(q.x, y + 4); g.closePath(); g.fillStyle = '#fff'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke(); g.restore(); });
   if (L.bubbleT > 0){ g.save(); g.globalAlpha = Math.min(1, L.bubbleT*2)*.8; g.beginPath(); g.arc(p.x + 11, p.y + 22, 34, 0, Math.PI*2); g.fillStyle = 'rgba(190,235,255,.25)'; g.fill(); g.lineWidth = 3; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke(); g.beginPath(); g.arc(p.x + 1, p.y + 10, 8, 3.6, 4.6); g.stroke(); g.restore(); }
+  (L.balls || []).forEach(b => { if (!R3 || R3.failed || !R3.kidsReady){ circle(g, b.x, b.y, b.r, '#d4f53c'); g.lineWidth = 1.5; g.strokeStyle = OL; g.beginPath(); g.arc(b.x, b.y, b.r, 0, 2*Math.PI); g.stroke(); } });
   L.shots.forEach(s => { if (!R3 || R3.failed || !R3.kidsReady){ if (s.kind === 'zap' && s.phase === 1){ g.fillStyle = '#fff6a0'; g.fillRect(s.x - 6, 0, 12, G*T); } else if (s.kind !== 'zap') circle(g, s.x, s.y, s.r, s.kind === 'snow' ? '#ffffff' : '#c58bff'); }
     if (s.kind === 'zap' && s.phase === 0){ g.save(); g.globalAlpha = .5 + Math.sin(clock*30)*.4; g.beginPath(); g.ellipse(s.x, G*T - 2, 26, 7, 0, 0, Math.PI*2); g.fillStyle = '#ffe14a'; g.fill(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke(); g.restore(); } });
 }
