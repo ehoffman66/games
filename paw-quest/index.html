@@ -228,7 +228,6 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
   <div class="row">
     <button class="btn green" id="vPlay">Adventure</button>
     <button class="btn" id="vShop">Shop</button>
-    <button class="btn" id="vHome">Our house</button>
     <button class="btn" id="vWard">Dress up</button>
     <button class="btn" id="vPet">Apollo</button>
     <button class="btn" id="vStick">Stickers</button>
@@ -266,7 +265,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">93 levels in 11 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 54</p>
+    <p class="ver" id="tVer">Version 55</p>
   </div>
 </section>
 
@@ -334,7 +333,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 
 <section class="screen ward home" id="sHome" hidden>
   <div class="card" id="hmCard">
-    <div class="wtop"><h2>Our house</h2><div class="coinpill"><span class="coin-ico"></span><span id="hmCoins">0</span></div></div>
+    <div class="wtop"><h2 id="hmTitle">Our house</h2><div class="coinpill"><span class="coin-ico"></span><span id="hmCoins">0</span></div></div>
     <div class="wkids" id="hmRooms"></div>
     <div class="tabs" id="hmTabs" role="tablist" style="margin:0"></div>
     <p class="msg" id="hmNote" hidden></p>
@@ -2319,7 +2318,7 @@ const SLOTX = {house:0, pond:-8.5, doghouse:8.6, tree:-14, swing:-17.5, statue:1
 function panUI(){ const on = state === 'village' && !vBar.hidden && !!(R3 && R3.kidsReady && !R3.failed); $('panL').hidden = $('panR').hidden = !on; $('moveBar').hidden = !on; if (!on && moveMode) setMoveMode(false); }
 // ---------- moving yard things and furniture: drag to slide, tap to turn ----------
 let moveMode = false, mv = null;
-function setMoveMode(on){ moveMode = on; $('moveBar').classList.toggle('on', on); $('vMove').textContent = on ? '✓ Done moving' : '✋ Move things'; $('vMoveBack').hidden = !on || !Object.keys(save.place || {}).length; if (on) toastMsg('✋', 'Move things', 'Drag something to move it. Tap it to turn it.'); }
+function setMoveMode(on){ moveMode = on; if (R3) R3.moving = on; $('moveBar').classList.toggle('on', on); $('vMove').textContent = on ? '✓ Done moving' : '✋ Move things'; $('vMoveBack').hidden = !on || !Object.keys(save.place || {}).length; if (on) toastMsg('✋', 'Move things', 'Drag something to move it. Tap it to turn it.'); }
 $('vMove').onclick = () => { sfx.tick && sfx.tick(); setMoveMode(!moveMode); };
 $('vMoveBack').onclick = () => { save.place = {}; persist(); sfx.bump && sfx.bump(); $('vMoveBack').hidden = true; };
 const ndcOf = e => { const r = $('cv3').getBoundingClientRect(); return [(e.clientX - r.left)/r.width*2 - 1, 1 - (e.clientY - r.top)/r.height*2]; };
@@ -2344,9 +2343,10 @@ window.addEventListener('pointerup', () => { if (!mv) return;
   R3.dragId = null; mv = null; persist(); if (moveMode) $('vMoveBack').hidden = !Object.keys(save.place || {}).length; if (state === 'home') drawHome(); });
 (() => {
   let drag = null; const cvEl = document.getElementById('cv');
-  cvEl.addEventListener('pointerdown', e => { if (state !== 'village' || vBar.hidden) return; if (moveMode && startMove(e, 'yard')) return; drag = {x: e.clientX, p: vPan}; vPanV = 0; });
+  cvEl.addEventListener('pointerdown', e => { if (state !== 'village' || vBar.hidden) return; if (moveMode && startMove(e, 'yard')) return; let tap = null; if (!moveMode && R3 && !R3.failed){ const [nx, ny] = ndcOf(e); tap = R3.pickYard(nx, ny, true); } drag = {x: e.clientX, y: e.clientY, p: vPan, tap}; vPanV = 0; });
   window.addEventListener('pointermove', e => { if (drag) vPan = Math.max(-PAN_MAX, Math.min(PAN_MAX, drag.p - (e.clientX - drag.x)/32)); });
-  window.addEventListener('pointerup', () => drag = null);
+  window.addEventListener('pointerup', e => { const d = drag; drag = null;
+    if (d && d.tap && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 10 && state === 'village' && !vBar.hidden){ const dogh = d.tap === 'doghouse'; if (dogh) sfx.bark && sfx.bark(); else sfx.tick && sfx.tick(); openHome(dogh ? ROOMS.findIndex(r => r[0] === 'doghouse') : (ROOMS[homeRoom][0] === 'doghouse' || roomLocked(homeRoom) ? 0 : homeRoom)); } });
   window.addEventListener('keydown', e => { if (state !== 'village' || vBar.hidden) return; if (e.key === 'ArrowLeft') vPanV = -1; if (e.key === 'ArrowRight') vPanV = 1; });
   window.addEventListener('keyup', e => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') vPanV = 0; });
   const hold = (id, d) => { const b = document.getElementById(id); b.addEventListener('pointerdown', e => { e.preventDefault(); vPanV = d; }); ['pointerup','pointerleave','pointercancel'].forEach(ev => b.addEventListener(ev, () => vPanV = 0)); };
@@ -2582,8 +2582,8 @@ function outfitLook(look){ const o = OUTFITS.find(x => x[0] === look.outfit) || 
 function syncLooks(){ save.kids.forEach((k, i) => { const l = lookOf(i); k.look3d = outfitLook(l); }); }
 // ---------- inside the house: one room per house size, furniture bought with coins ----------
 // [id, room, name, price]; the 3D pieces are in world3d (FURN). Rooms open as the house is upgraded in the shop.
-const ROOMS = [['living', 'Living room'], ['bed', 'Bedroom'], ['kitchen', 'Kitchen'], ['play', 'Playroom'], ['dog', "Dog's room"], ['fun', 'Game room']];
-const ROOM_LOOK = { living: [0, 0], bed: [3, 2], kitchen: [2, 4], play: [5, 3], dog: [1, 1], fun: [8, 1] };
+const ROOMS = [['living', 'Living room'], ['bed', 'Bedroom'], ['kitchen', 'Kitchen'], ['play', 'Playroom'], ['dog', "Dog's room"], ['fun', 'Game room'], ['doghouse', 'Doghouse']];
+const ROOM_LOOK = { living: [0, 0], bed: [3, 2], kitchen: [2, 4], play: [5, 3], dog: [1, 1], fun: [8, 1], doghouse: [9, 2] };
 const FURNITURE = [
   ['sofa', 'living', 'Comfy sofa', 120], ['tv', 'living', 'TV', 200], ['rug', 'living', 'Round rug', 60], ['lamp', 'living', 'Floor lamp', 80], ['plant', 'living', 'Big plant', 50], ['painting', 'living', 'Painting', 90], ['books', 'living', 'Bookshelf', 150], ['armchair', 'living', 'Armchair', 100],
   ['bunk', 'bed', 'Bunk beds', 260], ['chest', 'bed', 'Toy chest', 90], ['dresser', 'bed', 'Dresser', 160], ['nightlight', 'bed', 'Star night light', 70], ['roundrug', 'bed', 'Cloud rug', 60], ['stars', 'bed', 'Glow stars', 80], ['teddy', 'bed', 'Giant teddy', 120], ['desk', 'bed', 'Desk', 140],
@@ -2592,21 +2592,25 @@ const FURNITURE = [
   ['dogbed', 'dog', 'Dog bed', 120], ['bowls', 'dog', 'Food bowls', 40], ['toybox', 'dog', 'Toy basket', 70], ['portrait', 'dog', 'Dog portrait', 90], ['tunnel', 'dog', 'Play tunnel', 150], ['hydrant', 'dog', 'Fire hydrant', 60], ['bonerug', 'dog', 'Bone rug', 80], ['treats', 'dog', 'Treat jar', 50],
   ['arcade', 'fun', 'Arcade game', 300], ['piano', 'fun', 'Piano', 400], ['aquarium', 'fun', 'Fish tank', 350], ['telescope', 'fun', 'Telescope', 250], ['trophies', 'fun', 'Trophy shelf', 220], ['disco', 'fun', 'Disco ball', 180], ['rocket', 'fun', 'Rocket ship', 450], ['starrug', 'fun', 'Star rug', 100]
 ];
+FURNITURE.push(['pillowbed', 'doghouse', 'Pillow bed', 120], ['bonepile', 'doghouse', 'Pile of bones', 60], ['ballbasket', 'doghouse', 'Ball basket', 80], ['pawrug', 'doghouse', 'Paw rug', 50], ['kidsphoto', 'doghouse', 'Photo of us', 90], ['bonesign', 'doghouse', 'Bone sign', 70], ['chicken', 'doghouse', 'Squeaky chicken', 40], ['fountain', 'doghouse', 'Water fountain', 150]);
 const home = () => { const h = save.home = save.home || {}; h.own = h.own || {}; h.wall = h.wall || {}; h.floor = h.floor || {}; return h; };
 const roomsOpen = () => lvOf('house') + 1;
-const roomName = i => ROOMS[i][0] === 'dog' ? `${save.dog.name}'s room` : ROOMS[i][1];
+const roomName = i => ROOMS[i][0] === 'dog' ? `${save.dog.name}'s room` : ROOMS[i][0] === 'doghouse' ? `${save.dog.name}'s doghouse` : ROOMS[i][1];
+// house rooms open as the house grows; the doghouse opens once there is a doghouse in the yard
+const roomLocked = i => ROOMS[i][0] === 'doghouse' ? !lvOf('doghouse') : i >= roomsOpen();
 let homeRoom = 0, homeTab = 'Things', homePrev = null; const homePop = {}, furnThumbs = new Map();
-$('sHome').addEventListener('pointerdown', e => { if (e.target.closest('.card') || homeRoom >= roomsOpen()) return; if (startMove(e, 'home')) e.preventDefault(); });
-function openHome(){ state = 'home'; homePrev = null; vBar.hidden = true; panUI(); show('sHome'); if (homeRoom >= roomsOpen()) homeRoom = 0; drawHome(); }
+$('sHome').addEventListener('pointerdown', e => { if (e.target.closest('.card') || roomLocked(homeRoom)) return; if (startMove(e, 'home')) e.preventDefault(); });
+function openHome(ri){ state = 'home'; homePrev = null; vBar.hidden = true; panUI(); show('sHome'); if (ri != null) homeRoom = ri; else if (roomLocked(homeRoom)) homeRoom = 0; drawHome(); const rb = $('hmRooms').children[homeRoom]; if (rb) rb.scrollIntoView({ inline: 'center', block: 'nearest' }); }
 function drawHome(){
-  const h = home(), open = roomsOpen(), rid = ROOMS[homeRoom][0], locked = homeRoom >= open;
-  $('hmCoins').textContent = save.coins;
+  const h = home(), rid = ROOMS[homeRoom][0], locked = roomLocked(homeRoom);
+  $('hmCoins').textContent = save.coins; $('hmTitle').textContent = rid === 'doghouse' ? 'Doghouse' : 'Our house';
   const rb = $('hmRooms'); rb.innerHTML = '';
-  ROOMS.forEach((r, i) => { const b = document.createElement('button'); b.className = 'opt hroom'; b.setAttribute('aria-pressed', i === homeRoom); b.innerHTML = esc(roomName(i)) + (i >= open ? '<span class="lk" aria-label="locked">🔒</span>' : ''); b.onclick = () => { homeRoom = i; homePrev = null; drawHome(); }; rb.appendChild(b); });
+  ROOMS.forEach((r, i) => { const b = document.createElement('button'); b.className = 'opt hroom'; b.setAttribute('aria-pressed', i === homeRoom); b.innerHTML = esc(roomName(i)) + (roomLocked(i) ? '<span class="lk" aria-label="locked">🔒</span>' : ''); b.onclick = () => { homeRoom = i; homePrev = null; drawHome(); }; rb.appendChild(b); });
   const tabs = $('hmTabs'); tabs.innerHTML = '';
   ['Things', 'Walls', 'Floor'].forEach(t => { const b = document.createElement('button'); b.textContent = t; b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', t === homeTab); b.onclick = () => { homeTab = t; homePrev = null; drawHome(); }; tabs.appendChild(b); });
   const note = $('hmNote'); note.hidden = !locked;
-  if (locked){ const tier = CATALOG.find(c => c.id === 'house').tiers[homeRoom][0]; note.textContent = `Upgrade the house to the ${tier} in the Shop to open the ${roomName(homeRoom)}.`; }
+  if (locked && rid === 'doghouse') note.textContent = `Buy a doghouse in the Shop, then ${save.dog.name} can invite you in.`;
+  else if (locked){ const tier = CATALOG.find(c => c.id === 'house').tiers[homeRoom][0]; note.textContent = `Upgrade the house to the ${tier} in the Shop to open the ${roomName(homeRoom)}.`; }
   const grid = $('hmGrid'); grid.innerHTML = '';
   const tile = (pressed, onclick) => { const b = document.createElement('button'); b.className = 'wt'; b.setAttribute('aria-pressed', pressed); b.disabled = locked; b.onclick = onclick; grid.appendChild(b); return b; };
   if (homeTab === 'Things'){
@@ -2621,8 +2625,8 @@ function drawHome(){
     });
   } else {
     const walls = homeTab === 'Walls', cols = walls ? (R3 && R3.WALL_COLS) || [] : (R3 && R3.FLOOR_COLS) || [], cur = (walls ? h.wall : h.floor)[rid] ?? ROOM_LOOK[rid][walls ? 0 : 1];
-    const pat = walls ? ['', '', '', '', '', '', 'repeating-linear-gradient(90deg,#ffc9da 0 8px,transparent 8px 18px)', 'radial-gradient(#9fd0ff 30%,transparent 34%) 0 0/14px 14px', 'radial-gradient(#ffd23a 18%,transparent 22%) 0 0/16px 16px'] : ['repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 12px)', 'repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 12px)', '', '', 'conic-gradient(#ff8f8f 25%,#fff 0 50%,#ff8f8f 0 75%,#fff 0) 0 0/20px 20px', 'conic-gradient(#7fb9ff 25%,#fff 0 50%,#7fb9ff 0 75%,#fff 0) 0 0/20px 20px'];
-    const names = walls ? ['Cream', 'Peach', 'Mint', 'Sky blue', 'Lilac', 'Pink', 'Candy stripes', 'Polka dots', 'Starry night'] : ['Light wood', 'Dark wood', 'Blue carpet', 'Pink carpet', 'Red tiles', 'Blue tiles'];
+    const pat = walls ? ['', '', '', '', '', '', 'repeating-linear-gradient(90deg,#ffc9da 0 8px,transparent 8px 18px)', 'radial-gradient(#9fd0ff 30%,transparent 34%) 0 0/14px 14px', 'radial-gradient(#ffd23a 18%,transparent 22%) 0 0/16px 16px', 'repeating-linear-gradient(0deg,#a8723f 0 2px,transparent 2px 10px)'] : ['repeating-linear-gradient(0deg,rgba(0,0,0,.12) 0 2px,transparent 2px 12px)', 'repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 2px,transparent 2px 12px)', '', '', 'conic-gradient(#ff8f8f 25%,#fff 0 50%,#ff8f8f 0 75%,#fff 0) 0 0/20px 20px', 'conic-gradient(#7fb9ff 25%,#fff 0 50%,#7fb9ff 0 75%,#fff 0) 0 0/20px 20px'];
+    const names = walls ? ['Cream', 'Peach', 'Mint', 'Sky blue', 'Lilac', 'Pink', 'Candy stripes', 'Polka dots', 'Starry night', 'Wood planks'] : ['Light wood', 'Dark wood', 'Blue carpet', 'Pink carpet', 'Red tiles', 'Blue tiles'];
     cols.forEach((col, i) => { const b = tile(cur === i, () => { (walls ? h.wall : h.floor)[rid] = i; persist(); sfx.tick && sfx.tick(); drawHome(); }); b.innerHTML = `<span class="hsw" style="background:${pat[i] ? pat[i] + ',' : ''}${col}"></span><span>${names[i] || ''}</span><span class="tag">Free</span>`; });
   }
   const bb = $('hmBuyBox'), msg = $('hmMsg'); bb.innerHTML = ''; msg.textContent = '';
@@ -2638,11 +2642,10 @@ function drawHome(){
 function renderHome3D(){
   const h = home(), rid = ROOMS[homeRoom][0], wide = viewW/viewH > 1, card = $('hmCard').getBoundingClientRect(), W = window.innerWidth, H = window.innerHeight;
   const fitW = wide ? Math.max(0.35, (card.left - 12)/W) : 0.96, fitH = wide ? 0.94 : Math.max(0.3, (card.top - 12)/H);
-  const st = { room: rid, pos: h.pos || {}, owned: homeRoom < roomsOpen() ? h.own : {}, wall: h.wall[rid] ?? ROOM_LOOK[rid][0], floor: h.floor[rid] ?? ROOM_LOOK[rid][1], preview: homePrev, pop: homePop };
+  const st = { room: rid, pos: h.pos || {}, owned: roomLocked(homeRoom) ? {} : h.own, wall: h.wall[rid] ?? ROOM_LOOK[rid][0], floor: h.floor[rid] ?? ROOM_LOOK[rid][1], preview: homePrev, pop: homePop };
   R3.renderHome(st, viewW, viewH, clock, wide ? fitW/2 : 0.5, wide ? 0.5 : fitH/2, fitW, fitH);
   g.clearRect(0, 0, viewW, viewH);
 }
-$('vHome').onclick = openHome;
 // X close button on every pop-up: it presses that screen's own back/done button, which then isn't needed at the bottom
 [['sSet', 'setBack'], ['sPet', 'petBack'], ['sStick', 'stBack'], ['sSaves', 'sBack'], ['sLevels', 'lBack'], ['sShop', 'shopDone'], ['sWard', 'wDone'], ['sHome', 'hmDone']].forEach(([sid, bid]) => {
   const card = $(sid).querySelector('.card'), back = $(bid), x = document.createElement('button');
