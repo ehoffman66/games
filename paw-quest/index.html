@@ -27,6 +27,12 @@
 html,body{height:100%;overflow:hidden;touch-action:manipulation;overscroll-behavior:none;-webkit-text-size-adjust:100%;background:var(--sky);color:var(--ink);font-family:var(--font-b);-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #cv,#cv3{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #tint{position:fixed;inset:0;pointer-events:none;mix-blend-mode:multiply}
+/* soft sun rays (moonbeams in the forest) slanting in from the top corner of the 3D levels */
+#rays{position:fixed;inset:0;pointer-events:none;overflow:hidden;--rc:rgba(255,238,190,.34)}
+#rays::before,#rays::after{content:'';position:absolute;inset:0 -25%;-webkit-mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.5) 35%,transparent 65%);mask-image:linear-gradient(180deg,#000 0,rgba(0,0,0,.5) 35%,transparent 65%)}
+#rays::before{background:repeating-linear-gradient(100deg,transparent 0 70px,var(--rc) 100px,transparent 135px,transparent 230px,var(--rc) 242px,transparent 256px,transparent 420px);animation:rays 13s ease-in-out infinite alternate}
+#rays::after{background:repeating-linear-gradient(103deg,transparent 0 160px,var(--rc) 200px,transparent 250px,transparent 610px);opacity:.8;animation:rays 19s ease-in-out -6s infinite alternate-reverse}
+@keyframes rays{from{transform:translateX(-60px);opacity:.5}to{transform:translateX(60px);opacity:1}}
 [hidden]{display:none!important}
 button{font:inherit;color:inherit}
 .btn{font-family:var(--font-d);font-size:21px;font-weight:600;background:linear-gradient(#ffe07a,#ffbf2e);color:var(--ink);border:3px solid var(--ink);border-radius:16px;padding:10px 20px;box-shadow:inset 0 3px 0 rgba(255,255,255,.55),inset 0 -3px 0 rgba(0,0,0,.08),0 5px 0 var(--ink);cursor:pointer;transition:transform .06s,box-shadow .06s;line-height:1.1}
@@ -209,7 +215,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
 </style>
 
 <canvas id="cv3" aria-hidden="true"></canvas>
-<div id="tint" aria-hidden="true" hidden></div>
+<div id="tint" aria-hidden="true" hidden></div><div id="rays" aria-hidden="true" hidden></div>
 <canvas id="cv" aria-label="Paw Quest game"></canvas>
 
 <div class="bar" id="vBar" hidden>
@@ -256,7 +262,7 @@ body.bigpad .padb{width:112px;height:112px}body.bigpad #bJ{width:136px;height:13
     </div>
     <div class="row center" id="tMore"><button class="btn white small" id="tNew">New game</button><button class="btn white small" id="tSaves">Saved games</button><button class="btn white small" id="tSet">Settings</button></div>
     <p class="hint">85 levels in 10 lands, each with a boss at the end. Arrow keys and space work too. Turn a tablet sideways for the biggest view.</p>
-    <p class="ver" id="tVer">Version 49</p>
+    <p class="ver" id="tVer">Version 50</p>
   </div>
 </section>
 
@@ -429,6 +435,7 @@ function rng(seed){ let x = seed >>> 0; return () => { x = (Math.imul(x, 1664525
 const PER_LAND = 9;
 const BOSSES = {meadow:'King Slime', beach:'Captain Pinch', forest:'Old Toadstool', snow:'Emperor Waddles', sky:'Thunder Puff'};
 // lands 1-5 have 9 levels each; lands 6-10 (v46) revisit the five places at a new time of day, 8 harder levels each
+const RAY_COL = { meadow: 'rgba(255,244,200,.26)', beach: 'rgba(255,250,228,.22)', snow: 'rgba(255,246,228,.2)', forest: 'rgba(170,185,255,.2)', sky: 'rgba(255,226,244,.2)' };
 // tint is multiplied over the 3D picture (#tint) to set the time of day
 const LANDS = [...WORLDS.map(t => ({theme:t, name:THEMES[t].name, n:PER_LAND, boss:BOSSES[t]})),
   {theme:'meadow', name:'Sunset Meadow', n:8, boss:'Queen Slime', tint:'#ffb27a', tint2:'#ffe0b8'},
@@ -2176,7 +2183,8 @@ function renderVillage(){
 let dtLast = 0;
 function frame(now){
   const dt = Math.min(.05, (now - (frame.last || now)) / 1000); frame.last = now; if ((state === 'level') !== frame.playing){ frame.playing = state === 'level'; document.body.classList.toggle('playing', frame.playing); } if (window.innerWidth !== resize.w || window.innerHeight !== resize.h) resize(); clock += dt; dtLast = dt; panUI();
-  { const tn = (state === 'level' || state === 'done' || state === 'over' || state === 'paused') && L && R3 && R3.kidsReady && !R3.failed && LEVELS[L.li].tint || ''; const te = $('tint'); if (te.dataset.c !== tn){ te.dataset.c = tn; te.hidden = !tn; te.style.background = tn; } } syncMusic(); watchFps(dt);
+  { const tn = (state === 'level' || state === 'done' || state === 'over' || state === 'paused') && L && R3 && R3.kidsReady && !R3.failed && LEVELS[L.li].tint || ''; const te = $('tint'); if (te.dataset.c !== tn){ te.dataset.c = tn; te.hidden = !tn; te.style.background = tn; } }
+  { const th = (state === 'level' || state === 'paused') && L && R3 && R3.kidsReady && !R3.failed ? LEVELS[L.li].theme : ''; const re = $('rays'); if (re.dataset.t !== th){ re.dataset.t = th; re.hidden = !RAY_COL[th]; if (RAY_COL[th]) re.style.setProperty('--rc', RAY_COL[th]); } } syncMusic(); watchFps(dt);
   if (state === 'level'){ let s = dt; while (s > 0 && state === 'level'){ const h = Math.min(s, 1/120); step(h); s -= h; } }
   g.setTransform(dpr*scale, 0, 0, dpr*scale, 0, 0);
   const use3D = R3 && R3.kidsReady && !R3.failed;
