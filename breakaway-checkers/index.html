@@ -234,6 +234,13 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .sh-head{display:flex;gap:14px;align-items:center;background:var(--tg);border-radius:10px;padding:10px 12px;margin-right:44px}
 .sh-head h3{font-size:1.6rem;text-transform:uppercase;line-height:1}
 .sh-head small{color:var(--muted);font-size:.78rem}
+.off h4{font-size:.78rem;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);margin:6px 0 0}
+.ofl{display:flex;flex-direction:column;gap:4px}
+.ofr{display:flex;align-items:center;gap:10px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:6px 10px}
+.ofr span{flex:1;min-width:0;font-weight:700}.ofr small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
+.ofr.me{border-color:var(--led)}.ofr b{font-size:1.1rem}.ofr em{font-style:normal;font-weight:700;min-width:2.2em;text-align:right;color:var(--muted)}
+.ofr em.gu{color:#5fd38a}.ofr em.gd{color:#ff6b6b}
+.pros .pcard.sel{outline:3px solid var(--led);outline-offset:2px}
 .sh-lv{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.85rem}
 .sh-lv small{color:var(--muted)}
 .sh-pts{margin:0;font-size:.85rem;color:#c4cedb}.sh-pts b{color:var(--led)}
@@ -751,7 +758,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div><h3 class="ch">Scouting</h3><p class="muted">Sign a prospect from junior. Every one has a hidden potential, and about one in ten is a 95+ gem.</p></div>
         <div class="row"><button class="btn primary sm" id="btnScoutSk" type="button"></button><button class="btn primary sm" id="btnScoutGk" type="button"></button></div>
       </div>
-      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential.</div>
+      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
       <div><h3>What ratings do</h3><b>Shot</b> adds puck speed, <b>Accuracy</b> tightens your aim, <b>Speed</b> is top skating speed and <b>Hands</b> makes dekes quicker and harder. In net, <b>Reflexes</b> is lateral speed, <b>Size</b> covers more net, <b>Poke</b> wins more poke checks and <b>Positioning</b> makes him sharper overall. A 75 is average.</div></div>
     </div>
     <div class="pane" data-pane="locker" role="tabpanel" hidden>
@@ -789,7 +796,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v52</p>
+    <p class="ver">v53</p>
   </section>
 
   <section id="game" hidden>
@@ -1396,8 +1403,8 @@ const trainCost=r=>40+Math.max(0,r-60)*6;
 function newPlayer(R,goalie,o={}){
   const archs=Object.keys(ARCH).filter(k=>!!ARCH[k].g===goalie),arch=o.arch||pick(archs),base=o.base??rnd(64,74),r={};
   for(const [k] of goalie?GK_R:SK_R)r[k]=clamp(Math.round(base+ARCH[arch].bias[k]+gauss()*(o.spread??3)),55,92);
-  const usedN=new Set(allP(R).map(p=>p.num)),usedS=new Set(allP(R).map(p=>p.name));
-  const p={id:Math.random().toString(36).slice(2,9),g:goalie?1:0,arch,r,lv:1,xp:0,pts:0,goals:0,shots:0,saves:0,faced:0,
+  const usedN=new Set(allP(R).map(p=>p.num)),usedS=new Set([...allP(R).map(p=>p.name),...(PROF&&PROF.alumni||[]).slice(-12).map(a=>a.n.split(" ").pop())]);
+  const p={id:Math.random().toString(36).slice(2,9),g:goalie?1:0,arch,r,lv:1,xp:0,pts:0,goals:0,shots:0,saves:0,faced:0,age:Math.floor(rnd(...(o.age||[19,28]))),
     num:pick((goalie?GK_NUMS:SK_NUMS).filter(n=>!usedN.has(n)))??(goalie?30:9),name:pick(RNAMES.filter(n=>!usedS.has(n)))||pick(RNAMES),ini:pick("ABCDEGHJKLMNOPRSTVW")};
   const top=Math.max(...Object.values(r));
   p.pot=clamp(Math.round(o.pot??(Math.random()<.1?rnd(95,99.4):rnd(80,93))),top+4,99);
@@ -1405,8 +1412,8 @@ function newPlayer(R,goalie,o={}){
 }
 function startRoster(){
   const R={sk:[],gk:[],line:[],g:null};
-  for(const a of ["Sniper","Dangler","Power forward","Speedster","Two-way"]){const p=newPlayer(R,false,{arch:a,base:73,spread:1.5,pot:rnd(84,91)});R.sk.push(p);R.line.push(p.id);}
-  const g=newPlayer(R,true,{arch:"Hybrid",base:74,spread:1.5,pot:88});R.gk.push(g);R.g=g.id;
+  for(const a of ["Sniper","Dangler","Power forward","Speedster","Two-way"]){const p=newPlayer(R,false,{arch:a,base:73,spread:1.5,pot:rnd(84,91),age:[22,29]});R.sk.push(p);R.line.push(p.id);}
+  const g=newPlayer(R,true,{arch:"Hybrid",base:74,spread:1.5,pot:88,age:[24,30]});R.gk.push(g);R.g=g.id;
   return R;
 }
 const STAT0={games:0,goals:0,saves:0,wins:0,dekes:0,bh:0,posts:0,bombs:0,pokes:0,shutouts:0,hats:0,sd:0,best:0,beat:[],trained:0,signed:0,daily:0};
@@ -1599,7 +1606,9 @@ function renderStats(){
       <div class="stsum">${sum.map(([k,v])=>`<div><b>${v}</b><small>${k}</small></div>`).join("")}</div></div>
     <div class="card"><div class="row" style="justify-content:space-between"><h3 class="ch">Skaters</h3><span class="muted">Tap a player for his card</span></div><div class="tscroll">${skT}</div></div>
     <div class="card"><h3 class="ch">Goalies</h3><div class="tscroll">${gkT}</div>${older?`<p class="stnote">Games played, wins and shutouts count from this update on; goals, shots and saves go back to the start.</p>`:""}</div>
-    <div class="card">${teamCard}</div>`;
+    <div class="card">${teamCard}</div>
+    ${scope==="career"&&PROF.alumni&&PROF.alumni.length?`<div class="card"><div class="row" style="justify-content:space-between"><h3 class="ch">Retired</h3><span class="muted">${PROF.alumni.length} player${PROF.alumni.length>1?"s":""}</span></div>
+      <div class="ofl">${PROF.alumni.slice().reverse().map(a=>`<div class="ofr"><span>${a.n}<small>${a.g?"Goalie":a.arch} · retired after season ${a.y} at ${a.age} · ${a.line}${a.aw?` · ${a.aw} award${a.aw>1?"s":""}`:""}</small></span></div>`).join("")}</div></div>`:""}`;
   el.querySelectorAll("[data-sc]").forEach(b=>b.addEventListener("click",()=>{statScope=b.dataset.sc;renderStats();}));
   el.querySelectorAll("tr[data-pid]").forEach(t=>t.addEventListener("click",()=>openPlayer(t.dataset.pid)));
 }
@@ -1644,7 +1653,7 @@ function pCard(p,slot,withStats){
   const o=ovr(p),perks=perksOf(p);
   return `<button class="pcard t-${tierOf(o)}${p.me?" me":""}${p.inj?" inj":""}" data-pid="${p.id}" type="button">${p.me?`<span class="pc-you">★ YOU</span>`:""}
     <div class="pc-top"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div class="pc-slot">${slot||""}</div></div>
-    <div class="pc-num">#${p.num}</div><div class="pc-name">${p.ini}. ${p.name}</div><div class="pc-arch">${p.arch}${p.g?" goalie":""}</div>
+    <div class="pc-num">#${p.num}${p.age?` · age ${p.age}`:""}</div><div class="pc-name">${p.ini}. ${p.name}</div><div class="pc-arch">${p.arch}${p.g?" goalie":""}</div>
     ${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}</div>`:""}
     ${p.aw&&p.aw.length?`<div class="pc-aw">${p.aw.slice(-3).map(a=>`<span>🏅 ${AWN[a.id]||a.id} · S${a.y}</span>`).join("")}</div>`:""}
     <div class="pc-r">${RTS(p).map(([k,n])=>`<span>${n.slice(0,3).toUpperCase()}<b>${p.r[k]}</b></span>`).join("")}</div>
@@ -1718,7 +1727,7 @@ function openPlayer(id){
   m.innerHTML=`<div class="sheet t-${tierOf(o)}">
     <button class="x" data-act="close" aria-label="Close">✕</button>
     <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""}</div><h3>${p.ini}. ${p.name}</h3>
-      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"} · Potential ${p.pot} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
+      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"}${p.age?` · Age ${p.age}`:""} · Potential ${p.pot} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
     <div class="sh-lv"><span>Level ${p.lv}${p.lv>=MAX_LV?" (max)":""}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div><small>${p.lv>=MAX_LV?"Fully developed":`${p.xp} / ${needXP(p.lv)} XP`}</small></div>
     <p class="sh-pts">${p.pts?`<b>${p.pts} training point${p.pts>1?"s":""}</b> to spend. Each level earns one.`:`Earn XP by playing: ${p.g?"saves count most":"goals count most"}. Each level gives a training point, or pay coins to train now.`}</p>
     <div class="rts">${rows}</div>
@@ -1823,7 +1832,7 @@ const INJ_SK=.04,INJ_GK=.025,HEAL=60,INJ_WHAT=["Lower body","Upper body","Wrist"
 const injGames=()=>{const r=Math.random();return r<.4?1:r<.65?2:r<.8?3:Math.floor(rnd(4,7));};
 const injLine=p=>`${p.inj.what}, out ${p.inj.n} game${p.inj.n>1?"s":""}`;
 const isOut=(p,ex)=>!!p.inj||!!(ex&&ex.has(p.id));
-function callUp(goalie){const p=newPlayer(PROF.roster,goalie,{base:goalie?57:61,spread:2,pot:66});p.id="cu"+p.id;p.callup=1;return p;}
+function callUp(goalie){const p=newPlayer(PROF.roster,goalie,{base:goalie?57:61,spread:2,pot:66,age:[20,25]});p.id="cu"+p.id;p.callup=1;return p;}
 // the five who shoot tonight: the lineup in order, anyone out replaced by the best healthy bench skater, then call-ups
 function gameLineup(ex,preview){const R=PROF.roster,bench=R.sk.filter(p=>!R.line.includes(p.id)&&!isOut(p,ex)).sort((a,b)=>ovr(b)-ovr(a));
   return lineup().map(p=>isOut(p,ex)?bench.shift()||(preview?null:callUp(false)):p);}
@@ -2006,16 +2015,80 @@ function seasonLine(){const S=PROF.season;if(!S)return "";const r=S.rec[S.club],
   if(S.phase==="po"){const m=S.po.series.find(s=>s.a===S.club||s.b===S.club),mine=m.a===S.club;return `${PO_ROUNDS[S.po.round]} · series ${mine?m.wa:m.wb}-${mine?m.wb:m.wa}`;}
   if(S.po&&S.po.champ===S.club)return "Calder Cup champions";
   return S.po&&S.po.champ?`${byAbbr[S.po.champ].name} won the Cup`:"Missed the playoffs";}
+// ---- offseason: after a finished season everyone gets a year older. Young players grow toward their potential,
+// players past 30 slip (and their ceiling with them), veterans retire, and you draft a prospect.
+// It runs once and is kept on the season (S.off), so closing the screen and coming back shows the same results.
+const ageGrow=a=>a<=23?[1,3]:a<=26?[0,2]:a<=29?[-1,1]:a<=32?[-3,-1]:[-4,-2],retireCh=a=>clamp((a-32)*.22,0,1);
+function draftOrder(){const S=PROF.season,ch=S.po&&S.po.champ,st=standings().map(r=>r.abbr).reverse();return ch?[...st.filter(a=>a!==ch),ch]:st;}
+function runOffseason(){
+  const S=PROF.season,R=PROF.roster,ord=draftOrder(),pick=ord.indexOf(S.club)+1,q=1-(pick-1)/(ord.length-1);
+  const O=S.off={year:S.year,dev:[],ret:[],fa:[],pick,pros:[],done:false},nm=p=>`#${p.num} ${p.ini}. ${p.name}`;
+  for(const p of allP(R)){const o0=ovr(p),a=p.age=(p.age||25)+1;let [lo,hi]=ageGrow(a);
+    // your own player never slips
+    if(p.me){lo=Math.max(lo,0);hi=Math.max(hi,0);}
+    for(const [k] of RTS(p)){const d=Math.round(rnd(lo-.49,hi+.49));p.r[k]=clamp(d>0?Math.min(p.pot,p.r[k]+d):p.r[k]+d,55,99);}
+    if(hi<0&&!p.me)p.pot=Math.max(Math.max(...Object.values(p.r)),p.pot+lo+1);
+    delete p.inj;O.dev.push({id:p.id,n:nm(p),g:p.g,me:!!p.me,age:a,o:ovr(p),d:ovr(p)-o0});}
+  O.dev.sort((a,b)=>b.d-a.d||b.o-a.o);
+  for(const p of allP(R))if(!p.me&&Math.random()<retireCh(p.age)){
+    const st=pStats(p),line=p.g?`${st.sv} saves, ${svp(st.sv,st.sa)} save %`:`${st.g} goals on ${st.s} shots`;
+    R.sk=R.sk.filter(x=>x!==p);R.gk=R.gk.filter(x=>x!==p);
+    O.ret.push({n:nm(p),g:p.g,age:p.age,line});
+    (PROF.alumni=PROF.alumni||[]).push({n:nm(p),g:p.g,arch:p.arch,age:p.age,y:S.year,line,aw:(p.aw||[]).length});}
+  if(PROF.alumni)PROF.alumni=PROF.alumni.slice(-40);
+  O.dev=O.dev.filter(d=>findP(d.id));
+  // keep five shooters and a goalie: the bench steps up first, then free agents sign
+  R.line=R.line.filter(id=>R.sk.some(p=>p.id===id));
+  for(const p of [...R.sk].sort((a,b)=>ovr(b)-ovr(a)))if(R.line.length<5&&!R.line.includes(p.id))R.line.push(p.id);
+  while(R.sk.length<5){const p=newPlayer(R,false,{base:66,spread:2,pot:rnd(74,82),age:[25,31]});R.sk.push(p);R.line.push(p.id);O.fa.push(nm(p));}
+  if(!R.gk.length){const p=newPlayer(R,true,{base:66,spread:2,pot:rnd(74,82),age:[25,31]});R.gk.push(p);O.fa.push(nm(p));}
+  if(!R.gk.some(p=>p.id===R.g))R.g=[...R.gk].sort((a,b)=>ovr(b)-ovr(a))[0].id;
+  // the earlier the pick, the higher the ceilings on the board (and now and then a gem)
+  for(const g of [false,false,true]){const pot=82+12*q+rnd(-2,2)+(Math.random()<.12?5:0);
+    O.pros.push(newPlayer(R,g,{base:60+6*q,spread:2.5,pot:Math.min(99,pot),age:[18,20]}));}
+  saveProf();
+}
+function openOffseason(){
+  const S=PROF.season;if(!S||S.phase!=="done")return;if(!S.off)runOffseason();
+  const O=S.off,R=PROF.roster,full=p=>p.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK;
+  const m=document.createElement("div");m.className="modal";m.id="offmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
+  const dev=O.dev.map(d=>`<div class="ofr${d.me?" me":""}"><span>${d.n}${d.me?" ★":""}<small>${d.g?"Goalie · ":""}age ${d.age}</small></span><b>${d.o}</b><em class="${d.d>0?"gu":d.d<0?"gd":""}">${d.d>0?"+":""}${d.d||"="}</em></div>`).join("");
+  const ret=O.ret.length?O.ret.map(r=>`<div class="ofr"><span>${r.n}<small>${r.g?"Goalie · ":""}retires at ${r.age} · ${r.line}</small></span></div>`).join(""):`<p class="empty">Nobody retired this year.</p>`;
+  m.innerHTML=`<div class="sheet t-gold off">
+    <button class="x" data-a="close" aria-label="Close">✕</button>
+    <div class="sh-head"><div><div class="pc-num">After season ${O.year}</div><h3>Offseason</h3><small>A year older, a few goodbyes, and a pick in the draft</small></div></div>
+    <h4>A year older</h4><div class="ofl">${dev}</div>
+    <h4>Retirements</h4><div class="ofl">${ret}</div>
+    ${O.fa.length?`<p class="stnote">Signed to fill the lineup: ${O.fa.join(", ")}</p>`:""}
+    <h4>Draft · pick ${O.pick} of ${TEAMS.length}</h4>
+    <p class="muted" style="margin:0">${O.pick<=8?"An early pick: the best prospects are still on the board.":O.pick>=TEAMS.length-4?"Picking late: the top prospects are gone, but there's still talent.":"Pick one prospect. He starts raw, so train him up."}</p>
+    <div class="pgrid pros">${O.pros.map(p=>pCard(p,full(p)?"Roster full":`Potential ${p.pot}`)).join("")}</div>
+    <p class="cp-err" id="offErr"></p>
+    <div class="acts"><button class="btn primary" id="offDraft" disabled>Pick a prospect</button><button class="btn sm" id="offPass" type="button">Pass on the pick</button></div></div>`;
+  document.body.appendChild(m);
+  let sel=null;const q=x=>m.querySelector(x),close=()=>{m.remove();renderSeason();renderCareer();};
+  m.addEventListener("click",e=>{if(e.target===m)close();});q("[data-a=close]").addEventListener("click",close);
+  m.querySelectorAll(".pros .pcard").forEach(b=>b.addEventListener("click",()=>{const p=O.pros.find(x=>x.id===b.dataset.pid);
+    if(full(p)){q("#offErr").textContent=p.g?`You have ${MAX_GK} goalies. Release one from the roster first, or pass.`:`You have ${MAX_SK} skaters. Release a bench player first, or pass.`;return;}
+    q("#offErr").textContent="";sel=p;m.querySelectorAll(".pros .pcard").forEach(c=>c.classList.toggle("sel",c===b));
+    const d=q("#offDraft");d.disabled=false;d.textContent=`Draft ${p.ini}. ${p.name}`;}));
+  const finish=p=>{O.done=true;O.took=p?`#${p.num} ${p.ini}. ${p.name}`:null;
+    if(p)(p.g?R.gk:R.sk).push(p);saveProf();close();toast(p?`${p.ini}. ${p.name} joins the ${nickOf(byAbbr[S.club])}`:"You passed on the pick");};
+  q("#offDraft").addEventListener("click",()=>{if(sel&&!full(sel))finish(sel);});
+  q("#offPass").addEventListener("click",()=>finish(null));
+}
 function renderSeason(){renderTiles();
   const el=$("season"),S=PROF.season;if(!el)return;
   const me=selMe.value;
   if(!S||S.phase==="done"||S.phase==="out"||S.phase==="abandoned"){
-    const last=S?`<p class="muted">Season ${S.year} · ${byAbbr[S.club].abbr} · ${seasonLine()}</p>`:"";
+    const last=S?`<p class="muted">Season ${S.year} · ${byAbbr[S.club].abbr} · ${seasonLine()}</p>`:"",offTodo=S&&S.phase==="done"&&!(S.off&&S.off.done);
+    const offDone=S&&S.off&&S.off.done?`<p class="muted" style="margin:0">Offseason: ${S.off.took?`drafted ${S.off.took}`:"passed on the draft"}${S.off.ret.length?`, ${S.off.ret.length} retired`:""}.</p>`:"";
     el.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="ch">Season mode</h3><span class="muted">${SEASON_GAMES} games, then the top ${PO_TEAMS} make the playoffs</span></div>${last}
       <p class="muted" style="margin:0">Play a schedule against the league, climb the standings and chase the Calder Cup in best-of-3 playoff series.</p>
-      ${S&&S.phase==="done"?awardsHTML(S):""}
-      <div class="row"><button class="btn primary" id="btnSeasonNew">Start a season with ${byAbbr[me].abbr}</button>${S&&S.ps?`<button class="btn sm" id="btnSeasonStats" type="button">Last season's stats</button>`:""}</div>`;
-    $("btnSeasonNew").addEventListener("click",()=>{newSeason(selMe.value);renderSeason();});
+      ${S&&S.phase==="done"?awardsHTML(S):""}${offDone}
+      <div class="row">${offTodo?`<button class="btn primary" id="btnOff">${S.off?"Finish the offseason":"Go to the offseason"}</button>`:`<button class="btn primary" id="btnSeasonNew">Start a season with ${byAbbr[me].abbr}</button>`}${S&&S.ps?`<button class="btn sm" id="btnSeasonStats" type="button">Last season's stats</button>`:""}</div>`;
+    if(offTodo)$("btnOff").addEventListener("click",openOffseason);
+    else $("btnSeasonNew").addEventListener("click",()=>{newSeason(selMe.value);renderSeason();});
     if($("btnSeasonStats"))$("btnSeasonStats").addEventListener("click",()=>openStats("season"));
     return;}
   const opp=seasonNext(),st=standings(),club=byAbbr[S.club];
@@ -2147,6 +2220,7 @@ function openGcCreator(){
   const R=PROF.roster;R.line=R.line.filter(id=>R.sk.some(p=>p.id===id));
   for(const p of R.sk)if(R.line.length<5&&!R.line.includes(p.id))R.line.push(p.id);
   if(!R.gk.some(p=>p.id===R.g))R.g=R.gk[0].id;
+  for(const p of allP(R))if(p.age==null)p.age=p.me?22:Math.floor(rnd(21,30));
   if(!PROF.stats){const a=PROF.ach,T={...STAT0,beat:[]};T.games=PROF.games;T.wins=PROF.wins;T.best=PROF.streak;
     const seed={hat:"hats",shutout:"shutouts",sd:"sd",bh:"bh",post:"posts",bomb:"bombs",pokesave:"pokes",first:"goals"};
     for(const k in seed)if(a[k])T[seed[k]]=Math.max(T[seed[k]],1);PROF.stats=T;}
@@ -2238,7 +2312,7 @@ $("chipDiff").addEventListener("click",()=>showPage("options",true));$("chipRink
 // the title only plays the live arena on the Play home page; anywhere else it shrinks to one line
 function heroSync(){document.body.classList.toggle("sub",curTab!=="play"||page!=="home");}
 function renderTiles(){const S=PROF.season,C=PROF.gc,ts=$("tlSeason"),tg=$("tlGc");if(!ts||!tg)return;
-  ts.textContent=S&&(S.phase==="reg"||S.phase==="po")?`${byAbbr[S.club].abbr} · ${seasonLine()}`:`${SEASON_GAMES} games, then the playoffs`;
+  ts.textContent=S&&(S.phase==="reg"||S.phase==="po")?`${byAbbr[S.club].abbr} · ${seasonLine()}`:S&&S.phase==="done"&&!(S.off&&S.off.done)?"Offseason: your draft pick is waiting":`${SEASON_GAMES} games, then the playoffs`;
   tg.textContent=C&&C.p?(C.phase==="reg"?`${C.p.ini}. ${C.p.name} · ${C.st.w}-${C.st.l} in season ${C.year}`:`${C.p.ini}. ${C.p.name} · season ${C.year} done`):"Create your goalie and play every save";}
 heroSync();
 $("btnStart").addEventListener("click",()=>startGame(selMe.value,selOpp.value));
@@ -2689,7 +2763,7 @@ function openCreator(){
     const clash=allP(R).find(o=>o.num===p.num&&o!==me);if(clash)return err(`#${p.num} is taken by ${clash.name}. Pick another number.`);
     if(me){Object.assign(me,{first:p.first,ini:p.ini,name:p.name,num:p.num,skin:p.skin});saveProf();close();renderCareer();toast(`★ ${p.ini}. ${p.name} updated`);return;}
     if(R.sk.length>=MAX_SK)return err(`Your roster is full (${MAX_SK} skaters). Release a bench player first.`);
-    const np={...p,id:Math.random().toString(36).slice(2,9),goals:0,shots:0,saves:0,faced:0};
+    const np={...p,id:Math.random().toString(36).slice(2,9),goals:0,shots:0,saves:0,faced:0,age:22};
     R.sk.push(np);R.line=[np.id,...R.line.filter(id=>id!==np.id).slice(0,4)];saveProf();close();renderCareer();
     toast(`★ ${np.ini}. ${np.name} joins the lineup, shooting 1st`);openPlayer(np.id);
   });
