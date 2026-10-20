@@ -244,6 +244,7 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .pc-v{margin-left:auto;white-space:nowrap;color:var(--fg);font-weight:700}.pc-v .coin{width:10px;height:10px;margin-right:2px}
 .tro2 .chip{width:30px;height:30px}.tro2 small{line-height:1.35}.tro2 i{font-style:normal;font-weight:700}.tro2 i.gu{color:#5fd38a}.tro2 i.gd{color:#ff6b6b}
 .tro2 .btn{flex:none}
+.mkt{display:flex;flex-direction:column;gap:6px;min-width:0}.mkt .pcard{cursor:default;flex:1}
 .sh-lv{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.85rem}
 .sh-lv small{color:var(--muted)}
 .sh-pts{margin:0;font-size:.85rem;color:#c4cedb}.sh-pts b{color:var(--led)}
@@ -762,11 +763,15 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div><h3 class="ch">Scouting</h3><p class="muted">Sign a prospect from junior. Every one has a hidden potential, and about one in ten is a 95+ gem.</p></div>
         <div class="row"><button class="btn primary sm" id="btnScoutSk" type="button"></button><button class="btn primary sm" id="btnScoutGk" type="button"></button></div>
       </div>
+      <div class="card">
+        <div class="row" style="justify-content:space-between"><h3 class="ch">Trade market</h3><span class="muted">Other clubs' players for sale · a new board after every game</span></div>
+        <div class="pgrid" id="mkt"></div>
+      </div>
       <div class="card" id="txCard" hidden>
         <div class="row" style="justify-content:space-between"><h3 class="ch">Transactions</h3><span class="muted">Tap a player, then Trade or sell</span></div>
         <div class="ofl" id="txList"></div>
       </div>
-      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Every player has a market value: tap him and choose <b>Trade or sell</b> to take bids from other clubs or swap him for one of theirs. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
+      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Every player has a market value: tap him and choose <b>Trade or sell</b> to take bids from other clubs or swap him for one of theirs, and buy other clubs' players on the <b>trade market</b>. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
       <div><h3>What ratings do</h3><b>Shot</b> adds puck speed, <b>Accuracy</b> tightens your aim, <b>Speed</b> is top skating speed and <b>Hands</b> makes dekes quicker and harder. In net, <b>Reflexes</b> is lateral speed, <b>Size</b> covers more net, <b>Poke</b> wins more poke checks and <b>Positioning</b> makes him sharper overall. A 75 is average.</div></div>
     </div>
     <div class="pane" data-pane="locker" role="tabpanel" hidden>
@@ -804,7 +809,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v54</p>
+    <p class="ver">v55</p>
   </section>
 
   <section id="game" hidden>
@@ -1682,7 +1687,7 @@ function renderRoster(){
   s1.innerHTML=`Scout a skater <span class="coin"></span>${SIGN.sk}`;s1.disabled=PROF.coins<SIGN.sk||R.sk.length>=MAX_SK;
   s2.innerHTML=`Scout a goalie <span class="coin"></span>${SIGN.gk}`;s2.disabled=PROF.coins<SIGN.gk||R.gk.length>=MAX_GK;
   const tv=allP(R).reduce((t,p)=>t+pVal(p),0),tx=PROF.tx||[];$("teamVal").innerHTML=`Roster value ${coinN(tv)}`;
-  $("txCard").hidden=!tx.length;$("txList").innerHTML=tx.slice(-6).reverse().map(x=>`<div class="ofr"><span>${x.t}${x.y?`<small>Season ${x.y}</small>`:""}</span></div>`).join("");
+  renderMarket();$("txCard").hidden=!tx.length;$("txList").innerHTML=tx.slice(-6).reverse().map(x=>`<div class="ofr"><span>${x.t}${x.y?`<small>Season ${x.y}</small>`:""}</span></div>`).join("");
 }
 function renderLocker(){
   const shop=$("shop");shop.innerHTML="";
@@ -1745,6 +1750,26 @@ function tradeP(p,o){const R=PROF.roster,arr=p.g?R.gk:R.sk,i=arr.indexOf(p),q=o.
   arr[i]=q;const li=R.line.indexOf(p.id);if(li>=0)R.line[li]=q.id;if(R.g===p.id)R.g=q.id;q.acq=PROF.games;PROF.coins+=o.c;
   logTx(`Traded #${p.num} ${p.ini}. ${p.name} to ${byAbbr[o.t].name} for #${q.num} ${q.ini}. ${q.name}${o.c?` and ${o.c.toLocaleString("en-US")} coins`:""}`);
   cashIn();renderCareer();toast(`${q.ini}. ${q.name} arrives from the ${nickOf(byAbbr[o.t])}`);openPlayer(q.id);}
+// the trade market: four players other clubs will sell you for a fifth over their value (a star, a teenage prospect,
+// a solid regular and a goalie); a new board after every game
+const BUY_MARK=1.2;
+function market(){const M=PROF.mkt;if(M&&M.g===PROF.games)return M.list;
+  const R=PROF.roster,clubs=TEAMS.map(t=>t.abbr).filter(a=>a!==myClub()).sort(()=>Math.random()-.5);
+  const specs=[[0,rnd(80,85),[26,32],[3,8]],[0,rnd(64,69),[18,20],[18,28]],[0,rnd(73,77),[24,31],[3,9]],[1,rnd(74,82),[24,32],[3,9]]];
+  const list=specs.map(([g,base,age,up],i)=>{const q=newPlayer(R,!!g,{base,spread:2.5,age,pot:base+rnd(...up)});q.from=clubs[i];return {q,c:Math.round(pVal(q)*BUY_MARK/10)*10};});
+  PROF.mkt={g:PROF.games,list};saveProf();return list;}
+function buyP(i){const R=PROF.roster,M=market(),x=M[i];if(!x||x.sold)return;const q=x.q;
+  if(PROF.coins<x.c||(q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK))return;
+  // the board was drawn a while ago: if someone has taken his number since, he picks a free one
+  if(allP(R).some(o=>o.num===q.num)){const used=new Set(allP(R).map(o=>o.num));q.num=(q.g?GK_NUMS:SK_NUMS).find(n=>!used.has(n))??q.num;}
+  PROF.coins-=x.c;x.sold=1;q.acq=PROF.games;(q.g?R.gk:R.sk).push(q);
+  logTx(`Bought #${q.num} ${q.ini}. ${q.name} from ${byAbbr[q.from].name} for ${x.c.toLocaleString("en-US")} coins`);
+  cashIn();renderCareer();toast(`${q.ini}. ${q.name} joins from the ${nickOf(byAbbr[q.from])}`);openPlayer(q.id);}
+function renderMarket(){const el=$("mkt");if(!el)return;const R=PROF.roster,M=market();
+  el.innerHTML=M.map((x,i)=>{const q=x.q,full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK;
+    return `<div class="mkt">${pCard(q,`From ${q.from}`).replace('data-pid=','data-mid=')}${x.sold?`<button class="btn sm" type="button" disabled>Bought</button>`:
+      `<button class="btn primary sm" type="button" data-buy="${i}" ${PROF.coins<x.c||full?"disabled":""}>${full?"Roster full":`Buy ${coinN(x.c)}`}</button>`}</div>`;}).join("");
+  el.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{if(!b.dataset.arm){el.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.innerHTML=x.dataset.l;});b.dataset.l=b.innerHTML;b.dataset.arm=1;b.textContent="Confirm";return;}buyP(+b.dataset.buy);}));}
 function openTrade(id){
   const p=findP(id);if(!p||p.me)return;closePlayer();const old=$("trmodal");if(old)old.remove();
   const R=PROF.roster,o=ovr(p),v=pVal(p),lock=tradeLock(p),O=lock?null:tradeOffers(p),sellOk=canSell(p);
@@ -1786,7 +1811,7 @@ function openPlayer(id){
   if(p.g&&!starter)acts+=`<button class="btn primary sm" data-act="start">Make starter</button>`;
   if(p.me)acts+=`<button class="btn" data-act="edit">Edit name, number and look</button>`;
   if(p.inj)acts+=`<button class="btn primary sm" data-act="heal" ${PROF.coins<HEAL*p.inj.n?"disabled":""}>Treat him now <span class="coin"></span>${HEAL*p.inj.n}</button>`;
-  if(!p.me)acts+=`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
+  acts+=p.me?`<p class="stnote" style="flex-basis:100%">Worth ${coinN(pVal(p))} on the market, but you're not for sale: this is you. Tap any other player to trade or sell him.</p>`:`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
   const stat=p.g?`${p.saves} saves on ${p.faced} shots`:`${p.goals} goals on ${p.shots} attempts`;
   const SS=PROF.season,sRow=SS&&SS.ps&&SS.ps[p.id]?[[`Season ${SS.year}`,pStats(p,"season")]]:[];
   const stRows=[["Career",pStats(p)],...sRow],stCols=p.g?["GP","W","L","SA","SV","SV%","GAA","SO"]:["GP","G","S","SH%","Dekes","PIM"];
@@ -2341,7 +2366,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
