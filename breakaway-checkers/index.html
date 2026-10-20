@@ -241,6 +241,9 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .ofr.me{border-color:var(--led)}.ofr b{font-size:1.1rem}.ofr em{font-style:normal;font-weight:700;min-width:2.2em;text-align:right;color:var(--muted)}
 .ofr em.gu{color:#5fd38a}.ofr em.gd{color:#ff6b6b}
 .pros .pcard.sel{outline:3px solid var(--led);outline-offset:2px}
+.pc-v{margin-left:auto;white-space:nowrap;color:var(--fg);font-weight:700}.pc-v .coin{width:10px;height:10px;margin-right:2px}
+.tro2 .chip{width:30px;height:30px}.tro2 small{line-height:1.35}.tro2 i{font-style:normal;font-weight:700}.tro2 i.gu{color:#5fd38a}.tro2 i.gd{color:#ff6b6b}
+.tro2 .btn{flex:none}
 .sh-lv{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.85rem}
 .sh-lv small{color:var(--muted)}
 .sh-pts{margin:0;font-size:.85rem;color:#c4cedb}.sh-pts b{color:var(--led)}
@@ -752,13 +755,18 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
       </div>
       <div class="card">
         <div class="row" style="justify-content:space-between"><h3 class="ch">Bench</h3><span class="muted" id="benchCount"></span></div>
+        <p class="muted" id="teamVal" style="margin:0"></p>
         <div class="pgrid" id="bench"></div>
       </div>
       <div class="card scout">
         <div><h3 class="ch">Scouting</h3><p class="muted">Sign a prospect from junior. Every one has a hidden potential, and about one in ten is a 95+ gem.</p></div>
         <div class="row"><button class="btn primary sm" id="btnScoutSk" type="button"></button><button class="btn primary sm" id="btnScoutGk" type="button"></button></div>
       </div>
-      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
+      <div class="card" id="txCard" hidden>
+        <div class="row" style="justify-content:space-between"><h3 class="ch">Transactions</h3><span class="muted">Tap a player, then Trade or sell</span></div>
+        <div class="ofl" id="txList"></div>
+      </div>
+      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Every player has a market value: tap him and choose <b>Trade or sell</b> to take bids from other clubs or swap him for one of theirs. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
       <div><h3>What ratings do</h3><b>Shot</b> adds puck speed, <b>Accuracy</b> tightens your aim, <b>Speed</b> is top skating speed and <b>Hands</b> makes dekes quicker and harder. In net, <b>Reflexes</b> is lateral speed, <b>Size</b> covers more net, <b>Poke</b> wins more poke checks and <b>Positioning</b> makes him sharper overall. A 75 is average.</div></div>
     </div>
     <div class="pane" data-pane="locker" role="tabpanel" hidden>
@@ -796,7 +804,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v53</p>
+    <p class="ver">v54</p>
   </section>
 
   <section id="game" hidden>
@@ -1657,7 +1665,7 @@ function pCard(p,slot,withStats){
     ${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}</div>`:""}
     ${p.aw&&p.aw.length?`<div class="pc-aw">${p.aw.slice(-3).map(a=>`<span>🏅 ${AWN[a.id]||a.id} · S${a.y}</span>`).join("")}</div>`:""}
     <div class="pc-r">${RTS(p).map(([k,n])=>`<span>${n.slice(0,3).toUpperCase()}<b>${p.r[k]}</b></span>`).join("")}</div>
-    <div class="pc-lv"><span>Lv ${p.lv}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div>${p.pts?`<i class="dot-pt">+${p.pts}</i>`:""}</div>
+    <div class="pc-lv"><span>Lv ${p.lv}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div>${p.pts?`<i class="dot-pt">+${p.pts}</i>`:""}${pVal(p)?`<span class="pc-v">${coinN(pVal(p))}</span>`:""}</div>
     ${perks.length?`<div class="pc-perks">${perks.map(k=>`<span>${PERKS[k].name}</span>`).join("")}</div>`:""}
     ${withStats?`<div class="pc-st" title="Career stats">${statCells(p,pStats(p)).map(([k,v])=>`<span>${k}<b>${v}</b></span>`).join("")}</div>`:""}
   </button>`;
@@ -1673,6 +1681,8 @@ function renderRoster(){
   const s1=$("btnScoutSk"),s2=$("btnScoutGk");
   s1.innerHTML=`Scout a skater <span class="coin"></span>${SIGN.sk}`;s1.disabled=PROF.coins<SIGN.sk||R.sk.length>=MAX_SK;
   s2.innerHTML=`Scout a goalie <span class="coin"></span>${SIGN.gk}`;s2.disabled=PROF.coins<SIGN.gk||R.gk.length>=MAX_GK;
+  const tv=allP(R).reduce((t,p)=>t+pVal(p),0),tx=PROF.tx||[];$("teamVal").innerHTML=`Roster value ${coinN(tv)}`;
+  $("txCard").hidden=!tx.length;$("txList").innerHTML=tx.slice(-6).reverse().map(x=>`<div class="ofr"><span>${x.t}${x.y?`<small>Season ${x.y}</small>`:""}</span></div>`).join("");
 }
 function renderLocker(){
   const shop=$("shop");shop.innerHTML="";
@@ -1700,6 +1710,64 @@ function renderTrophies(){
   $("trophies").innerHTML=ACH.map(a=>`<div class="tro ${PROF.ach[a.id]?"got":""}"><b>${a.name}</b><span>${a.desc}</span><em>${PROF.ach[a.id]?"Unlocked":"+"+a.coins+" coins"}</em></div>`).join("");
 }
 
+// ---- player value and the trade market: what other clubs would pay for a player, or trade for him.
+// Worth climbs steeply with OVR, young players are paid for their potential, perks and awards add to it, and it fades after 30.
+const NEW_LOCK=3;
+function pVal(p){const o=ovr(p),a=p.age||25,pot=p.pot>o?p.pot:o,cur=250*Math.pow(1.15,o-70),pv=250*Math.pow(1.15,o+(pot-o)*.6-70);
+  const w=a<=21?.3:a<=24?.2:a<=27?.08:0,am=a<=29?1:a<=31?.8:a<=33?.6:.4;
+  const v=(cur+w*Math.max(0,pv-cur))*am*(1+.08*perksOf(p).length)*(1+Math.min(.25,.05*(p.aw||[]).length))*(p.g?1.1:1)*(p.inj?.7:1);
+  return Number.isFinite(v)?Math.max(40,Math.round(v/10)*10):0;}
+const coinN=n=>`<span class="coin"></span>${n.toLocaleString("en-US")}`;
+// a new arrival has to play a few games before clubs will deal for him (so signing to flip isn't a money machine)
+const tradeLock=p=>p.acq!=null?Math.max(0,NEW_LOCK-(PROF.games-p.acq)):0;
+const myClub=()=>PROF.season&&(PROF.season.phase==="reg"||PROF.season.phase==="po")?PROF.season.club:selMe.value;
+const canSell=p=>{const R=PROF.roster;return !p.me&&(p.g?R.gk.length>1:R.sk.length>5);};
+function logTx(t){(PROF.tx=PROF.tx||[]).push({t,y:PROF.season?PROF.season.year:0});PROF.tx=PROF.tx.slice(-20);}
+// the shooting order keeps five and the net keeps a starter: the best of the bench steps in
+function fixRoster(){const R=PROF.roster;R.line=R.line.filter(id=>R.sk.some(p=>p.id===id));
+  for(const p of [...R.sk].sort((a,b)=>ovr(b)-ovr(a)))if(R.line.length<5&&!R.line.includes(p.id))R.line.push(p.id);
+  if(!R.gk.some(p=>p.id===R.g))R.g=[...R.gk].sort((a,b)=>ovr(b)-ovr(a))[0].id;}
+// three clubs bid coins and two offer a player at the same position; the offers stand until you play another game
+function tradeOffers(p){
+  if(p.tb&&p.tb.g===PROF.games)return p.tb;
+  const v=pVal(p),o=ovr(p),R=PROF.roster,clubs=shuffle(TEAMS.map(t=>t.abbr).filter(a=>a!==myClub()));
+  const bids=clubs.slice(0,3).map(t=>({t,c:Math.round(v*rnd(.78,1.02)/10)*10})).sort((a,b)=>b.c-a.c);
+  const trades=clubs.slice(3,5).map(t=>{const tv=v*rnd(.75,1);let q=null,d=1e9;
+    for(let i=0;i<30;i++){const base=o+rnd(-7,5),c=newPlayer(R,!!p.g,{base,spread:2.5,age:[20,33],pot:base+rnd(3,13)}),e=Math.abs(pVal(c)-tv);if(e<d){d=e;q=c;}}
+    q.from=t;return {t,q,c:Math.max(0,Math.round((v*rnd(.9,1.02)-pVal(q))/10)*10)};});
+  p.tb={g:PROF.games,bids,trades};saveProf();return p.tb;
+}
+function sellP(p,b){const R=PROF.roster;if(!canSell(p)||tradeLock(p))return;
+  R.sk=R.sk.filter(x=>x!==p);R.gk=R.gk.filter(x=>x!==p);fixRoster();PROF.coins+=b.c;
+  logTx(`Sold #${p.num} ${p.ini}. ${p.name} to ${byAbbr[b.t].name} for ${b.c.toLocaleString("en-US")} coins`);
+  cashIn();renderCareer();toast(`${p.ini}. ${p.name} sold to the ${nickOf(byAbbr[b.t])} · +${b.c.toLocaleString("en-US")}`);}
+function tradeP(p,o){const R=PROF.roster,arr=p.g?R.gk:R.sk,i=arr.indexOf(p),q=o.q;if(i<0||p.me||tradeLock(p))return;
+  arr[i]=q;const li=R.line.indexOf(p.id);if(li>=0)R.line[li]=q.id;if(R.g===p.id)R.g=q.id;q.acq=PROF.games;PROF.coins+=o.c;
+  logTx(`Traded #${p.num} ${p.ini}. ${p.name} to ${byAbbr[o.t].name} for #${q.num} ${q.ini}. ${q.name}${o.c?` and ${o.c.toLocaleString("en-US")} coins`:""}`);
+  cashIn();renderCareer();toast(`${q.ini}. ${q.name} arrives from the ${nickOf(byAbbr[o.t])}`);openPlayer(q.id);}
+function openTrade(id){
+  const p=findP(id);if(!p||p.me)return;closePlayer();const old=$("trmodal");if(old)old.remove();
+  const R=PROF.roster,o=ovr(p),v=pVal(p),lock=tradeLock(p),O=lock?null:tradeOffers(p),sellOk=canSell(p);
+  const club=t=>`<img class="chip logo" src="${logoURL(byAbbr[t])}" alt="">`;
+  const m=document.createElement("div");m.className="modal";m.id="trmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
+  const body=lock?`<p class="muted" style="margin:0">${p.name} just joined. Clubs will make offers once he has played ${lock} more game${lock>1?"s":""}.</p>`:`
+    <h4>Sell him</h4><div class="ofl">${O.bids.map((b,i)=>`<div class="ofr tro2">${club(b.t)}<span>${byAbbr[b.t].name}<small>offers ${coinN(b.c)}</small></span><button class="btn sm primary" data-sell="${i}" type="button" ${sellOk?"":"disabled"}>Sell</button></div>`).join("")}</div>
+    ${sellOk?"":`<p class="stnote">You need ${p.g?"a goalie in net":"five shooters"}, so you can only trade him for now.</p>`}
+    <h4>Trade him</h4><div class="ofl">${O.trades.map((x,i)=>{const q=x.q,d=ovr(q)-o;return `<div class="ofr tro2">${club(x.t)}<span>#${q.num} ${q.ini}. ${q.name}${x.c?` + ${coinN(x.c)}`:""}
+      <small>${q.arch}${q.g?" goalie":""} · age ${q.age} · OVR ${ovr(q)} <i class="${d>0?"gu":d<0?"gd":""}">(${d>0?"+":""}${d||"same"})</i> · potential ${q.pot} · worth ${coinN(pVal(q))}</small>
+      <small>${RTS(q).map(([k,n])=>`${n.slice(0,3).toUpperCase()} ${q.r[k]}`).join(" · ")}</small></span><button class="btn sm" data-trade="${i}" type="button">Trade</button></div>`;}).join("")}</div>
+    <p class="stnote">Clubs make new offers after your next game. Tap twice to accept.</p>`;
+  m.innerHTML=`<div class="sheet t-${tierOf(o)} off trd">
+    <button class="x" data-a="close" aria-label="Close">✕</button>
+    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""} · age ${p.age}</div><h3>${p.ini}. ${p.name}</h3><small>Market value ${coinN(v)}</small></div></div>
+    ${body}</div>`;
+  document.body.appendChild(m);
+  const close=()=>m.remove();m.addEventListener("click",e=>{if(e.target===m)close();});m.querySelector("[data-a=close]").addEventListener("click",close);
+  // two taps to accept, so a stray tap can't send a player away
+  const arm=(b,label,go)=>b.addEventListener("click",()=>{if(!b.dataset.arm){m.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.textContent=x.dataset.l;});b.dataset.l=b.textContent;b.dataset.arm=1;b.textContent=label;return;}close();go();});
+  m.querySelectorAll("[data-sell]").forEach(b=>arm(b,"Confirm",()=>sellP(p,O.bids[+b.dataset.sell])));
+  m.querySelectorAll("[data-trade]").forEach(b=>arm(b,"Confirm",()=>tradeP(p,O.trades[+b.dataset.trade])));
+}
 // ---- player detail sheet: train, set the lineup, sign and release
 function closePlayer(){const m=$("pmodal");if(m)m.remove();}
 function openPlayer(id){
@@ -1718,7 +1786,7 @@ function openPlayer(id){
   if(p.g&&!starter)acts+=`<button class="btn primary sm" data-act="start">Make starter</button>`;
   if(p.me)acts+=`<button class="btn" data-act="edit">Edit name, number and look</button>`;
   if(p.inj)acts+=`<button class="btn primary sm" data-act="heal" ${PROF.coins<HEAL*p.inj.n?"disabled":""}>Treat him now <span class="coin"></span>${HEAL*p.inj.n}</button>`;
-  if(inLine<0&&!starter&&!p.me)acts+=`<button class="btn danger" data-act="release">Release <span class="coin"></span>+${RELEASE}</button>`;
+  if(!p.me)acts+=`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
   const stat=p.g?`${p.saves} saves on ${p.faced} shots`:`${p.goals} goals on ${p.shots} attempts`;
   const SS=PROF.season,sRow=SS&&SS.ps&&SS.ps[p.id]?[[`Season ${SS.year}`,pStats(p,"season")]]:[];
   const stRows=[["Career",pStats(p)],...sRow],stCols=p.g?["GP","W","L","SA","SV","SV%","GAA","SO"]:["GP","G","S","SH%","Dekes","PIM"];
@@ -1745,6 +1813,7 @@ function train(p,k,pay){
 function playerAct(p,a){
   const R=PROF.roster,i=R.line.indexOf(p.id);
   if(a==="close")return closePlayer();
+  if(a==="trade")return openTrade(p.id);
   if(a==="edit"){closePlayer();return openCreator();}
   if(a==="up"&&i>0)[R.line[i-1],R.line[i]]=[R.line[i],R.line[i-1]];
   if(a==="down"&&i>=0&&i<4)[R.line[i+1],R.line[i]]=[R.line[i],R.line[i+1]];
@@ -1757,7 +1826,7 @@ function playerAct(p,a){
 function scout(goalie){
   const R=PROF.roster,cost=goalie?SIGN.gk:SIGN.sk;
   if(PROF.coins<cost||(goalie?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK))return;
-  PROF.coins-=cost;const p=newPlayer(R,goalie);(goalie?R.gk:R.sk).push(p);PROF.stats.signed++;
+  PROF.coins-=cost;const p=newPlayer(R,goalie);p.acq=PROF.games;(goalie?R.gk:R.sk).push(p);PROF.stats.signed++;logTx(`Signed #${p.num} ${p.ini}. ${p.name} from junior`);
   if(p.pot>=95&&!PROF.ach.gem){PROF.ach.gem=Date.now();PROF.coins+=ACH.find(a=>a.id==="gem").coins;setTimeout(()=>toast("🏆 Diamond in the rough +150"),1600);}
   cashIn();renderCareer();
   // the reveal: a face-down card that flips to the new signing
@@ -2073,7 +2142,7 @@ function openOffseason(){
     q("#offErr").textContent="";sel=p;m.querySelectorAll(".pros .pcard").forEach(c=>c.classList.toggle("sel",c===b));
     const d=q("#offDraft");d.disabled=false;d.textContent=`Draft ${p.ini}. ${p.name}`;}));
   const finish=p=>{O.done=true;O.took=p?`#${p.num} ${p.ini}. ${p.name}`:null;
-    if(p)(p.g?R.gk:R.sk).push(p);saveProf();close();toast(p?`${p.ini}. ${p.name} joins the ${nickOf(byAbbr[S.club])}`:"You passed on the pick");};
+    if(p){p.acq=PROF.games;(p.g?R.gk:R.sk).push(p);logTx(`Drafted #${p.num} ${p.ini}. ${p.name} with pick ${O.pick}`);}saveProf();close();toast(p?`${p.ini}. ${p.name} joins the ${nickOf(byAbbr[S.club])}`:"You passed on the pick");};
   q("#offDraft").addEventListener("click",()=>{if(sel&&!full(sel))finish(sel);});
   q("#offPass").addEventListener("click",()=>finish(null));
 }
@@ -2272,7 +2341,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
