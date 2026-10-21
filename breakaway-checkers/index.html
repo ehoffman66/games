@@ -247,7 +247,7 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .mkt{display:flex;flex-direction:column;gap:6px;min-width:0}.mkc{font-size:.75rem;color:var(--muted);text-align:center}
 .over p.callline{margin:0;font-size:.95rem;color:var(--fg);max-width:40ch;display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px}
 .strip.call{border-color:var(--led)}.dl.on{color:var(--led)}#teamVal b.gd,#offPay b.gd{color:#ff6b6b}
-.mkt .pcard{cursor:default;flex:1}
+.mkt .pcard{flex:1}
 .sh-lv{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;font-size:.85rem}
 .sh-lv small{color:var(--muted)}
 .sh-pts{margin:0;font-size:.85rem;color:#c4cedb}.sh-pts b{color:var(--led)}
@@ -769,7 +769,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="row"><button class="btn primary sm" id="btnScoutSk" type="button"></button><button class="btn primary sm" id="btnScoutGk" type="button"></button></div>
       </div>
       <div class="card">
-        <div class="row" style="justify-content:space-between"><h3 class="ch">Trade market</h3><span class="muted">Other clubs' players for sale · a new board after every game</span></div>
+        <div class="row" style="justify-content:space-between"><h3 class="ch">Trade market</h3><span class="muted">Other clubs' players for sale · tap one for his full card · a new board after every game</span></div>
         <p class="stnote" id="mktNote"></p>
         <div class="pgrid" id="mkt"></div>
       </div>
@@ -815,7 +815,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v56</p>
+    <p class="ver">v57</p>
   </section>
 
   <section id="game" hidden>
@@ -1776,12 +1776,33 @@ function buyP(i){const R=PROF.roster,M=market(),x=M[i];if(!x||x.sold||tradeClose
   PROF.coins-=x.c;x.sold=1;q.acq=PROF.games;(q.g?R.gk:R.sk).push(q);
   logTx(`Bought #${q.num} ${q.ini}. ${q.name} from ${byAbbr[q.from].name} for ${x.c.toLocaleString("en-US")} coins`);
   cashIn();renderCareer();toast(`${q.ini}. ${q.name} joins from the ${nickOf(byAbbr[q.from])}`);openPlayer(q.id);}
+// a market player's full card: his ratings and how far each can grow, his perks, his contract and the asking price
+function openMktPlayer(i){const x=market()[i];if(!x)return;const q=x.q,R=PROF.roster,o=ovr(q),club=byAbbr[q.from];
+  let m=$("pmodal");if(!m){m=document.createElement("div");m.id="pmodal";m.className="modal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");document.body.appendChild(m);
+    m.addEventListener("click",e=>{if(e.target===m)closePlayer();});}
+  m.dataset.id="";
+  const rows=RTS(q).map(([k,n])=>{const v=q.r[k];return `<div class="rt"><span>${n}</span><div class="rbar"><i style="width:${(v-50)/49*100}%"></i><u style="left:${(q.pot-50)/49*100}%"></u></div><b>${v}</b><small class="cap">${v>=q.pot?"At potential":`+${q.pot-v} to grow`}</small></div>`;}).join("");
+  const perks=ARCH[q.arch].perks.map((k,j)=>`<div class="perk"><b>${PERKS[k].name}</b><span>${PERKS[k].desc}</span><em>Unlocks at level ${PERK_LV[j]}</em></div>`).join("");
+  const full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,why=x.sold?"Bought":tradeClosed()?"Trades closed":full?"Roster full":!capOk(q.sal||.5)?"Over the cap":"",short=!why&&PROF.coins<x.c;
+  m.innerHTML=`<div class="sheet t-${tierOf(o)}">
+    <button class="x" data-act="close" aria-label="Close">✕</button>
+    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${q.num} · ${q.arch}${q.g?" goalie":""}</div><h3>${q.ini}. ${q.name}</h3>
+      <small>${club?club.name:q.from} · Age ${q.age} · Potential ${q.pot} · ${money(q.sal||.5)} × ${yrsT(q.yrs||1)}</small></div></div>
+    <div class="sh-lv"><span>Level ${q.lv}</span><div class="bar"><i style="width:${Math.round(q.xp/needXP(q.lv)*100)}%"></i></div><small>${q.xp} / ${needXP(q.lv)} XP</small></div>
+    <p class="sh-pts">Worth ${coinN(pVal(q))}. The ${club?nickOf(club):q.from} want ${coinN(x.c)} for him.</p>
+    <div class="rts">${rows}</div>
+    <div class="lbl">Signature perks</div><div class="perks">${perks}</div>
+    <div class="acts">${why?`<button class="btn sm" type="button" disabled>${why}</button>`:`<button class="btn primary sm" type="button" id="mktBuy" ${short?"disabled":""}>Buy ${coinN(x.c)}</button>`}
+      ${short?`<p class="stnote" style="flex-basis:100%">You need ${coinN(x.c-PROF.coins)} more coins.</p>`:""}</div></div>`;
+  m.querySelector("[data-act=close]").addEventListener("click",closePlayer);
+  const b=$("mktBuy");if(b)b.addEventListener("click",()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent="Confirm";return;}buyP(i);});}
 function renderMarket(){const el=$("mkt");if(!el)return;const R=PROF.roster,M=market();
   const shut=tradeClosed();$("mktNote").textContent=shut?"The trade deadline has passed: the market reopens when the season is over.":"";
   el.innerHTML=M.map((x,i)=>{const q=x.q,full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,cap=!capOk(q.sal||.5);
     return `<div class="mkt">${pCard(q,`From ${q.from}`).replace('data-pid=','data-mid=')}<small class="mkc">${money(q.sal||.5)} × ${yrsT(q.yrs||1)}</small>${x.sold?`<button class="btn sm" type="button" disabled>Bought</button>`:
       `<button class="btn primary sm" type="button" data-buy="${i}" ${PROF.coins<x.c||full||cap||shut?"disabled":""}>${shut?"Trades closed":full?"Roster full":cap?"Over the cap":`Buy ${coinN(x.c)}`}</button>`}</div>`;}).join("");
-  el.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{if(!b.dataset.arm){el.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.innerHTML=x.dataset.l;});b.dataset.l=b.innerHTML;b.dataset.arm=1;b.textContent="Confirm";return;}buyP(+b.dataset.buy);}));}
+  el.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{if(!b.dataset.arm){el.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.innerHTML=x.dataset.l;});b.dataset.l=b.innerHTML;b.dataset.arm=1;b.textContent="Confirm";return;}buyP(+b.dataset.buy);}));
+  el.querySelectorAll("[data-mid]").forEach(c=>c.addEventListener("click",()=>openMktPlayer(M.findIndex(x=>x.q.id===c.dataset.mid))));}
 // the trade deadline: in season mode deals close after game 12 and reopen once the season is over; the last two games
 // before it are deadline day, when clubs pay more and call more often
 function tradeClosed(){const S=PROF.season;return !!S&&(S.phase==="reg"&&S.gi>=DEADLINE||S.phase==="po");}
@@ -2425,7 +2446,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
