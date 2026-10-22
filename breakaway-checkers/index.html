@@ -151,6 +151,15 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .bracket{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:6px}
 .bracket div{display:flex;justify-content:space-between;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:6px 10px;font-family:var(--display);font-weight:800}
 .bracket div.me{border-color:var(--led)}.bracket b{color:var(--led)}
+.pobr{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.potree{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+.poc{display:flex;flex-direction:column;min-width:0}.poc h4{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin:0 0 6px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.pobr .stf{display:none}
+.pos{flex:1;display:flex;flex-direction:column;justify-content:space-around;gap:6px}
+.pox{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:3px 0}.pox.me{border-color:var(--led)}.pox.now:not(.me){border-color:#3a4a63}
+.pox>div{display:grid;grid-template-columns:18px 1fr auto;align-items:center;gap:3px;padding:2px 6px;font-family:var(--display);font-weight:800;font-size:.95rem}
+.pox em{font:700 .66rem var(--body);font-style:normal;color:var(--muted);text-align:right}.pox b{color:var(--led)}
+.pox .lost{opacity:.38}.pox .mine span{color:var(--led)}.pox .tbd span{color:var(--muted);opacity:.5;font-size:.8rem}
+@media (min-width:600px){.pobr .stn{display:none}.pobr .stf{display:inline}.pox>div{font-size:1.05rem;padding:3px 10px}}
 .over .seasonline{color:var(--fg);font-weight:700}
 /* menu tabs */
 .tabs{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;background:#05080d;border:1px solid var(--line);border-radius:10px;padding:4px;position:sticky;top:0;z-index:5}
@@ -815,7 +824,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v57</p>
+    <p class="ver">v58</p>
   </section>
 
   <section id="game" hidden>
@@ -2163,11 +2172,12 @@ function cupSVG(cls){const id="cupg"+(++cupN);return `<svg class="${cls||"cupsvg
 function awardsHTML(S){if(!S||!S.awards)return "";const champ=S.po&&S.po.champ===S.club;
   return `<div class="awards">${champ?`<div class="awcup">${cupSVG()}<div><b>Calder Cup champions</b><small>${byAbbr[S.club].name} · season ${S.year}</small></div></div>`:""}
     <h3 class="ch">Season ${S.year} awards</h3>${S.awards.length?S.awards.map(a=>`<div class="aw"><span class="awi">🏅</span><div><b>${a.name}</b><span>#${a.num} ${a.who}</span><small>${a.line}</small></div><em>+${a.coins}</em></div>`).join(""):`<p class="muted">No awards this season: nobody on your roster played enough.</p>`}</div>`;}
+const seedOf=a=>PROF.season&&PROF.season.po?PROF.season.po.seeds.indexOf(a)+1:0;
 function seasonLine(){const S=PROF.season;if(!S)return "";const r=S.rec[S.club],st=standings(),pos=st.findIndex(x=>x.abbr===S.club)+1;
   const ord=n=>{const x=["th","st","nd","rd"],v=n%100;return n+(x[(v-20)%10]||x[v]||x[0]);};
   if(S.phase==="abandoned")return "Season abandoned";
   if(S.phase==="reg")return `${r.w}-${r.l}-${r.sdl} · ${ptsOf(r)} pts · ${ord(pos)} of ${TEAMS.length}`;
-  if(S.phase==="po"){const m=S.po.series.find(s=>s.a===S.club||s.b===S.club),mine=m.a===S.club;return `${PO_ROUNDS[S.po.round]} · series ${mine?m.wa:m.wb}-${mine?m.wb:m.wa}`;}
+  if(S.phase==="po"){const m=S.po.series.find(s=>s.a===S.club||s.b===S.club),mine=m.a===S.club;return `${PO_ROUNDS[S.po.round]} · ${ord(seedOf(S.club))} seed · series ${mine?m.wa:m.wb}-${mine?m.wb:m.wa}`;}
   if(S.po&&S.po.champ===S.club)return "Calder Cup champions";
   return S.po&&S.po.champ?`${byAbbr[S.po.champ].name} won the Cup`:"Missed the playoffs";}
 // ---- offseason: after a finished season everyone gets a year older. Young players grow toward their potential,
@@ -2247,6 +2257,18 @@ function openOffseason(){
   q("#offDraft").addEventListener("click",()=>{if(sel&&!full(sel))finish(sel);});
   q("#offPass").addEventListener("click",()=>finish(null));
 }
+// the playoff bracket as a tree: each round's series sit beside the two they came from (a series pairs the winners of
+// series k and n-1-k), so the first round reads 1v16, 8v9, 4v13, 5v12, 2v15, 7v10, 3v14, 6v11 from the top
+function poBracket(S){const P=S.po,R=PO_ROUNDS.length,n0=PO_TEAMS/2,ords=[[0]];
+  for(let r=R-2;r>=0;r--){const n=n0>>r;ords.unshift(ords[0].flatMap(k=>[k,n-1-k]));}
+  const short=["Round 1","Quarters","Semis","Final"];
+  const team=(a,w,lost)=>a?`<div class="${lost?"lost":""}${a===S.club?" mine":""}"><em>${seedOf(a)}</em><span>${a}</span><b>${w}</b></div>`:`<div class="tbd"><em></em><span>TBD</span><b></b></div>`;
+  const cols=ords.map((ord,r)=>{const list=r<P.done.length?P.done[r]:r===P.round&&P.series.length?P.series:null;
+    return `<div class="poc"><h4><span class="stn">${short[r]}</span><span class="stf">${PO_ROUNDS[r]}</span></h4><div class="pos">${ord.map(k=>{const x=list&&list[k];
+      if(!x)return `<div class="pox">${team()}${team()}</div>`;const aw=x.wa>=PO_WINS,bw=x.wb>=PO_WINS;
+      return `<div class="pox${x.a===S.club||x.b===S.club?" me":""}${r===P.round&&!P.champ?" now":""}">${team(x.a,x.wa,bw)}${team(x.b,x.wb,aw)}</div>`;}).join("")}</div></div>`;}).join("");
+  return `<div class="pobr"><div class="row" style="justify-content:space-between"><h3 class="ch">Playoff bracket</h3><span class="muted">Seeded by the regular season standings · best of 3</span></div>
+    <div class="potree">${cols}</div>${P.champ?`<p class="muted" style="margin:6px 0 0">🏆 ${byAbbr[P.champ].name} won the Calder Cup</p>`:""}</div>`;}
 function renderSeason(){renderTiles();
   const el=$("season"),S=PROF.season;if(!el)return;
   const me=selMe.value;
@@ -2255,7 +2277,7 @@ function renderSeason(){renderTiles();
     const offDone=S&&S.off&&S.off.done?`<p class="muted" style="margin:0">Offseason: ${S.off.took?`drafted ${S.off.took}`:"passed on the draft"}${S.off.ret.length?`, ${S.off.ret.length} retired`:""}.</p>`:"";
     el.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="ch">Season mode</h3><span class="muted">${SEASON_GAMES} games, then the top ${PO_TEAMS} make the playoffs</span></div>${last}
       <p class="muted" style="margin:0">Play a schedule against the league, climb the standings and chase the Calder Cup in best-of-3 playoff series.</p>
-      ${S&&S.phase==="done"?awardsHTML(S):""}${offDone}
+      ${S&&S.phase==="done"?awardsHTML(S):""}${offDone}${S&&S.phase==="done"&&S.po&&S.po.champ?poBracket(S):""}
       <div class="row">${offTodo?`<button class="btn primary" id="btnOff">${S.off?"Finish the offseason":"Go to the offseason"}</button>`:`<button class="btn primary" id="btnSeasonNew">Start a season with ${byAbbr[me].abbr}</button>`}${S&&S.ps?`<button class="btn sm" id="btnSeasonStats" type="button">Last season's stats</button>`:""}</div>`;
     if(offTodo)$("btnOff").addEventListener("click",openOffseason);
     else $("btnSeasonNew").addEventListener("click",()=>{newSeason(selMe.value);renderSeason();});
@@ -2267,13 +2289,13 @@ function renderSeason(){renderTiles();
   const table=`<table class="stand stfull"><thead><tr><th></th><th>Club</th><th>GP</th><th>W</th><th>L</th><th title="Sudden death losses">SDL</th><th>PTS</th></tr></thead><tbody>${st.map((r,i)=>({...r,i})).map(r=>`<tr class="${r.abbr===S.club?"me":""} ${r.i===PO_TEAMS-1?"cut":""}"><td>${r.i+1}</td><td><img src="${logoURL(byAbbr[r.abbr])}" alt=""><span class="stn">${nick(byAbbr[r.abbr])}</span><span class="stf">${byAbbr[r.abbr].name}</span></td><td>${r.gp}</td><td>${r.w}</td><td>${r.l}</td><td>${r.sdl}</td><td><b>${ptsOf(r)}</b></td></tr>`).join("")}</tbody></table>`;
   let head;
   if(S.phase==="reg")head=`Game ${S.gi+1} of ${SEASON_GAMES}`;
-  else head=PO_ROUNDS[S.po.round];
-  const bracket=S.phase==="po"?`<div class="bracket">${S.po.series.map(s=>`<div class="${s.a===S.club||s.b===S.club?"me":""}"><span>${s.a}</span><b>${s.wa}-${s.wb}</b><span>${s.b}</span></div>`).join("")}</div>`:"";
+  else head=`${PO_ROUNDS[S.po.round]} · No. ${seedOf(S.club)} seed vs No. ${seedOf(opp)} seed`;
+  const bracket=S.phase==="po"?poBracket(S):"";
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="ch">Season ${S.year} · ${club.abbr}</h3><span class="muted">${seasonLine()}</span></div>
     <div class="nextgame">${chipHTML(club)}<div><small>${head}</small><b>vs ${byAbbr[opp].name}</b><small>${byAbbr[opp].div} Division · SHT ${byAbbr[opp].sht} · GK ${byAbbr[opp].gk}</small></div>${chipHTML(byAbbr[opp])}</div>
     <div class="row"><button class="btn primary" id="btnSeasonPlay">Play ${S.phase==="po"?"playoff":"season"} game</button><button class="btn sm" id="btnSeasonStats" type="button">Season stats</button><button class="btn sm" id="btnSeasonQuit" type="button">Abandon season</button></div>
     ${dlLine()?`<p class="muted dl${deadlineDay()?" on":""}" style="margin:0">${dlLine()}</p>`:""}
-    ${bracket}<div class="stbox"><div class="row" style="justify-content:space-between"><h3 class="ch">${S.phase==="reg"?"Standings":"Final standings"}</h3><span class="muted">Top ${PO_TEAMS} make the playoffs</span></div>${table}</div>`;
+    ${bracket||`<div class="stbox"><div class="row" style="justify-content:space-between"><h3 class="ch">Standings</h3><span class="muted">Top ${PO_TEAMS} make the playoffs</span></div>${table}</div>`}`;
   $("btnSeasonPlay").addEventListener("click",()=>startGame(S.club,opp,{season:true}));
   $("btnSeasonStats").addEventListener("click",()=>openStats("season"));
   // two taps to abandon, so a stray tap can't throw away a season
