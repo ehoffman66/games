@@ -250,6 +250,12 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .ofr span{flex:1;min-width:0;font-weight:700}.ofr small{display:block;font-weight:400;color:var(--muted);font-size:.76rem}
 .ofr.me{border-color:var(--led)}.ofr b{font-size:1.1rem}.ofr em{font-style:normal;font-weight:700;min-width:2.2em;text-align:right;color:var(--muted)}
 .ofr em.gu{color:#5fd38a}.ofr em.gd{color:#ff6b6b}
+.ofn{cursor:pointer;border-radius:4px}.ofn:hover .chev,.ofn:focus-visible .chev{color:var(--led)}.ofn:focus-visible{outline:2px solid var(--led);outline-offset:2px}
+.chev{font-style:normal;color:var(--muted);font-weight:400}
+.ofr small.adv{margin-top:3px;line-height:1.3}.adv.ak{color:#8fd8a8}.adv.ag{color:#f0b46a}
+.advAll{align-self:flex-start;margin-bottom:2px}.advOk{margin:0 0 2px}
+.cona{display:flex;flex-direction:column;gap:4px;background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:8px 10px}
+.cona>span{color:var(--muted);font-size:.85rem}.cona p.adv{margin:0;font-size:.88rem;line-height:1.35}.cona .row{gap:8px}
 .pros .pcard.sel{outline:3px solid var(--led);outline-offset:2px}
 .pc-v{margin-left:auto;white-space:nowrap;color:var(--fg);font-weight:700}.pc-v .fm{font-style:normal;font-size:.7em;margin-right:3px}.fmu{color:#4ade80}.fmd{color:#7cc4ff}.fm-hot{color:#fbbf24}.fm-cold{color:#9cc9ff}.pc-v .coin{width:10px;height:10px;margin-right:2px}
 .tro2 .chip{width:30px;height:30px}.tro2 small{line-height:1.35}.tro2 i{font-style:normal;font-weight:700}.tro2 i.gu{color:#5fd38a}.tro2 i.gd{color:#ff6b6b}
@@ -825,7 +831,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v60</p>
+    <p class="ver">v61</p>
   </section>
 
   <section id="game" hidden>
@@ -1659,6 +1665,7 @@ function renderCareer(){
   const D=PROF.daily,left=D.ids.filter(id=>!D.done[id]).length;$("bdPlay").textContent=left?left:"";$("bdPlay").title=left?`${left} daily challenge${left>1?"s":""} left`:"";
   renderSeason();renderGc();renderLinePrev();renderDaily();renderRoster();renderLocker();renderTrophies();renderStats();renderCpCta();
   if($("pmodal"))openPlayer($("pmodal").dataset.id);
+  if(offRefresh)offRefresh();
 }
 const miniCard=(p,slot)=>`<button class="pmini t-${tierOf(ovr(p))}" data-pid="${p.id}" type="button"><em>${slot}</em><b>${ovr(p)}</b><span>#${p.num} ${p.name}</span>${p.pts?`<i class="dot-pt" title="Training points">${p.pts}</i>`:""}</button>`;
 // the Play tab shows who actually shoots next game: subs for anyone hurt, empty call-up spots if the bench runs out
@@ -1897,6 +1904,10 @@ function openPlayer(id){
   if(p.g&&!starter)acts+=`<button class="btn primary sm" data-act="start">Make starter</button>`;
   if(p.me)acts+=`<button class="btn" data-act="edit">Edit name, number and look</button>`;
   if(p.inj)acts+=`<button class="btn primary sm" data-act="heal" ${PROF.coins<HEAL*p.inj.n?"disabled":""}>Treat him now ${cash(HEAL*p.inj.n)}</button>`;
+  const OS=PROF.season&&PROF.season.phase==="done"&&PROF.season.off&&!PROF.season.off.done?PROF.season.off:null,con=OS&&OS.con&&OS.con.find(c=>c.id===p.id),adv=con&&OS.adv&&OS.adv[p.id];
+  const conB=!con?"":`<div class="cona"><b>His contract is up</b><span>He asks ${money(con.ask)} × ${yrsT(con.yrs)}. He made ${money(con.was)}.</span>
+    ${adv?`<p class="adv ${adv.keep?"ak":"ag"}">📊 Stats team: ${adv.keep?"re-sign him":"let him go"}. ${adv.why}</p>`:""}
+    <div class="row"><button class="btn sm ${con.keep?"primary":""}" data-act="ckeep" type="button">${con.keep?"✓ Re-sign":"Re-sign"}</button><button class="btn sm ${con.keep?"":"primary"}" data-act="cgo" type="button">${con.keep?"Let go":"✓ Let go"}</button></div></div>`;
   acts+=formNote(p);acts+=p.me?`<p class="stnote" style="flex-basis:100%">Worth ${coinN(pVal(p))} on the market, but you're not for sale: this is you. Tap any other player to trade or sell him.</p>`:`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
   const stat=p.g?`${p.saves} saves on ${p.faced} shots`:`${p.goals} goals on ${p.shots} attempts`;
   const SS=PROF.season,sRow=SS&&SS.ps&&SS.ps[p.id]?[[`Season ${SS.year}`,pStats(p,"season")]]:[];
@@ -1906,8 +1917,8 @@ function openPlayer(id){
   m.innerHTML=`<div class="sheet t-${tierOf(o)}">
     <button class="x" data-act="close" aria-label="Close">✕</button>
     <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""}</div><h3>${p.ini}. ${p.name}</h3>
-      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"}${p.age?` · Age ${p.age}`:""} · Potential ${p.pot}${p.me?"":` · ${money(p.sal||MIN_SAL)} × ${yrsT(p.yrs||1)}`} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
-    <div class="sh-lv"><span>Level ${p.lv}${p.lv>=MAX_LV?" (max)":""}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div><small>${p.lv>=MAX_LV?"Fully developed":`${p.xp} / ${needXP(p.lv)} XP`}</small></div>
+      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"}${p.age?` · Age ${p.age}`:""} · Potential ${p.pot}${p.me?"":` · ${money(p.sal||MIN_SAL)}${p.yrs>0?` × ${yrsT(p.yrs)}`:" · contract up"}`} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
+    ${conB}<div class="sh-lv"><span>Level ${p.lv}${p.lv>=MAX_LV?" (max)":""}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div><small>${p.lv>=MAX_LV?"Fully developed":`${p.xp} / ${needXP(p.lv)} XP`}</small></div>
     <p class="sh-pts">${p.pts?`<b>${p.pts} training point${p.pts>1?"s":""}</b> to spend. Each level earns one.`:`Earn XP by playing: ${p.g?"saves count most":"goals count most"}. Each level gives a training point, or pay to train now.`}</p>
     <div class="rts">${rows}</div>
     <div class="lbl">Stats</div>${stTable}${p.fw||p.fl?`<p class="stnote">Fights: ${p.fw||0} won, ${p.fl||0} lost</p>`:""}
@@ -1930,6 +1941,7 @@ function playerAct(p,a){
   if(a==="down"&&i>=0&&i<4)[R.line[i+1],R.line[i]]=[R.line[i],R.line[i+1]];
   if(a==="swap"){const out=$("swapSel").value,j=R.line.indexOf(out);if(j>=0)R.line[j]=p.id;}
   if(a==="start")R.g=p.id;
+  if(a==="ckeep"||a==="cgo"){const O=PROF.season&&PROF.season.off,c=O&&!O.done&&O.con&&O.con.find(x=>x.id===p.id);if(c)c.keep=a==="ckeep";}
   if(a==="heal"&&p.inj){const c=HEAL*p.inj.n;if(PROF.coins<c)return;PROF.coins-=c;delete p.inj;toast(`${p.name} is cleared to play`);}
   if(a==="release"){if(i>=0||R.g===p.id||p.me)return;R.sk=R.sk.filter(q=>q!==p);R.gk=R.gk.filter(q=>q!==p);PROF.coins+=RELEASE;closePlayer();toast(`${p.name} released · +${cash(RELEASE)}`);}
   saveProf();renderCareer();
@@ -2231,16 +2243,53 @@ function runOffseason(){
     O.pros.push(newPlayer(R,g,{base:60+6*q,spread:2.5,pot:Math.min(99,pot),age:[18,20]}));}
   saveProf();
 }
+// the stats team's call on each expiring deal: keep the shooters who make the lineup, young players still growing and the
+// starting goalie; let go old or fringe players a free agent at the minimum could replace; then, if keeping everyone they like
+// would break the cap, drop the least value for the money until it fits. pay(keep) is next season's payroll for a set of choices.
+const nth=n=>{const x=["th","st","nd","rd"],v=n%100;return n+(x[(v-20)%10]||x[v]||x[0]);};
+function conAdvice(O,pay){const R=PROF.roster,S=PROF.season,live=O.con.filter(c=>findP(c.id)),adv={};
+  const skR=[...R.sk].sort((a,b)=>ovr(b)-ovr(a)),gkR=[...R.gk].sort((a,b)=>ovr(b)-ovr(a));
+  for(const c of live){const p=findP(c.id),o=ovr(p),q=S&&S.ps&&S.ps[p.id],f=formOf(p),grow=p.age<=24&&p.pot-o>=6,old=p.age>=33;
+    const rank=(p.g?gkR:skR).indexOf(p)+1,role=p.g?(rank===1?"your starting goalie":`your ${nth(rank)} goalie`):rank===1?"your best shooter":`your ${nth(rank)}-best shooter`;
+    const line=!q?"":p.g?(q.sa?`${q.sv} saves on ${q.sa} shots (${svp(q.sv,q.sa)})`:""):q.s?`${q.g} goal${q.g===1?"":"s"} on ${q.s} shot${q.s===1?"":"s"}`:"";
+    const did=line?`, with ${line} this season`:"",hot=f?(f.hot?" He's coming off a hot season.":" He's coming off a cold season."):"";
+    let keep,why;
+    if(p.g){const next=gkR.find(x=>x!==p);
+      if(rank===1&&!(old&&next&&ovr(next)>=o-2)){keep=true;why=`He's ${role}${did}.${hot}`;}
+      else if(rank===1){keep=false;why=`He's ${p.age}, and your backup is nearly as good for less.`;}
+      else if(grow){keep=true;why=`Only ${p.age} with a potential of ${p.pot}, so he should keep getting better.`;}
+      else if(c.ask<=.07){keep=true;why=`A backup at ${money(c.ask)} is cheap insurance.`;}
+      else{keep=false;why=`He's ${role}, and ${money(c.ask)} is a lot for a backup.`;}}
+    else if(rank<=5&&!(old&&rank>=4&&o<72)){keep=true;why=`He's ${role}${did}.${hot}`;}
+    else if(grow){keep=true;why=`Only ${p.age} with a potential of ${p.pot}, so he should keep getting better.`;}
+    else if(o<=68){keep=false;why=c.ask>MIN_SAL+.004?`A free agent at ${money(MIN_SAL)} would be about as good as a ${o}.`:`He's a ${o}, so his roster spot is better spent on a stronger player.`;}
+    else if(old){keep=false;why=`He's ${p.age} and only ${role}, and he won't get any better.`;}
+    else if(c.ask<=.08){keep=true;why=`Cheap depth at ${money(c.ask)}. He's ${role}.`;}
+    else{keep=false;why=`He's ${role}, so he'd sit on the bench for ${money(c.ask)} a year.`;}
+    adv[c.id]={keep,why,score:(o+(grow?4:0)-(old?3:0)+(f?(f.k-1)*10:0))/c.ask};}
+  // over the cap with their picks: let go the least value per dollar until it fits
+  const keepSet=()=>new Set(live.filter(c=>adv[c.id].keep).map(c=>c.id));
+  const over0=pay(keepSet())-CAP;
+  for(let n=0;n<live.length;n++){const k=keepSet();if(pay(k)-CAP<=1e-9)break;
+    const c=live.filter(x=>k.has(x.id)).sort((a,b)=>adv[a.id].score-adv[b.id].score)[0];if(!c)break;
+    adv[c.id].keep=false;adv[c.id].why=`Re-signing everyone else they like would put you ${money(over0)} over the cap, and he's among the least value for the money.`;}
+  return adv;}
+let offRefresh=null; // set while the offseason screen is open, so a change made on a player card shows there too
 function openOffseason(){
   const S=PROF.season;if(!S||S.phase!=="done")return;if(!S.off)runOffseason();
   const O=S.off,R=PROF.roster;O.con=O.con||[];
   const gone=g=>O.con.filter(c=>!c.keep&&c.g==g&&findP(c.id)).length,full=p=>p.g?R.gk.length-gone(1)>=MAX_GK:R.sk.length-gone(0)>=MAX_SK;
   // next season's payroll with the choices made so far (and any free agents needed to fill the lineup)
-  const payNext=d=>{let t=0;for(const p of allP(R)){if(p.me)continue;const c=O.con.find(x=>x.id===p.id);t+=c?(c.keep?c.ask:0):(p.sal||MIN_SAL);}
-    const need=Math.max(0,5-(R.sk.length-gone(0)))+(R.gk.length-gone(1)>0?0:1);return Math.round((t+(d?MIN_SAL:0)+need*MIN_SAL)*1000)/1000;};
-  const conHTML=()=>O.con.filter(c=>findP(c.id)).map(c=>`<div class="ofr"><span>${c.n}<small>${c.g?"Goalie · ":""}age ${c.age} · was ${money(c.was)} · asks ${money(c.ask)} × ${yrsT(c.yrs)}</small></span><button class="btn sm ${c.keep?"primary":""}" data-con="${O.con.indexOf(c)}" type="button">${c.keep?"Re-sign":"Let go"}</button></div>`).join("");
+  const payFor=(keep,d)=>{let t=0,lost=[0,0];for(const p of allP(R)){if(p.me)continue;const c=O.con.find(x=>x.id===p.id);if(c&&!keep(c))lost[p.g?1:0]++;t+=c?(keep(c)?c.ask:0):(p.sal||MIN_SAL);}
+    const need=Math.max(0,5-(R.sk.length-lost[0]))+(R.gk.length-lost[1]>0?0:1);return Math.round((t+(d?MIN_SAL:0)+need*MIN_SAL)*1000)/1000;};
+  const payNext=d=>payFor(c=>c.keep,d);
+  O.adv=conAdvice(O,k=>payFor(c=>k.has(c.id)));const advOf=c=>O.adv[c.id];
+  const conHTML=()=>{const L=O.con.filter(c=>findP(c.id)),off=L.filter(c=>advOf(c)&&advOf(c).keep!==c.keep).length;
+    return (off?`<button class="btn sm advAll" id="offAdv" type="button">📊 Take the stats team's advice (${off} change${off>1?"s":""})</button>`:L.length?`<p class="stnote advOk">📊 Your choices match the stats team's advice.</p>`:"")+
+    L.map(c=>{const a=advOf(c);return `<div class="ofr ofc"><span class="ofn" data-pc="${c.id}" role="button" tabindex="0">${c.n} <i class="chev">›</i><small>${c.g?"Goalie · ":""}age ${c.age} · was ${money(c.was)} · asks ${money(c.ask)} × ${yrsT(c.yrs)}</small>
+      ${a?`<small class="adv ${a.keep?"ak":"ag"}">📊 ${a.keep?"Re-sign":"Let go"}: ${a.why}</small>`:""}</span><button class="btn sm ${c.keep?"primary":""}" data-con="${O.con.indexOf(c)}" type="button">${c.keep?"Re-sign":"Let go"}</button></div>`;}).join("");};
   const m=document.createElement("div");m.className="modal";m.id="offmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
-  const dev=O.dev.map(d=>`<div class="ofr${d.me?" me":""}"><span>${d.n}${d.me?" ★":""}<small>${d.g?"Goalie · ":""}age ${d.age}</small></span><b>${d.o}</b><em class="${d.d>0?"gu":d.d<0?"gd":""}">${d.d>0?"+":""}${d.d||"="}</em></div>`).join("");
+  const dev=O.dev.map(d=>`<div class="ofr${d.me?" me":""}"><span class="ofn" data-pc="${d.id}" role="button" tabindex="0">${d.n}${d.me?" ★":""} <i class="chev">›</i><small>${d.g?"Goalie · ":""}age ${d.age}</small></span><b>${d.o}</b><em class="${d.d>0?"gu":d.d<0?"gd":""}">${d.d>0?"+":""}${d.d||"="}</em></div>`).join("");
   const ret=O.ret.length?O.ret.map(r=>`<div class="ofr"><span>${r.n}<small>${r.g?"Goalie · ":""}retires at ${r.age} · ${r.line}</small></span></div>`).join(""):`<p class="empty">Nobody retired this year.</p>`;
   m.innerHTML=`<div class="sheet t-gold off">
     <button class="x" data-a="close" aria-label="Close">✕</button>
@@ -2248,7 +2297,7 @@ function openOffseason(){
     <h4>A year older</h4><div class="ofl">${dev}</div>
     <h4>Retirements</h4><div class="ofl">${ret}</div>
     ${O.fa.length?`<p class="stnote">Signed to fill the lineup: ${O.fa.join(", ")}</p>`:""}
-    ${O.con.length?`<h4>Contracts</h4><p class="muted" style="margin:0">These deals are up. Tap to switch between re-signing a player and letting him go.</p><div class="ofl" id="offCon">${conHTML()}</div>`:""}
+    ${O.con.length?`<h4>Contracts</h4><p class="muted" style="margin:0">These deals are up. Tap a player for his card, and the button to switch between re-signing him and letting him go. Your stats team gives its call under each one.</p><div class="ofl" id="offCon">${conHTML()}</div>`:""}
     <p class="stnote" id="offPay"></p>
     <h4>Draft · pick ${O.pick} of ${TEAMS.length}</h4>
     <p class="muted" style="margin:0">${O.pick<=8?"An early pick: the best prospects are still on the board.":O.pick>=TEAMS.length-4?"Picking late: the top prospects are gone, but there's still talent.":"Pick one prospect. He starts raw, so train him up."}</p>
@@ -2256,9 +2305,13 @@ function openOffseason(){
     <p class="cp-err" id="offErr"></p>
     <div class="acts"><button class="btn primary" id="offDraft" disabled>Pick a prospect</button><button class="btn sm" id="offPass" type="button">Pass on the pick</button></div></div>`;
   document.body.appendChild(m);
-  let sel=null;const q=x=>m.querySelector(x),close=()=>{m.remove();renderSeason();renderCareer();};
+  let sel=null;const q=x=>m.querySelector(x),close=()=>{offRefresh=null;closePlayer();m.remove();renderSeason();renderCareer();};
   const payLine=()=>{const n=payNext(sel);q("#offPay").innerHTML=`Payroll next season: <b class="${n>CAP?"gd":""}">${money(n)}</b> of ${money(CAP)} cap${n>CAP?". Let someone go to get under it.":""}`;};payLine();
-  const wireCon=()=>m.querySelectorAll("[data-con]").forEach(b=>b.addEventListener("click",()=>{const c=O.con[+b.dataset.con];c.keep=!c.keep;saveProf();q("#offCon").innerHTML=conHTML();wireCon();payLine();}));wireCon();
+  const redo=()=>{q("#offCon").innerHTML=conHTML();wireCon();payLine();};
+  const wireCon=()=>{const E=q("#offCon");if(!E)return;E.querySelectorAll("[data-con]").forEach(b=>b.addEventListener("click",()=>{const c=O.con[+b.dataset.con];c.keep=!c.keep;saveProf();redo();}));
+    const A=q("#offAdv");if(A)A.addEventListener("click",()=>{for(const c of O.con){const a=advOf(c);if(a)c.keep=a.keep;}saveProf();redo();});wirePc(E);};
+  const wirePc=E=>E.querySelectorAll("[data-pc]").forEach(b=>{const go=()=>{if(findP(b.dataset.pc))openPlayer(b.dataset.pc);};b.addEventListener("click",go);b.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
+  wireCon();wirePc(q(".ofl"));offRefresh=()=>{if(m.isConnected&&q("#offCon"))redo();};
   m.addEventListener("click",e=>{if(e.target===m)close();});q("[data-a=close]").addEventListener("click",close);
   m.querySelectorAll(".pros .pcard").forEach(b=>b.addEventListener("click",()=>{const p=O.pros.find(x=>x.id===b.dataset.pid);
     if(full(p)){q("#offErr").textContent=p.g?`You have ${MAX_GK} goalies. Let one go above, sell one, or pass.`:`You have ${MAX_SK} skaters. Let one go above, sell one, or pass.`;return;}
@@ -2268,7 +2321,7 @@ function openOffseason(){
     for(const c of O.con){const x=findP(c.id);if(!x)continue;if(c.keep){x.sal=c.ask;x.yrs=c.yrs;}else{R.sk=R.sk.filter(y=>y!==x);R.gk=R.gk.filter(y=>y!==x);logTx(`${c.n} left as a free agent`);}}
     while(R.sk.length<5){const f=newPlayer(R,false,{base:64,spread:2,pot:rnd(72,80),age:[25,31]});f.yrs=1;R.sk.push(f);O.fa.push(`#${f.num} ${f.ini}. ${f.name}`);}
     if(!R.gk.length){const f=newPlayer(R,true,{base:64,spread:2,pot:rnd(72,80),age:[25,31]});f.yrs=1;R.gk.push(f);O.fa.push(`#${f.num} ${f.ini}. ${f.name}`);}
-    fixRoster();O.done=true;O.took=p?`#${p.num} ${p.ini}. ${p.name}`:null;
+    fixRoster();O.done=true;offRefresh=null;O.took=p?`#${p.num} ${p.ini}. ${p.name}`:null;
     if(p){p.acq=PROF.games;(p.g?R.gk:R.sk).push(p);logTx(`Drafted #${p.num} ${p.ini}. ${p.name} with pick ${O.pick}`);}fixRoster();saveProf();close();toast(p?`${p.ini}. ${p.name} joins the ${nickOf(byAbbr[S.club])}`:"You passed on the pick");};
   q("#offDraft").addEventListener("click",()=>{if(sel&&!full(sel))finish(sel);});
   q("#offPass").addEventListener("click",()=>finish(null));
@@ -2487,7 +2540,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},conAdvice:(O,pay)=>conAdvice(O,pay),formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
@@ -3814,7 +3867,7 @@ function envArena(){const T=THREE,sc=new T.Scene(),pm=new T.PMREMGenerator(R3.r)
 function skyTex(top,mid,bot,stars){return texText(64,512,(x,w,h)=>{const g=x.createLinearGradient(0,0,0,h);g.addColorStop(0,top);g.addColorStop(.42,mid);g.addColorStop(.5,bot);g.addColorStop(1,bot);x.fillStyle=g;x.fillRect(0,0,w,h);
   if(stars){let sd=3;const rn=()=>((sd=(sd*16807)%2147483647)/2147483647);for(let i=0;i<140;i++){x.fillStyle=`rgba(255,255,255,${.3+rn()*.6})`;x.fillRect(rn()*w,rn()*h*.4,rn()<.15?1.4:.8,rn()<.15?1.4:.8);}}});}
 function themeWorld(W3){
-  const T=THREE,th=rinkSel(),hide=p=>W3.children.forEach(o=>{if(o.userData.part===p)o.visible=false;});
+  const T=THREE,th=rinkSel(),hide=p=>W3.children.forEach(o=>{if(o.userData.part===p){o.visible=false;o.userData.hid=true;}});
   R3.theme=th;R3.snow=null;R3.noLamp=th==="pond";R3.painted=null;R3.clear=0x0a0e15;document.body.classList.toggle("rk-retro",th==="retro");
   // the arena's lighting, reset every game so the last theme doesn't linger
   R3.hemi.color.set(0xdfe9ff);R3.hemi.groundColor.set(0x6a7a90);R3.hemi.intensity=.3;R3.key.color.set(0xfff6e8);R3.key.intensity=1.7;R3.rim.intensity=.45;
@@ -3877,37 +3930,112 @@ function stepSnow(dt){const S=R3.snow,p=S.pos;S.t+=dt;
     if(p[k+1]<0){p[k+1]=700;p[k]=rnd(-520,520);p[k+2]=rnd(-250,H+EXT+250);}}
   S.geo.attributes.position.needsUpdate=true;}
 
-// ---- the crowd up close: a baked atlas of fans (models/fans.png: the player rig without his helmet, in jeans, seated and clapping
-// or up with his arms in the air, under four heads: short hair, a toque, a ball cap, long hair). The bottom half of the image is a
-// mask the shader tints by (red: jersey, green: skin, blue: hair or hat), so every fan gets his own colours from one small picture.
-const FANS={tex:null,ok:false};
-function fanTex(){if(FANS.tex)return FANS.tex;const t=new THREE.TextureLoader().load("models/fans.png",()=>{FANS.ok=true;fansOn();},undefined,()=>{FANS.failed=true;});
+// ---- the crowd up close: a baked atlas of fans (models/fans2.png: the player rig without his helmet, in jeans and a replica
+// sweater, in nine poses: seated, two clapping, two with his arms in the air, a fist pump, head down, standing, dancing; under seven
+// heads: short hair, a toque, a ball cap, long hair, bald, curls, a cap on backwards). The bottom half of the image is a mask the
+// shader tints by (red: the sweater, with its yoke and stripes at half red; green: skin; blue: hair or hat), so every fan gets his
+// own colours from one picture. A few carry a sign, a foam finger or a rally towel, drawn for each game in the clubs' colours.
+const FANS={tex:null,ok:false},FAN_POSES=9,FAN_COLS=16;
+// where his hands are in each pose, as a share of the picture across and up (measured when the atlas was baked)
+const FAN_HANDS={L:[[0.527,0.369],[0.532,0.369],[0.518,0.371],[0.681,0.778],[0.693,0.768],[0.681,0.778],[0.617,0.349],[0.682,0.408],[0.689,0.551]],R:[[0.446,0.366],[0.411,0.366],[0.418,0.365],[0.258,0.788],[0.206,0.701],[0.286,0.506],[0.366,0.332],[0.3,0.408],[0.301,0.562]]};
+function fanTex(){if(FANS.tex)return FANS.tex;const t=new THREE.TextureLoader().load("models/fans2.png",()=>{FANS.ok=true;fansOn();},undefined,()=>{FANS.failed=true;});
   t.encoding=THREE.sRGBEncoding;t.anisotropy=4;return FANS.tex=t;}
+// which pose a fan is in this frame (shared by the fans and what they hold). aFan: head (+10 if drawn mirrored), phase, how keen
+// (0-1), which club (1 home); aMisc: where he sits around the bowl (0-1, for the wave), how brightly lit, what he holds (0 nothing,
+// 1 a sign, 2 a foam finger, 3 a towel), and his style of celebrating.
+// On a goal the scoring club's fans get up one after another: arms in the air, fist pumps, a few dancing; the other club's keenest
+// fans hang their heads. A save brings the goalie's fans up for a moment, the keenest stand as the shooter closes in, now and then
+// a few clap on their own, and every so often the wave goes round the building.
+const FAN_POSE_GLSL=`
+  float ph=aFan.y,keen=aFan.z,kind=aMisc.z,sty=aMisc.w,mine=uHome>.5?aFan.w:1.-aFan.w,svm=uSaveHome>.5?aFan.w:1.-aFan.w;
+  float mir=step(9.5,aFan.x),head=aFan.x-mir*10.;
+  float clap=step(.5,fract(uT*2.7+ph*9.)),alt=step(.5,fract(uT*2.1+ph*5.)),pump=step(.5,fract(uT*2.4+ph*7.));
+  float burst=step(1.-keen*.35,fract(uT*.06+ph*3.1));
+  float pose=0.,lift=0.,sway=sin(uT*.8+ph*30.)*.7;
+  float wv=-1.;if(uWave>=0.){float wd=fract(aMisc.x-uWave+.5)-.5;wv=1.-smoothstep(0.,.03,abs(wd));}
+  if(uGoal>=0.&&uGoal>ph*.8+.12){
+    if(mine>.5){
+      if(kind==1.)pose=3.;else if(kind==2.)pose=5.+2.*pump;
+      else if(sty<.5)pose=3.+alt;else if(sty<.72)pose=5.+2.*pump;
+      else if(sty<.86){pose=8.;sway=sin(uT*5.+ph*9.)*7.;}else pose=7.;
+      if(pose<6.)lift=max(0.,sin(uT*8.+ph*40.))*4.;}
+    else if(keen>.4)pose=6.;}
+  else if(uGoal>=0.&&mine>.5)pose=1.+clap;
+  else if(wv>.02){pose=wv>.45?3.:7.;lift=wv*5.;}
+  else if(uSave>=0.&&uSave>ph*.4&&uSave<2.4+ph&&svm>.5&&keen>.35)pose=keen>.8?5.+2.*pump:1.+clap;
+  else if(keen>1.-uTense*.75)pose=7.;
+  else if(burst>.5)pose=1.+clap;
+  if(kind==1.){if(pose==1.||pose==2.)pose=0.;if(pose==4.||pose==5.||pose==7.)pose=3.;}
+  if(kind==2.&&(pose==1.||pose==2.||pose==7.))pose=5.+2.*pump;
+`;
+const FAN_U=`uniform float uT;uniform float uGoal;uniform float uHome;uniform float uTense;uniform float uWave;uniform float uSave;uniform float uSaveHome;
+attribute vec4 aFan;attribute vec4 aMisc;`;
 function fanMat(){
   if(R3.fanM)return R3.fanM;
-  const U=R3.fanU={uT:{value:0},uGoal:{value:-1},uHome:{value:1}},m=new THREE.MeshBasicMaterial({map:fanTex(),alphaTest:.45,color:0x9aa0aa});
+  const U=R3.fanU={uT:{value:0},uGoal:{value:-1},uHome:{value:1},uTense:{value:0},uWave:{value:-1},uSave:{value:-1},uSaveHome:{value:1}},m=new THREE.MeshBasicMaterial({map:fanTex(),alphaTest:.45,color:0x9aa0aa});
   m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,U);
     sh.vertexShader=sh.vertexShader.replace("#include <common>",`#include <common>
-attribute vec3 aTint;attribute vec3 aSkin;attribute vec3 aHair;attribute vec4 aFan;uniform float uT;uniform float uGoal;uniform float uHome;
-varying vec3 vTint;varying vec3 vSkin;varying vec3 vHair;varying vec2 vFanUv;`).replace("#include <begin_vertex>",`#include <begin_vertex>
-  // aFan: head (0-3), phase, how keen a clapper (0-1), which club (1 home, 0 away). On a goal the scoring club's fans jump up
-  // one after another and wave their arms; everyone else stays in his seat. Now and then a few start clapping on their own.
-  float ph=aFan.y,mine=uHome>.5?aFan.w:1.-aFan.w;
-  float up=uGoal<0.?0.:smoothstep(ph*.8,ph*.8+.25,uGoal)*step(.5,mine);
-  float clap=step(.5,fract(uT*2.7+ph*9.)),burst=step(1.-aFan.z*.35,fract(uT*.06+ph*3.1));
-  float pose=up>.5?3.+step(.5,fract(uT*2.1+ph*5.)):((uGoal>=0.&&mine>.5)||burst>.5?1.+clap:0.);
-  float cell=aFan.x*5.+pose;vec2 cxy=vec2(mod(cell,8.),floor(cell/8.));
-  vFanUv=vec2((cxy.x+uv.x)/8.,1.-(cxy.y+1.-uv.y)/6.);vTint=aTint;vSkin=aSkin;vHair=aHair;
-  transformed.y+=up*max(0.,sin(uT*8.+ph*40.))*4.;`);
+${FAN_U}attribute vec3 aTint;attribute vec3 aSkin;attribute vec3 aHair;attribute vec3 aStripe;
+varying vec3 vTint;varying vec3 vSkin;varying vec3 vHair;varying vec3 vStripe;varying vec2 vFanUv;varying float vLit;`).replace("#include <begin_vertex>",`#include <begin_vertex>
+${FAN_POSE_GLSL}
+  float cell=head*${FAN_POSES}.+pose;vec2 cxy=vec2(mod(cell,${FAN_COLS}.),floor(cell/${FAN_COLS}.));float u=mix(uv.x,1.-uv.x,mir);
+  vFanUv=vec2((cxy.x+u)/${FAN_COLS}.,1.-(cxy.y+1.-uv.y)/8.);vTint=aTint;vSkin=aSkin;vHair=aHair;vStripe=aStripe;
+  // the rink lights fall off toward the back rows, and his seat shades his legs
+  vLit=aMisc.y*mix(.8,1.,smoothstep(.02,.2,uv.y));
+  transformed.y+=lift;transformed.x+=sway;`);
     sh.fragmentShader=sh.fragmentShader.replace("#include <common>",`#include <common>
-varying vec3 vTint;varying vec3 vSkin;varying vec3 vHair;varying vec2 vFanUv;`).replace("#include <map_fragment>",`
+varying vec3 vTint;varying vec3 vSkin;varying vec3 vHair;varying vec3 vStripe;varying vec2 vFanUv;varying float vLit;`).replace("#include <map_fragment>",`
   vec4 fc=texture2D(map,vFanUv);vec3 fm=texture2D(map,vFanUv-vec2(0.,.5)).rgb;
-  diffuseColor*=vec4(fc.rgb*mix(vec3(1.),vTint,fm.r)*mix(vec3(1.),vSkin,fm.g)*mix(vec3(1.),vHair,fm.b),fc.a);`);};
+  vec3 cloth=mix(mix(vec3(1.),vStripe,clamp(fm.r*2.,0.,1.)),mix(vStripe,vTint,clamp(fm.r*2.-1.,0.,1.)),step(.5,fm.r));
+  diffuseColor*=vec4(fc.rgb*cloth*mix(vec3(1.),vSkin,fm.g)*mix(vec3(1.),vHair,fm.b)*vLit,fc.a);`);};
   return R3.fanM=m;}
-// the fans take over from the painted lower bowl once the atlas has loaded (where the rink theme shows the stands at all), and hand
-// it back if the device has to drop to the bottom of the quality ladder
-function fansOn(){if(!FANS.ok||!R3.fanG||!R3.lowPaint||R3.theme==="pond")return;const on=!(R3.lv>=4);
-  R3.lowPaint.forEach(q=>q.visible=!on);R3.fanG.visible=on;}
+// what the fans hold: four home signs, two away signs, a foam finger and a rally towel for each club, 256px apiece
+const PROP_SLOT={sign:[0,1,2,3],asign:[4,5],finger:6,afinger:7,towel:8,atowel:9};
+function propTex(home,away){const nk=t=>({HFD:"Wolf Pack",HSK:"Silver Knights"})[t.abbr]||t.name.split(" ").pop(),dark=(h,k)=>"#"+new THREE.Color(h).multiplyScalar(k).getHexString();
+  return texText(1024,1024,(x,w,h)=>{const S=256,at=i=>[(i%4)*S+S/2,Math.floor(i/4)*S+S/2],font=px=>`900 ${px}px 'Big Shoulders Display',Impact,sans-serif`;
+    const sign=(i,bg,fg,edge,lines)=>{const [cx,cy]=at(i);x.save();x.translate(cx,cy);x.rotate(((i*7)%5-2)*.02);
+      x.fillStyle=edge;x.fillRect(-124,-84,248,168);x.fillStyle=bg;x.fillRect(-114,-74,228,148);
+      x.fillStyle=fg;x.textAlign="center";x.textBaseline="middle";const n=lines.length;
+      lines.forEach((t,k)=>{let px=n>1?66:84;do x.font=font(px);while(x.measureText(t).width>208&&(px-=3)>18);x.fillText(t,0,(k-(n-1)/2)*64+4);});x.restore();};
+    const finger=(i,c)=>{const [cx,cy]=at(i);x.save();x.translate(cx,cy+6);x.fillStyle=c;x.strokeStyle=dark(c,.55);x.lineWidth=7;
+      x.beginPath();x.roundRect(-30,-122,50,140,24);x.fill();x.stroke();x.beginPath();x.roundRect(-60,-14,120,124,32);x.fill();x.stroke();
+      x.fillStyle=ink(c);x.font=font(60);x.textAlign="center";x.textBaseline="middle";x.fillText("#1",0,50);x.restore();};
+    const towel=(i,t)=>{const [cx,cy]=at(i);x.save();x.translate(cx,cy-S/2+6);x.fillStyle="#f3f4f6";
+      x.beginPath();x.moveTo(-64,0);x.lineTo(64,0);x.quadraticCurveTo(78,120,62,240);x.lineTo(-58,244);x.quadraticCurveTo(-76,120,-64,0);x.fill();
+      x.fillStyle=t.c1;x.fillRect(-68,22,136,20);x.fillRect(-66,200,132,16);x.font=font(54);x.textAlign="center";x.textBaseline="middle";x.fillText(t.abbr,0,122);
+      x.fillStyle="rgba(0,0,0,.09)";for(let k=-46;k<=46;k+=30)x.fillRect(k,4,7,236);x.restore();};
+    const H=nk(home).toUpperCase(),A=nk(away).toUpperCase();
+    sign(0,"#f4f5f7",home.c1,home.c1,["GO",H+"!"]);sign(1,home.c1,ink(home.c1),"#f4f5f7",["LET'S GO",home.abbr]);
+    sign(2,"#f4f5f7","#16181d",home.c2,["SHOOTOUT","TIME!"]);sign(3,home.c2,ink(home.c2),home.c1,["WE ♥",H]);
+    sign(4,"#f4f5f7",away.c1,away.c1,["GO",A+"!"]);sign(5,away.c1,ink(away.c1),"#f4f5f7",["ROAD","TRIP!"]);
+    finger(6,home.c1);finger(7,away.c1);towel(8,home);towel(9,away);});}
+// the props ride on the fans' hands: a sign between them (in his lap when he sits), a foam finger in his left, a towel in his right
+// that only comes out to wave on a goal. aProp: atlas slot, width, height.
+function propMat(home,away){
+  const m=new THREE.MeshBasicMaterial({map:propTex(home,away),alphaTest:.5,side:THREE.DoubleSide,color:0x9aa0aa}),hv=a=>a.map(([u,v])=>new THREE.Vector2(u,v));
+  const PU={uL:{value:hv(FAN_HANDS.L)},uR:{value:hv(FAN_HANDS.R)}};
+  m.onBeforeCompile=sh=>{Object.assign(sh.uniforms,R3.fanU,PU);
+    sh.vertexShader=sh.vertexShader.replace("#include <common>",`#include <common>
+${FAN_U}attribute vec4 aProp;uniform vec2 uL[${FAN_POSES}];uniform vec2 uR[${FAN_POSES}];varying vec2 vPropUv;varying float vLit;`).replace("#include <begin_vertex>",`#include <begin_vertex>
+${FAN_POSE_GLSL}
+  int pi=int(pose+.5);vec2 hl=uL[pi],hr=uR[pi],at=kind==3.?hr:kind==2.?hl:(hl+hr)*.5;at.x=mix(at.x,1.-at.x,mir);
+  float show=kind==3.?((pose==3.||pose==4.)&&uGoal>=0.?1.:0.):1.,ang=kind==3.?sin(uT*9.+ph*20.)*.55*(1.-2.*mir):0.;
+  vec2 q=position.xy*aProp.yz;
+  if(kind==3.){q.y-=aProp.z*.5;q=vec2(q.x*cos(ang)-q.y*sin(ang),q.x*sin(ang)+q.y*cos(ang));}
+  else if(kind==2.)q.y+=aProp.z*.36;
+  else if(pose==3.)q.y+=aProp.z*.24+sin(uT*6.+ph*20.)*step(0.,uGoal)*2.;
+  else q.y-=aProp.z*.12;
+  transformed=vec3((at.x-.5)*54.6+q.x+sway,at.y*109.2+q.y+lift,4.)*show;
+  float sl=aProp.x;vPropUv=vec2((mod(sl,4.)+uv.x)/4.,1.-(floor(sl/4.)+1.-uv.y)/4.);vLit=aMisc.y;`);
+    sh.fragmentShader=sh.fragmentShader.replace("#include <common>",`#include <common>
+varying vec2 vPropUv;varying float vLit;`).replace("#include <map_fragment>",`
+  vec4 tc=texture2D(map,vPropUv);diffuseColor*=vec4(tc.rgb*vLit,tc.a);`);};
+  return R3.propM=m;}
+// the fans take over from the painted bowl once the atlas has loaded (where the rink theme shows the stands at all), and hand it back
+// if the device has to drop down the quality ladder: the upper deck first, then the lower bowl
+function fansOn(){if(!FANS.ok||!R3.fanG||!R3.lowPaint||R3.theme==="pond")return;const on=!(R3.lv>=4),up=on&&!(R3.lv>=3);
+  R3.lowPaint.forEach(q=>q.visible=!on);R3.fanG.visible=on;
+  if(R3.fanUpG){R3.upPaint.forEach(q=>q.visible=!up&&!q.userData.hid);R3.fanUpG.visible=up&&!R3.fanUpG.userData.hid;}}
 const FAN_SKIN=["#f6d3b3","#eabf98","#d29a6c","#a8714a","#7f5236"],FAN_HAIR=["#2a2019","#4a3220","#7a5634","#c09a5e","#dcd3c4","#3a322c"],
   FAN_PLAIN=["#3a3f48","#24365a","#8a9099","#2a2d33","#e9edf2","#55607a"];
 function free3D(o,keep){
@@ -3970,50 +4098,68 @@ function build3D(){
   // lower bowl: fans right up against the glass, rising to a ribbon board; the upper deck sits above and behind it
   // the real thing: nine stepped rows, mitred at the corners so the ends and the sides meet (lo/hi: how far along its run a row
   // at depth d reaches), seat backs on the risers, and a fan in nearly every seat
-  const FR=9,DD=220/FR,DH=200/FR,fan={pos:[],yaw:[],sc:[],tint:[],skin:[],hair:[],fan:[]},rk=Math.random,pick=a=>a[Math.floor(rk()*a.length)];
+  // the real thing: stepped rows, mitred at the corners so the ends and the sides meet (lo/hi: how far along its run a row at depth
+  // d reaches), seat backs on the risers, and a fan in nearly every seat; nine rows in the lower bowl and eight in the upper deck
+  const rk=Math.random,pick=a=>a[Math.floor(rk()*a.length)],bowlC=v3(GX,(H+EXT)/2,0),newF=()=>({pos:[],yaw:[],sc:[],tint:[],skin:[],hair:[],stripe:[],fan:[],misc:[],prop:[]});
+  const fan=newF(),fanUp=newF(),jT=t=>lum(t.c1)<.25?"#eceff2":"#16181d";
   const seatC=new T.Color(home.c1).lerp(new T.Color(0x10151e),.55);
   const riserT=texText(64,64,(x,w,h)=>{x.fillStyle="#121823";x.fillRect(0,0,w,h);x.fillStyle="#"+seatC.getHexString();x.beginPath();x.roundRect(5,6,w-10,h-22,[10,10,3,3]);x.fill();
     x.fillStyle="rgba(255,255,255,.12)";x.fillRect(9,9,w-18,4);x.fillStyle="rgba(0,0,0,.35)";x.fillRect(5,h-20,w-10,4);});
   riserT.wrapS=T.RepeatWrapping;
   const riserM=new T.MeshStandardMaterial({map:riserT,color:0xb8bec8,roughness:.9}),treadM=mat(0x1a212d,{roughness:.95});
   R3.fanG=new T.Group();R3.fanG.visible=false;R3.lowPaint=[];
-  const fanRun=(P,lo,hi)=>{const rv=[],ru=[],tv=[];
+  R3.fanUpG=new T.Group();R3.fanUpG.visible=false;R3.fanUpG.userData.part="upper";R3.upPaint=[];
+  const LOW={rows:9,d0:30,d1:250,hF:20,hA:60,dh:200/9,hE:300,lit:[1,.84],prop:1,grp:R3.fanG,F:fan},
+    UP={rows:8,d0:262,d1:520,hF:340,hA:358,dh:32,hE:600,lit:[.74,.6],prop:.6,grp:R3.fanUpG,F:fanUp};
+  const fanRun=(P,lo,hi,o)=>{const rv=[],ru=[],tv=[],F=o.F,DDr=(o.d1-o.d0)/o.rows;
     const q4=(arr,uv,a,b,c,d,u0,u1)=>{arr.push(...a.toArray(),...b.toArray(),...c.toArray(),...c.toArray(),...b.toArray(),...d.toArray());if(uv)uv.push(u0,0,u1,0,u0,1,u0,1,u1,0,u1,1);};
-    for(let i=0;i<=FR;i++){const d0=30+i*DD,h0=i?60+(i-1)*DH:20,h1=i<FR?60+i*DH:300;
+    for(let i=0;i<=o.rows;i++){const d0=o.d0+i*DDr,h0=i?o.hA+(i-1)*o.dh:o.hF,h1=i<o.rows?o.hA+i*o.dh:o.hE;
       q4(rv,ru,P(lo(d0),d0,h0),P(hi(d0),d0,h0),P(lo(d0),d0,h1),P(hi(d0),d0,h1),lo(d0)/24,hi(d0)/24);
-      if(i===FR)break;const d1=d0+DD;
+      if(i===o.rows)break;const d1=d0+DDr;
       q4(tv,null,P(lo(d0),d0,h1),P(hi(d0),d0,h1),P(lo(d1),d1,h1),P(hi(d1),d1,h1));
-      // the fans in this row, facing the ice
-      const df=d0+DD*.6,dir=P(0,0,0).sub(P(0,1,0)),yaw=Math.atan2(dir.x,dir.z);let n=0;
+      // the fans in this row, facing the ice: mostly the home club's, in its sweaters (home and white) or their own clothes
+      const df=d0+DDr*.6,dir=P(0,0,0).sub(P(0,1,0)),yaw=Math.atan2(dir.x,dir.z),lit=o.lit[0]+(o.lit[1]-o.lit[0])*i/(o.rows-1);let n=0;
       for(let a=lo(df)+12;a<hi(df)-12;a+=24,n++){if(n%16===15||rk()<.06)continue;
-        const at=a+(rk()-.5)*5,ps=P(at,df+(rk()-.5)*3,h1);fan.pos.push(ps);fan.yaw.push(yaw+(rk()-.5)*.25);fan.sc.push(.9+rk()*.18);
-        const hm=rk()<.82,head=rk()<.4?0:Math.floor(1+rk()*3),club=hm?home:away,cr=rk();
-        fan.tint.push(hm?(cr<.5?club.c1:cr<.65?club.c2:cr<.75?"#f2f4f7":pick(FAN_PLAIN)):(cr<.65?club.c1:cr<.8?club.c2:pick(FAN_PLAIN)));
-        fan.skin.push(pick(FAN_SKIN));fan.hair.push(head===1||head===2?(rk()<.6?(rk()<.6?club.c1:club.c2):pick(FAN_PLAIN)):pick(FAN_HAIR));
-        fan.fan.push([head,rk(),rk(),hm?1:0]);}}
+        const at=a+(rk()-.5)*5,ps=P(at,df+(rk()-.5)*3,h1);F.pos.push(ps);F.yaw.push(yaw+(rk()-.5)*.25);F.sc.push(.9+rk()*.18);
+        const hm=rk()<.82,head=Math.floor(rk()*7),club=hm?home:away,cr=rk();
+        const tint=hm?(cr<.48?club.c1:cr<.6?club.c2:cr<.72?"#f2f4f7":pick(FAN_PLAIN)):(cr<.62?club.c1:cr<.76?club.c2:cr<.84?"#f2f4f7":pick(FAN_PLAIN));
+        F.tint.push(tint);F.stripe.push(tint===club.c1?jT(club):tint===club.c2?club.c1:tint==="#f2f4f7"?club.c1:tint);
+        F.skin.push(pick(FAN_SKIN));F.hair.push(head===1||head===2||head===6?(rk()<.6?(rk()<.6?club.c1:club.c2):pick(FAN_PLAIN)):pick(FAN_HAIR));
+        F.fan.push([head+(rk()<.5?10:0),rk(),rk(),hm?1:0]);
+        const r2=rk()/o.prop,kind=hm?(r2<.04?1:r2<.07?2:r2<.29?3:0):(r2<.04?1:r2<.06?2:r2<.16?3:0);
+        F.misc.push([(Math.atan2(ps.z-bowlC.z,ps.x-bowlC.x)/(Math.PI*2)+1)%1,lit*(.94+rk()*.12),kind,rk()]);
+        F.prop.push(kind===1?[hm?pick(PROP_SLOT.sign):pick(PROP_SLOT.asign),36,36]:kind===2?[hm?PROP_SLOT.finger:PROP_SLOT.afinger,30,30]:kind===3?[hm?PROP_SLOT.towel:PROP_SLOT.atowel,23,23]:null);}}
     const gr=new T.BufferGeometry();gr.setAttribute("position",new T.Float32BufferAttribute(rv,3));gr.setAttribute("uv",new T.Float32BufferAttribute(ru,2));gr.computeVertexNormals();
     const gt=new T.BufferGeometry();gt.setAttribute("position",new T.Float32BufferAttribute(tv,3));gt.computeVertexNormals();
-    const mr=new T.Mesh(gr,riserM),mt=new T.Mesh(gt,treadM);mr.receiveShadow=mt.receiveShadow=true;R3.fanG.add(mr,mt);R3.seats.push(mr,mt);};
+    const mr=new T.Mesh(gr,riserM),mt=new T.Mesh(gt,treadM);mr.receiveShadow=mt.receiveShadow=true;o.grp.add(mr,mt);R3.seats.push(mr,mt);};
   const bowl=(P,a0,a1,tile,lo,hi)=>{ // P(d,h) maps distance back from the boards and height to a world point at either end of the run
     const L=Math.abs(a1-a0)/tile;
     {const q=quad(P(a0,30,60),P(a1,30,60),P(a0,250,300),P(a1,250,300),L,1,crowdM);R3.seats.push(q);R3.lowPaint.push(q);}
-    fanRun(P,lo,hi);
+    fanRun(P,lo,hi,LOW);
     quad(P(a0,250,300),P(a1,250,300),P(a0,250,326),P(a1,250,326),L*2,1,ribM).layers.enable(1);
     quad(P(a0,250,326),P(a1,250,326),P(a0,262,340),P(a1,262,340),1,1,deck).userData.part="upper";
-    const up=quad(P(a0,262,340),P(a1,262,340),P(a0,520,600),P(a1,520,600),L,1,crowdM);up.userData.part="upper";R3.seats.push(up);};
+    const up=quad(P(a0,262,340),P(a1,262,340),P(a0,520,600),P(a1,520,600),L,1,crowdM);up.userData.part="upper";R3.seats.push(up);R3.upPaint.push(up);
+    fanRun(P,lo,hi,UP);};
   R3.seats=[]; // the crowd surfaces, for camera flashes
   for(const e of[-1,1]){const yb=e<0?-6:H+EXT+6;bowl((a,d,h)=>v3(a,yb+e*d,h),-430,1030,1000,d=>8-d,d=>W-8+d);}
   for(const sx of[-1,1]){const xb=sx<0?8:W-8;bowl((a,d,h)=>v3(xb+sx*d,a,h),-430,H+EXT+430,1000,d=>-6-d,d=>H+EXT+6+d);}
-  {// one instanced quad per fan, standing on his row (the atlas cell is 130 x 260 model centimetres)
-    const N=fan.pos.length,geo=new T.PlaneGeometry(54.6,109.2);geo.translate(0,54.6,0);
-    const im=new T.InstancedMesh(geo,fanMat(),N),o=new T.Object3D(),c=new T.Color(),att=n=>new T.InstancedBufferAttribute(new Float32Array(N*n),n);
-    const aT=att(3),aS=att(3),aH=att(3),aF=att(4),lin=(h,A,i)=>{c.set(h);A.setXYZ(i,c.r,c.g,c.b);};
-    for(let i=0;i<N;i++){o.position.copy(fan.pos[i]);o.rotation.set(0,fan.yaw[i],0);o.scale.setScalar(fan.sc[i]);o.updateMatrix();im.setMatrixAt(i,o.matrix);
-      lin(fan.tint[i],aT,i);lin(fan.skin[i],aS,i);lin(fan.hair[i],aH,i);aF.setXYZW(i,...fan.fan[i]);}
-    geo.setAttribute("aTint",aT);geo.setAttribute("aSkin",aS);geo.setAttribute("aHair",aH);geo.setAttribute("aFan",aF);
-    im.frustumCulled=false;R3.fanG.add(im);R3.fanN=N;}
+  // one instanced quad per fan, standing on his row (the atlas cell is 130 x 260 model centimetres), and one per prop
+  const pm=propMat(home,away);
+  const crowdMesh=(F,grp)=>{const N=F.pos.length,geo=new T.PlaneGeometry(54.6,109.2);geo.translate(0,54.6,0);
+    const im=new T.InstancedMesh(geo,fanMat(),N),o=new T.Object3D(),c=new T.Color(),att=(n,k)=>new T.InstancedBufferAttribute(new Float32Array(k*n),n);
+    const aT=att(3,N),aS=att(3,N),aH=att(3,N),aSt=att(3,N),aF=att(4,N),aM=att(4,N),lin=(h,A,i)=>{c.set(h);A.setXYZ(i,c.r,c.g,c.b);};
+    const PI=[];F.prop.forEach((x,i)=>{if(x)PI.push(i);});
+    const pg=new T.PlaneGeometry(1,1),pim=new T.InstancedMesh(pg,pm,Math.max(1,PI.length)),pF=att(4,PI.length||1),pM=att(4,PI.length||1),pP=att(4,PI.length||1);
+    for(let i=0;i<N;i++){o.position.copy(F.pos[i]);o.rotation.set(0,F.yaw[i],0);o.scale.setScalar(F.sc[i]);o.updateMatrix();im.setMatrixAt(i,o.matrix);
+      lin(F.tint[i],aT,i);lin(F.skin[i],aS,i);lin(F.hair[i],aH,i);lin(F.stripe[i],aSt,i);aF.setXYZW(i,...F.fan[i]);aM.setXYZW(i,...F.misc[i]);}
+    PI.forEach((i,j)=>{im.getMatrixAt(i,o.matrix);pim.setMatrixAt(j,o.matrix);pF.setXYZW(j,...F.fan[i]);pM.setXYZW(j,...F.misc[i]);pP.setXYZW(j,...F.prop[i],0);});
+    pim.count=PI.length;
+    geo.setAttribute("aTint",aT);geo.setAttribute("aSkin",aS);geo.setAttribute("aHair",aH);geo.setAttribute("aStripe",aSt);geo.setAttribute("aFan",aF);geo.setAttribute("aMisc",aM);
+    pg.setAttribute("aFan",pF);pg.setAttribute("aMisc",pM);pg.setAttribute("aProp",pP);
+    im.frustumCulled=pim.frustumCulled=false;grp.add(im,pim);return [N,PI.length];};
+  const [n1,p1]=crowdMesh(fan,R3.fanG),[n2,p2]=crowdMesh(fanUp,R3.fanUpG);R3.fanN=n1+n2;R3.propN=p1+p2;R3.fanLow=n1;
   W3.add(R3.fanG);
-  R3.fanHype=0;tagFrom(n0,"stands");n0=W3.children.length;
+  R3.fanHype=0;tagFrom(n0,"stands");W3.add(R3.fanUpG);n0=W3.children.length;
   // arena shell, rafters lights and hanging banners
   const shell=new T.Mesh(new T.BoxGeometry(2600,1300,3400),new T.MeshStandardMaterial({color:0x0b1019,side:T.BackSide,roughness:1}));shell.position.copy(v3(GX,(H+EXT)/2,600));W3.add(shell);
   const lampM=new T.MeshBasicMaterial({color:0xfffbea,toneMapped:false});lampM.color.multiplyScalar(5);
@@ -4824,7 +4970,18 @@ function place3D(A){
   // the crowd jumps up with their arms in the air on a goal; the ribbon boards scroll
   const hype=A.result==="goal"||G.mob?1:0;
   if(hype!==R3.fanHype){R3.crowdM.map=R3.crowd[hype];R3.crowdM.needsUpdate=true;R3.fanHype=hype;R3.fanH0=G.clockT;}
-  if(R3.fanU){const U=R3.fanU;U.uT.value=G.clockT;U.uGoal.value=hype?Math.min(G.clockT-R3.fanH0,G.mob?3:99):-1;U.uHome.value=(G.mob?G.mob.w==="me":G.side==="me")?1:0;R3.fanM.color.copy(R3.crowdM.color).multiplyScalar(1.15);}
+  if(R3.fanU){const U=R3.fanU;U.uT.value=G.clockT;U.uGoal.value=hype?Math.min(G.clockT-R3.fanH0,G.mob?3:99):-1;U.uHome.value=(G.mob?G.mob.w==="me":G.side==="me")?1:0;R3.fanM.color.copy(R3.crowdM.color).multiplyScalar(1.25);
+    if(R3.propM)R3.propM.color.copy(R3.crowdM.color).multiplyScalar(1.15);
+    // the building leans in as the shooter closes on the net, the goalie's fans jump up for a save, and every minute or two the
+    // wave goes round the bowl (eleven seconds a lap) when nothing else is happening
+    if(G.clockT<(R3.fanT??0)-1){R3.wave0=null;R3.waveAt=null;}
+    const dt=clamp(G.clockT-(R3.fanT??G.clockT),0,.2),tn=A&&A.phase!=="ready"&&!A.result&&!G.over?clamp((700-A.s.y)/560,0,1):0;R3.fanT=G.clockT;
+    R3.tense=(R3.tense||0)+(tn-(R3.tense||0))*Math.min(1,dt*2.5);U.uTense.value=R3.tense;
+    U.uSave.value=A&&A.result==="save"?A.endT:-1;U.uSaveHome.value=G.side==="opp"?1:0;
+    if(R3.waveAt==null)R3.waveAt=G.clockT+25+Math.random()*30;
+    if(R3.wave0==null&&!hype&&!(R3.tense>.15)&&G.clockT>R3.waveAt)R3.wave0=G.clockT;
+    const wv=R3.wave0==null?-1:(G.clockT-R3.wave0)/11;
+    if(wv>1.12||(wv>=0&&hype)){R3.wave0=null;R3.waveAt=G.clockT+60+Math.random()*60;U.uWave.value=-1;}else U.uWave.value=wv;}
   R3.crowdM.map.offset.y=hype?-Math.abs(Math.sin(G.clockT*9))*.012:0;R3.ribbon.offset.x=(G.clockT*.03)%1;
   // goal lamp
   const on=A.result==="goal"&&!R3.noLamp,f=on?.6+.4*Math.sin(A.endT*20):0;R3.lamp.intensity=on?3.2*f:0;R3.lampMat.emissive.setRGB(on?f*3:0,on?f*.05:0,0);R3.glow.material.opacity=on?.9*f:0;
