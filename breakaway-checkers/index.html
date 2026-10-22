@@ -778,7 +778,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="row"><button class="btn primary sm" id="btnScoutSk" type="button"></button><button class="btn primary sm" id="btnScoutGk" type="button"></button></div>
       </div>
       <div class="card">
-        <div class="row" style="justify-content:space-between"><h3 class="ch">Trade market</h3><span class="muted">Other clubs' players for sale · tap one for his full card · a new board after every game</span></div>
+        <div class="row" style="justify-content:space-between"><h3 class="ch">Trade market</h3><span class="muted" id="mktSub"></span></div>
         <p class="stnote" id="mktNote"></p>
         <div class="pgrid" id="mkt"></div>
       </div>
@@ -824,7 +824,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v58</p>
+    <p class="ver">v59</p>
   </section>
 
   <section id="game" hidden>
@@ -1805,11 +1805,13 @@ function openMktPlayer(i){const x=market()[i];if(!x)return;const q=x.q,R=PROF.ro
       ${short?`<p class="stnote" style="flex-basis:100%">You need ${coinN(x.c-PROF.coins)} more coins.</p>`:""}</div></div>`;
   m.querySelector("[data-act=close]").addEventListener("click",closePlayer);
   const b=$("mktBuy");if(b)b.addEventListener("click",()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent="Confirm";return;}buyP(i);});}
-function renderMarket(){const el=$("mkt");if(!el)return;const R=PROF.roster,M=market();
-  const shut=tradeClosed();$("mktNote").textContent=shut?"The trade deadline has passed: the market reopens when the season is over.":"";
+function renderMarket(){const el=$("mkt");if(!el)return;const shut=tradeClosed();
+  $("mktSub").textContent=shut?"Closed for the rest of the season":"Other clubs' players for sale · tap one for his full card · a new board after every game";
+  $("mktNote").textContent=shut?"The trade deadline has passed, so no players are for sale. The market reopens when the season is over.":"";
+  if(shut){el.innerHTML="";return;}const R=PROF.roster,M=market();
   el.innerHTML=M.map((x,i)=>{const q=x.q,full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,cap=!capOk(q.sal||.5);
     return `<div class="mkt">${pCard(q,`From ${q.from}`).replace('data-pid=','data-mid=')}<small class="mkc">${money(q.sal||.5)} × ${yrsT(q.yrs||1)}</small>${x.sold?`<button class="btn sm" type="button" disabled>Bought</button>`:
-      `<button class="btn primary sm" type="button" data-buy="${i}" ${PROF.coins<x.c||full||cap||shut?"disabled":""}>${shut?"Trades closed":full?"Roster full":cap?"Over the cap":`Buy ${coinN(x.c)}`}</button>`}</div>`;}).join("");
+      `<button class="btn primary sm" type="button" data-buy="${i}" ${PROF.coins<x.c||full||cap?"disabled":""}>${full?"Roster full":cap?"Over the cap":`Buy ${coinN(x.c)}`}</button>`}</div>`;}).join("");
   el.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{if(!b.dataset.arm){el.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.innerHTML=x.dataset.l;});b.dataset.l=b.innerHTML;b.dataset.arm=1;b.textContent="Confirm";return;}buyP(+b.dataset.buy);}));
   el.querySelectorAll("[data-mid]").forEach(c=>c.addEventListener("click",()=>openMktPlayer(M.findIndex(x=>x.q.id===c.dataset.mid))));}
 // the trade deadline: in season mode deals close after game 12 and reopen once the season is over; the last two games
