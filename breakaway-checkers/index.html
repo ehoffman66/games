@@ -238,6 +238,7 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 @media (max-width:420px){.cp-row{grid-template-columns:1fr 1fr}.cp-row label:last-child{grid-column:1/-1}}
 /* player sheet */
 .modal{position:fixed;inset:0;z-index:50;background:rgba(3,5,9,.8);display:flex;align-items:center;justify-content:center;padding:16px;overflow:auto}
+.sheet>*{flex-shrink:0}
 .sheet{position:relative;width:min(460px,100%);max-height:calc(100dvh - 32px);overflow:auto;background:var(--panel);border:2px solid var(--tc);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
 .sheet .x{position:absolute;top:8px;right:8px;width:40px;height:40px;border-radius:8px;border:1px solid var(--line);background:var(--panel-2);color:var(--fg);font-size:1rem;cursor:pointer}
 .sh-head{display:flex;gap:14px;align-items:center;background:var(--tg);border-radius:10px;padding:10px 12px;margin-right:44px}
@@ -250,7 +251,7 @@ select{font:inherit;background:var(--panel-2);color:var(--fg);border:1px solid v
 .ofr.me{border-color:var(--led)}.ofr b{font-size:1.1rem}.ofr em{font-style:normal;font-weight:700;min-width:2.2em;text-align:right;color:var(--muted)}
 .ofr em.gu{color:#5fd38a}.ofr em.gd{color:#ff6b6b}
 .pros .pcard.sel{outline:3px solid var(--led);outline-offset:2px}
-.pc-v{margin-left:auto;white-space:nowrap;color:var(--fg);font-weight:700}.pc-v .coin{width:10px;height:10px;margin-right:2px}
+.pc-v{margin-left:auto;white-space:nowrap;color:var(--fg);font-weight:700}.pc-v .fm{font-style:normal;font-size:.7em;margin-right:3px}.fmu{color:#4ade80}.fmd{color:#7cc4ff}.fm-hot{color:#fbbf24}.fm-cold{color:#9cc9ff}.pc-v .coin{width:10px;height:10px;margin-right:2px}
 .tro2 .chip{width:30px;height:30px}.tro2 small{line-height:1.35}.tro2 i{font-style:normal;font-weight:700}.tro2 i.gu{color:#5fd38a}.tro2 i.gd{color:#ff6b6b}
 .tro2 .btn{flex:none}
 .mkt{display:flex;flex-direction:column;gap:6px;min-width:0}.mkc{font-size:.75rem;color:var(--muted);text-align:center}
@@ -786,7 +787,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="row" style="justify-content:space-between"><h3 class="ch">Transactions</h3><span class="muted">Tap a player, then Trade or sell</span></div>
         <div class="ofl" id="txList"></div>
       </div>
-      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also train with coins any time, up to the player's potential. Every player has a market value: tap him and choose <b>Trade or sell</b> to take bids from other clubs or swap him for one of theirs, and buy other clubs' players on the <b>trade market</b>. Every player but you has a <b>contract</b>: the payroll must stay under the $12.0M cap, deals end in the offseason, and in season mode trades close after game 12. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
+      <div class="howto"><div><h3>How players grow</h3>Every attempt earns your shooter XP, and goals earn the most. Your goalie earns XP for every save. Each level gives a <b>training point</b> to raise a rating, and levels 3 and 6 unlock his signature <b>perks</b>. You can also pay to train any time, up to the player's potential. Every player has a market value, and it rises with a <b>hot season</b> and falls with a cold one: tap him and choose <b>Trade or sell</b> to take bids from other clubs or swap him for one of theirs, and buy other clubs' players on the <b>trade market</b>. Every player but you has a <b>contract</b>: the payroll must stay under the $2.4M cap, deals end in the offseason, and in season mode trades close after game 12. Players get a year older after every season: young ones keep growing, players past 30 slowly slip, and veterans retire.</div>
       <div><h3>What ratings do</h3><b>Shot</b> adds puck speed, <b>Accuracy</b> tightens your aim, <b>Speed</b> is top skating speed and <b>Hands</b> makes dekes quicker and harder. In net, <b>Reflexes</b> is lateral speed, <b>Size</b> covers more net, <b>Poke</b> wins more poke checks and <b>Positioning</b> makes him sharper overall. A 75 is average.</div></div>
     </div>
     <div class="pane" data-pane="locker" role="tabpanel" hidden>
@@ -824,7 +825,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v59</p>
+    <p class="ver">v60</p>
   </section>
 
   <section id="game" hidden>
@@ -1417,9 +1418,11 @@ const ARCH={
 };
 const PERK_LV=[3,6],MAX_LV=10,MAX_SK=10,MAX_GK=3,SIGN={sk:350,gk:450},RELEASE=50;
 // contracts: every player but your own has a salary (in $M a season) and years left; the payroll has to stay under the cap
-const CAP=12,DEADLINE=12;
-const salFor=p=>Math.max(.5,Math.round(pVal(p)/100)/10),money=m=>`$${(+m).toFixed(1)}M`,yrsT=n=>`${n} yr${n===1?"":"s"}`;
-const payroll=ex=>Math.round(allP(PROF.roster).reduce((t,p)=>t+(p.me||p===ex?0:(p.sal||.5)),0)*10)/10;
+// salaries are AHL money: a $55K floor (the AHL minimum was $52,725 in 2024-25), about $100K for a solid 75 and up to
+// $900K for the league's best, under a $2.4M payroll cap
+const CAP=2.4,DEADLINE=12,MIN_SAL=.055;
+const salFor=p=>clamp(Math.round(pVal(p)*.2/5)*5/1000,MIN_SAL,.9),money=m=>{const k=Math.round(m*1000);return k>=1000?`$${(k/1000).toFixed(2).replace(/0$/,"")}M`:`$${k}K`;},yrsT=n=>`${n} yr${n===1?"":"s"}`;
+const payroll=ex=>Math.round(allP(PROF.roster).reduce((t,p)=>t+(p.me||p===ex?0:(p.sal||MIN_SAL)),0)*1000)/1000;
 const capOk=(add,ex)=>payroll(ex)+add<=CAP+1e-9;
 const RNAMES=["NOVAK","LAROCHE","BERGMAN","MACKAY","DUBOIS","SORENSEN","LINDQVIST","FORTIER","HALVORSEN","KOWALSKI","BRENNAN","TREMBLAY","OKAFOR","MARCHAND","EKLUND","REILLY","STROMBERG","CALLAHAN","DESROSIERS","HOLM",
   "PELLETIER","VASQUEZ","AHONEN","GALLAGHER","BOUCHARD","NYSTROM","KRAVCHUK","OSULLIVAN","LEMIEUX","HARTLEY","VIRTANEN","DAWSON","BEAULIEU","MORENO","KARLSSON","PATTERSON","GAUTHIER","ROWE","SATO","FINNEGAN"];
@@ -1437,7 +1440,7 @@ function newPlayer(R,goalie,o={}){
   const archs=Object.keys(ARCH).filter(k=>!!ARCH[k].g===goalie),arch=o.arch||pick(archs),base=o.base??rnd(64,74),r={};
   for(const [k] of goalie?GK_R:SK_R)r[k]=clamp(Math.round(base+ARCH[arch].bias[k]+gauss()*(o.spread??3)),55,92);
   const usedN=new Set(allP(R).map(p=>p.num)),usedS=new Set([...allP(R).map(p=>p.name),...(PROF&&PROF.alumni||[]).slice(-12).map(a=>a.n.split(" ").pop())]);
-  const p={id:Math.random().toString(36).slice(2,9),g:goalie?1:0,arch,r,lv:1,xp:0,pts:0,goals:0,shots:0,saves:0,faced:0,age:Math.floor(rnd(...(o.age||[19,28]))),sal:.5,yrs:3,
+  const p={id:Math.random().toString(36).slice(2,9),g:goalie?1:0,arch,r,lv:1,xp:0,pts:0,goals:0,shots:0,saves:0,faced:0,age:Math.floor(rnd(...(o.age||[19,28]))),sal:MIN_SAL,yrs:3,
     num:pick((goalie?GK_NUMS:SK_NUMS).filter(n=>!usedN.has(n)))??(goalie?30:9),name:pick(RNAMES.filter(n=>!usedS.has(n)))||pick(RNAMES),ini:pick("ABCDEGHJKLMNOPRSTVW")};
   const top=Math.max(...Object.values(r));
   p.pot=clamp(Math.round(o.pot??(Math.random()<.1?rnd(95,99.4):rnd(80,93))),top+4,99);
@@ -1574,7 +1577,7 @@ function checkDaily(){
 // for rewards earned off the ice (training, signing): pay out on the spot and pop a toast
 function cashIn(){
   const got=[...checkDaily(),...checkAch()];for(const a of got)PROF.coins+=a.coins;
-  saveProf();if(got.length)toast(got.map(a=>`🏆 ${a.name} +${a.coins}`).join("<br>"));
+  saveProf();if(got.length)toast(got.map(a=>`🏆 ${a.name} +${cash(a.coins)}`).join("<br>"));
 }
 function toast(html){let t=$("toast");if(!t){t=document.createElement("div");t.id="toast";t.setAttribute("role","status");document.body.appendChild(t);}
   t.innerHTML=html;t.classList.add("on");clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove("on"),3200);}
@@ -1649,7 +1652,7 @@ function renderCareer(){
   ensureDaily();
   const L=lvlOf(PROF.xp),line=lineup(),gk=starterG(),team=Math.round((line.reduce((s,p)=>s+ovr(p),0)+ovr(gk))/6);
   $("career").innerHTML=`<div class="lvl"><b>Level ${L.l}</b><div class="bar"><i style="width:${Math.round(L.into/L.need*100)}%"></i></div><small>${L.into} / ${L.need} XP</small></div>
-    <div class="coins"><span class="coin"></span><b>${PROF.coins}</b><span class="cx"> coins</span></div>
+    <div class="coins"><b>${cash(PROF.coins)}</b><span class="cx"> in the bank</span></div>
     <div class="rec">Team <b class="ovr-${tierOf(team)}">${team}</b> OVR<span class="cx"> · ${PROF.wins}-${PROF.games-PROF.wins} career${PROF.streak>1?` · ${PROF.streak} win streak`:""}</span></div>`;
   const pts=allP(PROF.roster).reduce((s,p)=>s+p.pts,0);
   $("bdRoster").textContent=pts?pts:"";$("bdRoster").title=pts?`${pts} training point${pts>1?"s":""} to spend`:"";
@@ -1669,11 +1672,11 @@ function renderLinePrev(){
 }
 function renderDaily(){
   const D=PROF.daily,html=D.ids.map(id=>{const c=DAILY.find(x=>x.id===id),v=dailyProg(c),done=!!D.done[id];
-    return `<div class="daily ${done?"done":""}"><div><b>${c.d}</b><small>${done?"Done":`${v} / ${c.n}`}</small></div><div class="bar"><i style="width:${v/c.n*100}%"></i></div><em><span class="coin"></span>${c.coins}</em></div>`;}).join("")+
-    `<div class="daily-b ${D.bonus?"done":""}">Finish all three for a <span class="coin"></span>${DAILY_BONUS} bonus${D.bonus?": collected":""}. New challenges every day.</div>`;
+    return `<div class="daily ${done?"done":""}"><div><b>${c.d}</b><small>${done?"Done":`${v} / ${c.n}`}</small></div><div class="bar"><i style="width:${v/c.n*100}%"></i></div><em>${cash(c.coins)}</em></div>`;}).join("")+
+    `<div class="daily-b ${D.bonus?"done":""}">Finish all three for a ${cash(DAILY_BONUS)} bonus${D.bonus?": collected":""}. New challenges every day.</div>`;
   $("daily2").innerHTML=html;
   const n=D.ids.filter(id=>D.done[id]).length;
-  $("dailyStrip").innerHTML=`<span class="coin"></span><b>Daily challenges</b><span>${n===D.ids.length?"All done today":`${n} of ${D.ids.length} done`}</span><i aria-hidden="true">›</i>`;
+  $("dailyStrip").innerHTML=`<span aria-hidden="true">💵</span><b>Daily challenges</b><span>${n===D.ids.length?"All done today":`${n} of ${D.ids.length} done`}</span><i aria-hidden="true">›</i>`;
 }
 // a player's numbers: career off the player, or a season's
 function pStats(p,scope){
@@ -1686,11 +1689,11 @@ function pCard(p,slot,withStats){
   const o=ovr(p),perks=perksOf(p);
   return `<button class="pcard t-${tierOf(o)}${p.me?" me":""}${p.inj?" inj":""}" data-pid="${p.id}" type="button">${p.me?`<span class="pc-you">★ YOU</span>`:""}
     <div class="pc-top"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div class="pc-slot">${slot||""}</div></div>
-    <div class="pc-num">#${p.num}${p.age?` · age ${p.age}`:""}${p.me?"":` · ${money(p.sal||.5)}`}</div><div class="pc-name">${p.ini}. ${p.name}</div><div class="pc-arch">${p.arch}${p.g?" goalie":""}</div>
+    <div class="pc-num">#${p.num}${p.age?` · age ${p.age}`:""}${p.me?"":` · ${money(p.sal||MIN_SAL)}`}</div><div class="pc-name">${p.ini}. ${p.name}</div><div class="pc-arch">${p.arch}${p.g?" goalie":""}</div>
     ${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}</div>`:""}
     ${p.aw&&p.aw.length?`<div class="pc-aw">${p.aw.slice(-3).map(a=>`<span>🏅 ${AWN[a.id]||a.id} · S${a.y}</span>`).join("")}</div>`:""}
     <div class="pc-r">${RTS(p).map(([k,n])=>`<span>${n.slice(0,3).toUpperCase()}<b>${p.r[k]}</b></span>`).join("")}</div>
-    <div class="pc-lv"><span>Lv ${p.lv}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div>${p.pts?`<i class="dot-pt">+${p.pts}</i>`:""}${pVal(p)?`<span class="pc-v">${coinN(pVal(p))}</span>`:""}</div>
+    <div class="pc-lv"><span>Lv ${p.lv}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div>${p.pts?`<i class="dot-pt">+${p.pts}</i>`:""}${pVal(p)?`<span class="pc-v">${(f=>f?`<span class="fm ${f.hot?"fmu":"fmd"}" title="${f.hot?"Hot":"Cold"} season">${f.hot?"▲":"▼"}</span>`:"")(formOf(p))}${coinN(pVal(p))}</span>`:""}</div>
     ${perks.length?`<div class="pc-perks">${perks.map(k=>`<span>${PERKS[k].name}</span>`).join("")}</div>`:""}
     ${withStats?`<div class="pc-st" title="Career stats">${statCells(p,pStats(p)).map(([k,v])=>`<span>${k}<b>${v}</b></span>`).join("")}</div>`:""}
   </button>`;
@@ -1704,8 +1707,8 @@ function renderRoster(){
   const hurt=allP(R).filter(p=>p.inj).length;
   $("benchCount").textContent=`${R.sk.length} of ${MAX_SK} skaters · ${R.gk.length} of ${MAX_GK} goalies${hurt?` · ${hurt} injured`:""}`;
   const s1=$("btnScoutSk"),s2=$("btnScoutGk");
-  s1.innerHTML=`Scout a skater <span class="coin"></span>${SIGN.sk}`;s1.disabled=PROF.coins<SIGN.sk||R.sk.length>=MAX_SK||!capOk(.5);
-  s2.innerHTML=`Scout a goalie <span class="coin"></span>${SIGN.gk}`;s2.disabled=PROF.coins<SIGN.gk||R.gk.length>=MAX_GK||!capOk(.5);
+  s1.innerHTML=`Scout a skater ${cash(SIGN.sk)}`;s1.disabled=PROF.coins<SIGN.sk||R.sk.length>=MAX_SK||!capOk(MIN_SAL);
+  s2.innerHTML=`Scout a goalie ${cash(SIGN.gk)}`;s2.disabled=PROF.coins<SIGN.gk||R.gk.length>=MAX_GK||!capOk(MIN_SAL);
   const tv=allP(R).reduce((t,p)=>t+pVal(p),0),tx=PROF.tx||[];const pay=payroll();$("teamVal").innerHTML=`Roster value ${coinN(tv)} · Payroll <b class="${pay>CAP?"gd":""}">${money(pay)}</b> of ${money(CAP)} cap`;renderCall();
   renderMarket();$("txCard").hidden=!tx.length;$("txList").innerHTML=tx.slice(-6).reverse().map(x=>`<div class="ofr"><span>${x.t}${x.y?`<small>Season ${x.y}</small>`:""}</span></div>`).join("");
 }
@@ -1716,11 +1719,11 @@ function renderLocker(){
     d.innerHTML=`<div class="up-k">${u.kind}</div><h4>${u.name}</h4><p>${u.desc}</p><div class="pips">${[0,1,2].map(i=>`<i class="${i<lv?"on":""}"></i>`).join("")}</div>`;
     const b=document.createElement("button");b.className="btn buy";b.id="buy-"+u.id;
     if(lv>=3){b.textContent="Maxed out";b.disabled=true;}
-    else{b.innerHTML=`Upgrade <span class="coin"></span>${cost}`;b.disabled=PROF.coins<cost;b.addEventListener("click",()=>{if(PROF.coins<cost)return;PROF.coins-=cost;PROF.up[u.id]=lv+1;saveProf();renderCareer();});}
+    else{b.innerHTML=`Upgrade ${cash(cost)}`;b.disabled=PROF.coins<cost;b.addEventListener("click",()=>{if(PROF.coins<cost)return;PROF.coins-=cost;PROF.up[u.id]=lv+1;saveProf();renderCareer();});}
     d.appendChild(b);shop.appendChild(d);}
   const st=$("sticks");st.innerHTML="";
   for(const s of STICKS){const own=PROF.sticks.includes(s.id),eq=PROF.stick===s.id;const b=document.createElement("button");b.className="btn stickopt"+(eq?" eq":"");b.id="stick-"+s.id;
-    b.innerHTML=`<span class="swatch" style="background:${s.c}"></span>${s.name}<small>${eq?"Equipped":own?"Equip":`<span class="coin"></span>${s.cost}`}</small>`;
+    b.innerHTML=`<span class="swatch" style="background:${s.c}"></span>${s.name}<small>${eq?"Equipped":own?"Equip":`${cash(s.cost)}`}</small>`;
     b.disabled=!own&&PROF.coins<s.cost;
     b.addEventListener("click",()=>{if(!own){if(PROF.coins<s.cost)return;PROF.coins-=s.cost;PROF.sticks.push(s.id);}PROF.stick=s.id;saveProf();renderCareer();});st.appendChild(b);}
 }
@@ -1731,18 +1734,29 @@ function renderTrophies(){
     const pct=next?Math.min(100,(v-prev)/(next-prev)*100):100;
     return `<div class="tach m${lv}"><div class="medals">${[0,1,2].map(i=>`<i class="${i<lv?"on":""}" title="${TIERS[i]}: ${t.t[i]}"></i>`).join("")}</div>
       <b>${t.name}</b><span>${next?fillN(t.d,next):fillN(t.d,t.t[2])+" · complete"}</span>
-      <div class="bar"><i style="width:${pct}%"></i></div><small>${next?`${v} / ${next} · next ${TIERS[lv]} <span class="coin"></span>${TCOIN[lv]}`:"All three medals"}</small></div>`;}).join("");
-  $("trophies").innerHTML=ACH.map(a=>`<div class="tro ${PROF.ach[a.id]?"got":""}"><b>${a.name}</b><span>${a.desc}</span><em>${PROF.ach[a.id]?"Unlocked":"+"+a.coins+" coins"}</em></div>`).join("");
+      <div class="bar"><i style="width:${pct}%"></i></div><small>${next?`${v} / ${next} · next ${TIERS[lv]} ${cash(TCOIN[lv])}`:"All three medals"}</small></div>`;}).join("");
+  $("trophies").innerHTML=ACH.map(a=>`<div class="tro ${PROF.ach[a.id]?"got":""}"><b>${a.name}</b><span>${a.desc}</span><em>${PROF.ach[a.id]?"Unlocked":"+"+cash(a.coins)}</em></div>`).join("");
 }
 
 // ---- player value and the trade market: what other clubs would pay for a player, or trade for him.
 // Worth climbs steeply with OVR, young players are paid for their potential, perks and awards add to it, and it fades after 30.
 const NEW_LOCK=3;
+// season form: a skater scoring more often than your club usually does, or a goalie stopping more, is worth more this
+// season, and a slumping one less. How far it moves depends on how big the gap is for the number of shots (a z-score),
+// so one lucky game barely counts. It lasts until the next season starts.
+function formOf(p){const S=PROF.season,q=S&&S.phase!=="abandoned"&&S.ps&&S.ps[p.id],n=q?(p.g?q.sa:q.s):0;if(n<3)return null;
+  const all=allP(PROF.roster).filter(x=>!!x.g===!!p.g),made=all.reduce((t,x)=>t+(p.g?x.saves||0:x.goals||0),0),tries=all.reduce((t,x)=>t+(p.g?x.faced||0:x.shots||0),0);
+  const b=clamp(tries>=20?made/tries:p.g?.65:.35,.15,.85),hit=p.g?q.sv:q.g,k=Math.round(clamp(1+.12*(hit-b*n)/Math.sqrt(n*b*(1-b)),.7,1.4)*100)/100;
+  if(Math.abs(k-1)<.05)return null;
+  return {k,hot:k>1,pct:Math.round(Math.abs(k-1)*100),line:p.g?`${q.sv} saves on ${q.sa} shots`:`${q.g} goal${q.g===1?"":"s"} on ${q.s} shot${q.s===1?"":"s"}`};}
+const formNote=p=>{const f=formOf(p);return f?`<p class="stnote fm-${f.hot?"hot":"cold"}" style="flex-basis:100%">${f.hot?"🔥 Hot season":"🧊 Cold season"}: ${f.line}. His value is ${f.hot?"up":"down"} ${f.pct}%.</p>`:"";};
 function pVal(p){const o=ovr(p),a=p.age||25,pot=p.pot>o?p.pot:o,cur=250*Math.pow(1.15,o-70),pv=250*Math.pow(1.15,o+(pot-o)*.6-70);
   const w=a<=21?.3:a<=24?.2:a<=27?.08:0,am=a<=29?1:a<=31?.8:a<=33?.6:.4;
-  const v=(cur+w*Math.max(0,pv-cur))*am*(1+.08*perksOf(p).length)*(1+Math.min(.25,.05*(p.aw||[]).length))*(p.g?1.1:1)*(p.inj?.7:1);
+  const v=(cur+w*Math.max(0,pv-cur))*am*(1+.08*perksOf(p).length)*(1+Math.min(.25,.05*(p.aw||[]).length))*(p.g?1.1:1)*(p.inj?.7:1)*((formOf(p)||{k:1}).k);
   return Number.isFinite(v)?Math.max(40,Math.round(v/10)*10):0;}
-const coinN=n=>`<span class="coin"></span>${n.toLocaleString("en-US")}`;
+// money is kept in coins and shown as dollars: one coin is $1,000, so a win's 100 coins reads $100K
+const cash=n=>{n=Math.round(n);const a=Math.abs(n);return (n<0?"-":"")+(a>=1000?`$${(a/1000).toFixed(2).replace(/\.?0+$/,"")}M`:`$${a}K`);};
+const coinN=n=>`<span class="cash">${cash(n)}</span>`;
 // a new arrival has to play a few games before clubs will deal for him (so signing to flip isn't a money machine)
 const tradeLock=p=>p.acq!=null?Math.max(0,NEW_LOCK-(PROF.games-p.acq)):0;
 const myClub=()=>PROF.season&&(PROF.season.phase==="reg"||PROF.season.phase==="po")?PROF.season.club:selMe.value;
@@ -1764,11 +1778,11 @@ function tradeOffers(p){
 }
 function sellP(p,b){const R=PROF.roster;if(!canSell(p)||tradeLock(p)||tradeClosed())return;
   R.sk=R.sk.filter(x=>x!==p);R.gk=R.gk.filter(x=>x!==p);fixRoster();PROF.coins+=b.c;
-  logTx(`Sold #${p.num} ${p.ini}. ${p.name} to ${byAbbr[b.t].name} for ${b.c.toLocaleString("en-US")} coins`);
-  cashIn();renderCareer();toast(`${p.ini}. ${p.name} sold to the ${nickOf(byAbbr[b.t])} · +${b.c.toLocaleString("en-US")}`);}
-function tradeP(p,o){const R=PROF.roster,arr=p.g?R.gk:R.sk,i=arr.indexOf(p),q=o.q;if(i<0||p.me||tradeLock(p)||tradeClosed()||!capOk(q.sal||.5,p))return;
+  logTx(`Sold #${p.num} ${p.ini}. ${p.name} to ${byAbbr[b.t].name} for ${cash(b.c)}`);
+  cashIn();renderCareer();toast(`${p.ini}. ${p.name} sold to the ${nickOf(byAbbr[b.t])} · +${cash(b.c)}`);}
+function tradeP(p,o){const R=PROF.roster,arr=p.g?R.gk:R.sk,i=arr.indexOf(p),q=o.q;if(i<0||p.me||tradeLock(p)||tradeClosed()||!capOk(q.sal||MIN_SAL,p))return;
   arr[i]=q;const li=R.line.indexOf(p.id);if(li>=0)R.line[li]=q.id;if(R.g===p.id)R.g=q.id;q.acq=PROF.games;PROF.coins+=o.c;
-  logTx(`Traded #${p.num} ${p.ini}. ${p.name} to ${byAbbr[o.t].name} for #${q.num} ${q.ini}. ${q.name}${o.c?` and ${o.c.toLocaleString("en-US")} coins`:""}`);
+  logTx(`Traded #${p.num} ${p.ini}. ${p.name} to ${byAbbr[o.t].name} for #${q.num} ${q.ini}. ${q.name}${o.c?` and ${cash(o.c)}`:""}`);
   cashIn();renderCareer();toast(`${q.ini}. ${q.name} arrives from the ${nickOf(byAbbr[o.t])}`);openPlayer(q.id);}
 // the trade market: four players other clubs will sell you for a fifth over their value (a star, a teenage prospect,
 // a solid regular and a goalie); a new board after every game
@@ -1779,11 +1793,11 @@ function market(){const M=PROF.mkt;if(M&&M.g===PROF.games)return M.list;
   const list=specs.map(([g,base,age,up],i)=>{const q=newPlayer(R,!!g,{base,spread:2.5,age,pot:base+rnd(...up)});q.from=clubs[i];q.sal=salFor(q);q.yrs=2+Math.floor(Math.random()*3);return {q,c:Math.round(pVal(q)*BUY_MARK/10)*10};});
   PROF.mkt={g:PROF.games,list};saveProf();return list;}
 function buyP(i){const R=PROF.roster,M=market(),x=M[i];if(!x||x.sold||tradeClosed())return;const q=x.q;
-  if(PROF.coins<x.c||(q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK)||!capOk(q.sal||.5))return;
+  if(PROF.coins<x.c||(q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK)||!capOk(q.sal||MIN_SAL))return;
   // the board was drawn a while ago: if someone has taken his number since, he picks a free one
   if(allP(R).some(o=>o.num===q.num)){const used=new Set(allP(R).map(o=>o.num));q.num=(q.g?GK_NUMS:SK_NUMS).find(n=>!used.has(n))??q.num;}
   PROF.coins-=x.c;x.sold=1;q.acq=PROF.games;(q.g?R.gk:R.sk).push(q);
-  logTx(`Bought #${q.num} ${q.ini}. ${q.name} from ${byAbbr[q.from].name} for ${x.c.toLocaleString("en-US")} coins`);
+  logTx(`Bought #${q.num} ${q.ini}. ${q.name} from ${byAbbr[q.from].name} for ${cash(x.c)}`);
   cashIn();renderCareer();toast(`${q.ini}. ${q.name} joins from the ${nickOf(byAbbr[q.from])}`);openPlayer(q.id);}
 // a market player's full card: his ratings and how far each can grow, his perks, his contract and the asking price
 function openMktPlayer(i){const x=market()[i];if(!x)return;const q=x.q,R=PROF.roster,o=ovr(q),club=byAbbr[q.from];
@@ -1792,25 +1806,25 @@ function openMktPlayer(i){const x=market()[i];if(!x)return;const q=x.q,R=PROF.ro
   m.dataset.id="";
   const rows=RTS(q).map(([k,n])=>{const v=q.r[k];return `<div class="rt"><span>${n}</span><div class="rbar"><i style="width:${(v-50)/49*100}%"></i><u style="left:${(q.pot-50)/49*100}%"></u></div><b>${v}</b><small class="cap">${v>=q.pot?"At potential":`+${q.pot-v} to grow`}</small></div>`;}).join("");
   const perks=ARCH[q.arch].perks.map((k,j)=>`<div class="perk"><b>${PERKS[k].name}</b><span>${PERKS[k].desc}</span><em>Unlocks at level ${PERK_LV[j]}</em></div>`).join("");
-  const full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,why=x.sold?"Bought":tradeClosed()?"Trades closed":full?"Roster full":!capOk(q.sal||.5)?"Over the cap":"",short=!why&&PROF.coins<x.c;
+  const full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,why=x.sold?"Bought":tradeClosed()?"Trades closed":full?"Roster full":!capOk(q.sal||MIN_SAL)?"Over the cap":"",short=!why&&PROF.coins<x.c;
   m.innerHTML=`<div class="sheet t-${tierOf(o)}">
     <button class="x" data-act="close" aria-label="Close">✕</button>
     <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${q.num} · ${q.arch}${q.g?" goalie":""}</div><h3>${q.ini}. ${q.name}</h3>
-      <small>${club?club.name:q.from} · Age ${q.age} · Potential ${q.pot} · ${money(q.sal||.5)} × ${yrsT(q.yrs||1)}</small></div></div>
+      <small>${club?club.name:q.from} · Age ${q.age} · Potential ${q.pot} · ${money(q.sal||MIN_SAL)} × ${yrsT(q.yrs||1)}</small></div></div>
     <div class="sh-lv"><span>Level ${q.lv}</span><div class="bar"><i style="width:${Math.round(q.xp/needXP(q.lv)*100)}%"></i></div><small>${q.xp} / ${needXP(q.lv)} XP</small></div>
     <p class="sh-pts">Worth ${coinN(pVal(q))}. The ${club?nickOf(club):q.from} want ${coinN(x.c)} for him.</p>
     <div class="rts">${rows}</div>
     <div class="lbl">Signature perks</div><div class="perks">${perks}</div>
     <div class="acts">${why?`<button class="btn sm" type="button" disabled>${why}</button>`:`<button class="btn primary sm" type="button" id="mktBuy" ${short?"disabled":""}>Buy ${coinN(x.c)}</button>`}
-      ${short?`<p class="stnote" style="flex-basis:100%">You need ${coinN(x.c-PROF.coins)} more coins.</p>`:""}</div></div>`;
+      ${short?`<p class="stnote" style="flex-basis:100%">You need ${coinN(x.c-PROF.coins)} more.</p>`:""}</div></div>`;
   m.querySelector("[data-act=close]").addEventListener("click",closePlayer);
   const b=$("mktBuy");if(b)b.addEventListener("click",()=>{if(!b.dataset.arm){b.dataset.arm=1;b.textContent="Confirm";return;}buyP(i);});}
 function renderMarket(){const el=$("mkt");if(!el)return;const shut=tradeClosed();
   $("mktSub").textContent=shut?"Closed for the rest of the season":"Other clubs' players for sale · tap one for his full card · a new board after every game";
   $("mktNote").textContent=shut?"The trade deadline has passed, so no players are for sale. The market reopens when the season is over.":"";
   if(shut){el.innerHTML="";return;}const R=PROF.roster,M=market();
-  el.innerHTML=M.map((x,i)=>{const q=x.q,full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,cap=!capOk(q.sal||.5);
-    return `<div class="mkt">${pCard(q,`From ${q.from}`).replace('data-pid=','data-mid=')}<small class="mkc">${money(q.sal||.5)} × ${yrsT(q.yrs||1)}</small>${x.sold?`<button class="btn sm" type="button" disabled>Bought</button>`:
+  el.innerHTML=M.map((x,i)=>{const q=x.q,full=q.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK,cap=!capOk(q.sal||MIN_SAL);
+    return `<div class="mkt">${pCard(q,`From ${q.from}`).replace('data-pid=','data-mid=')}<small class="mkc">${money(q.sal||MIN_SAL)} × ${yrsT(q.yrs||1)}</small>${x.sold?`<button class="btn sm" type="button" disabled>Bought</button>`:
       `<button class="btn primary sm" type="button" data-buy="${i}" ${PROF.coins<x.c||full||cap?"disabled":""}>${full?"Roster full":cap?"Over the cap":`Buy ${coinN(x.c)}`}</button>`}</div>`;}).join("");
   el.querySelectorAll("[data-buy]").forEach(b=>b.addEventListener("click",()=>{if(!b.dataset.arm){el.querySelectorAll("[data-arm]").forEach(x=>{delete x.dataset.arm;x.innerHTML=x.dataset.l;});b.dataset.l=b.innerHTML;b.dataset.arm=1;b.textContent="Confirm";return;}buyP(+b.dataset.buy);}));
   el.querySelectorAll("[data-mid]").forEach(c=>c.addEventListener("click",()=>openMktPlayer(M.findIndex(x=>x.q.id===c.dataset.mid))));}
@@ -1834,7 +1848,7 @@ function openCall(){const C=liveCall();if(!C){PROF.call=null;renderCall();return
   const p=findP(C.pid),o=ovr(p),m=document.createElement("div");m.className="modal";m.id="callmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
   m.innerHTML=`<div class="sheet t-${tierOf(o)} off trd">
     <button class="x" data-a="close" aria-label="Close">✕</button>
-    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""} · age ${p.age}</div><h3>${p.ini}. ${p.name}</h3><small>Market value ${coinN(pVal(p))} · ${money(p.sal||.5)} × ${yrsT(p.yrs||1)}</small></div></div>
+    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""} · age ${p.age}</div><h3>${p.ini}. ${p.name}</h3><small>Market value ${coinN(pVal(p))} · ${money(p.sal||MIN_SAL)} × ${yrsT(p.yrs||1)}</small></div></div>
     <div class="ofr tro2"><img class="chip logo" src="${logoURL(byAbbr[C.t])}" alt=""><span>${byAbbr[C.t].name} are calling<small>They offer ${coinN(C.c)} for him, ${Math.round((C.c/pVal(p)-1)*100)}% over his value.</small></span></div>
     <p class="stnote">The offer stands until your next game.</p>
     <div class="acts"><button class="btn primary" id="callYes" type="button">Accept ${coinN(C.c)}</button><button class="btn sm" id="callNo" type="button">No thanks</button></div></div>`;
@@ -1856,8 +1870,8 @@ function openTrade(id){
     <p class="stnote">Clubs make new offers after your next game. Tap twice to accept.</p>`;
   m.innerHTML=`<div class="sheet t-${tierOf(o)} off trd">
     <button class="x" data-a="close" aria-label="Close">✕</button>
-    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""} · age ${p.age}</div><h3>${p.ini}. ${p.name}</h3><small>Market value ${coinN(v)} · ${money(p.sal||.5)} × ${yrsT(p.yrs||1)}</small></div></div>
-    ${body}</div>`;
+    <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""} · age ${p.age}</div><h3>${p.ini}. ${p.name}</h3><small>Market value ${coinN(v)} · ${money(p.sal||MIN_SAL)} × ${yrsT(p.yrs||1)}</small></div></div>
+    ${formNote(p)}${body}</div>`;
   document.body.appendChild(m);
   const close=()=>m.remove();m.addEventListener("click",e=>{if(e.target===m)close();});m.querySelector("[data-a=close]").addEventListener("click",close);
   // two taps to accept, so a stray tap can't send a player away
@@ -1875,15 +1889,15 @@ function openPlayer(id){
   m.dataset.id=id;
   const rows=RTS(p).map(([k,n])=>{const v=p.r[k],c=trainCost(v),cap=v>=p.pot;
     return `<div class="rt"><span>${n}</span><div class="rbar"><i style="width:${(v-50)/49*100}%"></i><u style="left:${(p.pot-50)/49*100}%"></u></div><b>${v}</b>
-      ${cap?`<small class="cap">At potential</small>`:p.pts?`<button class="btn tr" data-k="${k}" data-pay="pt">+1 <small>point</small></button>`:`<button class="btn tr" data-k="${k}" data-pay="coin" ${PROF.coins<c?"disabled":""}>+1 <span class="coin"></span>${c}</button>`}</div>`;}).join("");
+      ${cap?`<small class="cap">At potential</small>`:p.pts?`<button class="btn tr" data-k="${k}" data-pay="pt">+1 <small>point</small></button>`:`<button class="btn tr" data-k="${k}" data-pay="coin" ${PROF.coins<c?"disabled":""}>+1 ${cash(c)}</button>`}</div>`;}).join("");
   const perks=ARCH[p.arch].perks.map((k,i)=>`<div class="perk ${p.lv>=PERK_LV[i]?"on":""}"><b>${PERKS[k].name}</b><span>${PERKS[k].desc}</span><em>${p.lv>=PERK_LV[i]?"Active":`Unlocks at level ${PERK_LV[i]}`}</em></div>`).join("");
   let acts="";
   if(!p.g&&inLine>=0)acts+=`<button class="btn" data-act="up" ${inLine===0?"disabled":""}>Shoot earlier</button><button class="btn" data-act="down" ${inLine===4?"disabled":""}>Shoot later</button>`;
   if(!p.g&&inLine<0)acts+=`<label class="lbl" for="swapSel">Put in the lineup for</label><select id="swapSel">${lineup().map(q=>`<option value="${q.id}">#${q.num} ${q.name} (${ovr(q)})</option>`).join("")}</select><button class="btn primary sm" data-act="swap">Start him</button>`;
   if(p.g&&!starter)acts+=`<button class="btn primary sm" data-act="start">Make starter</button>`;
   if(p.me)acts+=`<button class="btn" data-act="edit">Edit name, number and look</button>`;
-  if(p.inj)acts+=`<button class="btn primary sm" data-act="heal" ${PROF.coins<HEAL*p.inj.n?"disabled":""}>Treat him now <span class="coin"></span>${HEAL*p.inj.n}</button>`;
-  acts+=p.me?`<p class="stnote" style="flex-basis:100%">Worth ${coinN(pVal(p))} on the market, but you're not for sale: this is you. Tap any other player to trade or sell him.</p>`:`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
+  if(p.inj)acts+=`<button class="btn primary sm" data-act="heal" ${PROF.coins<HEAL*p.inj.n?"disabled":""}>Treat him now ${cash(HEAL*p.inj.n)}</button>`;
+  acts+=formNote(p);acts+=p.me?`<p class="stnote" style="flex-basis:100%">Worth ${coinN(pVal(p))} on the market, but you're not for sale: this is you. Tap any other player to trade or sell him.</p>`:`<button class="btn" data-act="trade">Trade or sell · worth ${coinN(pVal(p))}</button>`;
   const stat=p.g?`${p.saves} saves on ${p.faced} shots`:`${p.goals} goals on ${p.shots} attempts`;
   const SS=PROF.season,sRow=SS&&SS.ps&&SS.ps[p.id]?[[`Season ${SS.year}`,pStats(p,"season")]]:[];
   const stRows=[["Career",pStats(p)],...sRow],stCols=p.g?["GP","W","L","SA","SV","SV%","GAA","SO"]:["GP","G","S","SH%","Dekes","PIM"];
@@ -1892,9 +1906,9 @@ function openPlayer(id){
   m.innerHTML=`<div class="sheet t-${tierOf(o)}">
     <button class="x" data-act="close" aria-label="Close">✕</button>
     <div class="sh-head"><div class="pc-ovr"><b>${o}</b><small>OVR</small></div><div><div class="pc-num">#${p.num} · ${p.arch}${p.g?" goalie":""}</div><h3>${p.ini}. ${p.name}</h3>
-      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"}${p.age?` · Age ${p.age}`:""} · Potential ${p.pot}${p.me?"":` · ${money(p.sal||.5)} × ${yrsT(p.yrs||1)}`} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
+      <small>${starter?"Starting goalie":inLine>=0?`Shoots ${["1st","2nd","3rd","4th","5th"][inLine]}`:"Bench"}${p.age?` · Age ${p.age}`:""} · Potential ${p.pot}${p.me?"":` · ${money(p.sal||MIN_SAL)} × ${yrsT(p.yrs||1)}`} · ${stat}</small>${p.inj?`<div class="pc-inj">🩹 ${injLine(p)}${p.g||inLine<0?"":`, ${gameLineup(null,true)[inLine]?"the bench fills in":"a call-up fills in"}`}</div>`:""}</div></div>
     <div class="sh-lv"><span>Level ${p.lv}${p.lv>=MAX_LV?" (max)":""}</span><div class="bar"><i style="width:${p.lv>=MAX_LV?100:Math.round(p.xp/needXP(p.lv)*100)}%"></i></div><small>${p.lv>=MAX_LV?"Fully developed":`${p.xp} / ${needXP(p.lv)} XP`}</small></div>
-    <p class="sh-pts">${p.pts?`<b>${p.pts} training point${p.pts>1?"s":""}</b> to spend. Each level earns one.`:`Earn XP by playing: ${p.g?"saves count most":"goals count most"}. Each level gives a training point, or pay coins to train now.`}</p>
+    <p class="sh-pts">${p.pts?`<b>${p.pts} training point${p.pts>1?"s":""}</b> to spend. Each level earns one.`:`Earn XP by playing: ${p.g?"saves count most":"goals count most"}. Each level gives a training point, or pay to train now.`}</p>
     <div class="rts">${rows}</div>
     <div class="lbl">Stats</div>${stTable}${p.fw||p.fl?`<p class="stnote">Fights: ${p.fw||0} won, ${p.fl||0} lost</p>`:""}
     <div class="lbl">Signature perks</div><div class="perks">${perks}</div>
@@ -1917,14 +1931,14 @@ function playerAct(p,a){
   if(a==="swap"){const out=$("swapSel").value,j=R.line.indexOf(out);if(j>=0)R.line[j]=p.id;}
   if(a==="start")R.g=p.id;
   if(a==="heal"&&p.inj){const c=HEAL*p.inj.n;if(PROF.coins<c)return;PROF.coins-=c;delete p.inj;toast(`${p.name} is cleared to play`);}
-  if(a==="release"){if(i>=0||R.g===p.id||p.me)return;R.sk=R.sk.filter(q=>q!==p);R.gk=R.gk.filter(q=>q!==p);PROF.coins+=RELEASE;closePlayer();toast(`${p.name} released · +${RELEASE} coins`);}
+  if(a==="release"){if(i>=0||R.g===p.id||p.me)return;R.sk=R.sk.filter(q=>q!==p);R.gk=R.gk.filter(q=>q!==p);PROF.coins+=RELEASE;closePlayer();toast(`${p.name} released · +${cash(RELEASE)}`);}
   saveProf();renderCareer();
 }
 function scout(goalie){
   const R=PROF.roster,cost=goalie?SIGN.gk:SIGN.sk;
   if(PROF.coins<cost||(goalie?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK))return;
   PROF.coins-=cost;const p=newPlayer(R,goalie);p.acq=PROF.games;(goalie?R.gk:R.sk).push(p);PROF.stats.signed++;logTx(`Signed #${p.num} ${p.ini}. ${p.name} from junior`);
-  if(p.pot>=95&&!PROF.ach.gem){PROF.ach.gem=Date.now();PROF.coins+=ACH.find(a=>a.id==="gem").coins;setTimeout(()=>toast("🏆 Diamond in the rough +150"),1600);}
+  if(p.pot>=95&&!PROF.ach.gem){PROF.ach.gem=Date.now();PROF.coins+=ACH.find(a=>a.id==="gem").coins;setTimeout(()=>toast(`🏆 Diamond in the rough +${cash(150)}`),1600);}
   cashIn();renderCareer();
   // the reveal: a face-down card that flips to the new signing
   const m=document.createElement("div");m.className="modal reveal";m.innerHTML=`<div class="flip"><div class="back">Scouting report</div><div class="front">${pCard(p,"New signing")}</div></div>
@@ -2173,7 +2187,7 @@ function cupSVG(cls){const id="cupg"+(++cupN);return `<svg class="${cls||"cupsvg
   <path d="M30 34Q50 40 70 34" stroke="#fff" stroke-opacity=".55" stroke-width="2" fill="none"/></svg>`;}
 function awardsHTML(S){if(!S||!S.awards)return "";const champ=S.po&&S.po.champ===S.club;
   return `<div class="awards">${champ?`<div class="awcup">${cupSVG()}<div><b>Calder Cup champions</b><small>${byAbbr[S.club].name} · season ${S.year}</small></div></div>`:""}
-    <h3 class="ch">Season ${S.year} awards</h3>${S.awards.length?S.awards.map(a=>`<div class="aw"><span class="awi">🏅</span><div><b>${a.name}</b><span>#${a.num} ${a.who}</span><small>${a.line}</small></div><em>+${a.coins}</em></div>`).join(""):`<p class="muted">No awards this season: nobody on your roster played enough.</p>`}</div>`;}
+    <h3 class="ch">Season ${S.year} awards</h3>${S.awards.length?S.awards.map(a=>`<div class="aw"><span class="awi">🏅</span><div><b>${a.name}</b><span>#${a.num} ${a.who}</span><small>${a.line}</small></div><em>+${cash(a.coins)}</em></div>`).join(""):`<p class="muted">No awards this season: nobody on your roster played enough.</p>`}</div>`;}
 const seedOf=a=>PROF.season&&PROF.season.po?PROF.season.po.seeds.indexOf(a)+1:0;
 function seasonLine(){const S=PROF.season;if(!S)return "";const r=S.rec[S.club],st=standings(),pos=st.findIndex(x=>x.abbr===S.club)+1;
   const ord=n=>{const x=["th","st","nd","rd"],v=n%100;return n+(x[(v-20)%10]||x[v]||x[0]);};
@@ -2205,7 +2219,7 @@ function runOffseason(){
   if(PROF.alumni)PROF.alumni=PROF.alumni.slice(-40);
   O.dev=O.dev.filter(d=>findP(d.id));
   // a year off every contract; the ones that run out ask for a new deal at what the player is worth now
-  O.con=[];for(const p of allP(R))if(!p.me){p.yrs=(p.yrs??1)-1;if(p.yrs<=0)O.con.push({id:p.id,n:nm(p),g:p.g,age:p.age,was:p.sal||.5,ask:salFor(p),yrs:p.age<=27?3:p.age<=31?2:1,keep:true});}
+  O.con=[];for(const p of allP(R))if(!p.me){p.yrs=(p.yrs??1)-1;if(p.yrs<=0)O.con.push({id:p.id,n:nm(p),g:p.g,age:p.age,was:p.sal||MIN_SAL,ask:salFor(p),yrs:p.age<=27?3:p.age<=31?2:1,keep:true});}
   // keep five shooters and a goalie: the bench steps up first, then free agents sign
   R.line=R.line.filter(id=>R.sk.some(p=>p.id===id));
   for(const p of [...R.sk].sort((a,b)=>ovr(b)-ovr(a)))if(R.line.length<5&&!R.line.includes(p.id))R.line.push(p.id);
@@ -2222,8 +2236,8 @@ function openOffseason(){
   const O=S.off,R=PROF.roster;O.con=O.con||[];
   const gone=g=>O.con.filter(c=>!c.keep&&c.g==g&&findP(c.id)).length,full=p=>p.g?R.gk.length-gone(1)>=MAX_GK:R.sk.length-gone(0)>=MAX_SK;
   // next season's payroll with the choices made so far (and any free agents needed to fill the lineup)
-  const payNext=d=>{let t=0;for(const p of allP(R)){if(p.me)continue;const c=O.con.find(x=>x.id===p.id);t+=c?(c.keep?c.ask:0):(p.sal||.5);}
-    const need=Math.max(0,5-(R.sk.length-gone(0)))+(R.gk.length-gone(1)>0?0:1);return Math.round((t+(d?.5:0)+need*.5)*10)/10;};
+  const payNext=d=>{let t=0;for(const p of allP(R)){if(p.me)continue;const c=O.con.find(x=>x.id===p.id);t+=c?(c.keep?c.ask:0):(p.sal||MIN_SAL);}
+    const need=Math.max(0,5-(R.sk.length-gone(0)))+(R.gk.length-gone(1)>0?0:1);return Math.round((t+(d?MIN_SAL:0)+need*MIN_SAL)*1000)/1000;};
   const conHTML=()=>O.con.filter(c=>findP(c.id)).map(c=>`<div class="ofr"><span>${c.n}<small>${c.g?"Goalie · ":""}age ${c.age} · was ${money(c.was)} · asks ${money(c.ask)} × ${yrsT(c.yrs)}</small></span><button class="btn sm ${c.keep?"primary":""}" data-con="${O.con.indexOf(c)}" type="button">${c.keep?"Re-sign":"Let go"}</button></div>`).join("");
   const m=document.createElement("div");m.className="modal";m.id="offmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
   const dev=O.dev.map(d=>`<div class="ofr${d.me?" me":""}"><span>${d.n}${d.me?" ★":""}<small>${d.g?"Goalie · ":""}age ${d.age}</small></span><b>${d.o}</b><em class="${d.d>0?"gu":d.d<0?"gd":""}">${d.d>0?"+":""}${d.d||"="}</em></div>`).join("");
@@ -2416,9 +2430,12 @@ function openGcCreator(){
   for(const p of R.sk)if(R.line.length<5&&!R.line.includes(p.id))R.line.push(p.id);
   if(!R.gk.some(p=>p.id===R.g))R.g=R.gk[0].id;
   for(const p of allP(R))if(p.age==null)p.age=p.me?22:Math.floor(rnd(21,30));
+  // v60 moved salaries from NHL money to AHL money: deals signed before then shrink to a fifth
+  if(PROF.econ!==2){const ahl=m=>clamp(Math.round(m*200)/1000,MIN_SAL,.9);for(const p of allP(R)){if(p.sal!=null)p.sal=ahl(p.sal);delete p.tb;}
+    PROF.mkt=null;const O=PROF.season&&PROF.season.off;if(O&&O.con)for(const c of O.con){c.was=ahl(c.was);c.ask=ahl(c.ask);}PROF.econ=2;}
   // contracts arrived in v56: everyone gets one at his value, scaled down if that would put an existing roster over the cap
   if(allP(R).some(p=>!p.me&&p.sal==null)){for(const p of allP(R))if(!p.me&&p.sal==null){p.sal=salFor(p);p.yrs=1+Math.floor(Math.random()*3);}
-    const pay=payroll();if(pay>CAP*.9){const k=CAP*.9/pay;for(const p of allP(R))if(!p.me)p.sal=Math.max(.5,Math.round(p.sal*k*10)/10);}}
+    const pay=payroll();if(pay>CAP*.9){const k=CAP*.9/pay;for(const p of allP(R))if(!p.me)p.sal=Math.max(MIN_SAL,Math.round(p.sal*k*200)/200);}}
   if(!PROF.stats){const a=PROF.ach,T={...STAT0,beat:[]};T.games=PROF.games;T.wins=PROF.wins;T.best=PROF.streak;
     const seed={hat:"hats",shutout:"shutouts",sd:"sd",bh:"bh",post:"posts",bomb:"bombs",pokesave:"pokes",first:"goals"};
     for(const k in seed)if(a[k])T[seed[k]]=Math.max(T[seed[k]],1);PROF.stats=T;}
@@ -2470,7 +2487,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
@@ -2481,7 +2498,7 @@ $("mode1").addEventListener("click",()=>setMode(false));$("mode3").addEventListe
 function diffSel(){const d=store.get("bc-diff","pro");return DIFFS[d]?d:"pro";}
 function syncDiff(){const d=diffSel(),D=DIFFS[d];
   document.querySelectorAll(".diff").forEach(b=>{const on=b.dataset.d===d;b.classList.toggle("on",on);b.setAttribute("aria-checked",String(on));});
-  $("diffNote").textContent=D.desc+(D.pay>1?` · ${D.pay}× coins`:D.pay<1?` · ${D.pay}× coins`:"");
+  $("diffNote").textContent=D.desc+(D.pay>1?` · ${D.pay}× pay`:D.pay<1?` · ${D.pay}× pay`:"");
   $("chipDiff").innerHTML=`<small>Level</small>${D.name}`;}
 document.querySelectorAll(".diff").forEach(b=>b.addEventListener("click",()=>{store.set("bc-diff",b.dataset.d);syncDiff();}));
 // rink themes only change the look, so they apply to every kind of game
@@ -3123,7 +3140,7 @@ function endGame(w){
   if(G.net){const won=w===G.mySide,host=NET.role==="host";if(won){sfx.horn(3);sfx.cheer(1);}else sfx.buzzer();
     const ov=document.createElement("div");ov.className="over";const rounds=Math.max(G.att.me.length,G.att.opp.length);
     ov.innerHTML=`<div class="kicker">Final · online shootout${rounds>5?" · sudden death":""}</div><h2 class="${won?"win":""}">${won?"You win":"Your friend wins"}</h2>
-      <p>${G.me.abbr} ${goals("me")}, ${G.opp.abbr} ${goals("opp")} in the shootout. Online games don't count toward coins or your record.</p>
+      <p>${G.me.abbr} ${goals("me")}, ${G.opp.abbr} ${goals("opp")} in the shootout. Online games don't count toward earnings or your record.</p>
       ${host?"":`<p class="netwait">Your friend can start a rematch from their phone.</p>`}
       <div class="row" style="justify-content:center">${host?`<button class="btn primary" id="btnAgain">Rematch</button><button class="btn" id="btnSwap">Swap teams</button>`:""}<button class="btn" id="btnNext">Menu</button></div>`;
     if(won)confetti(ov,80,[G[w].c1,G[w].c2,"#ffb21e","#ffffff"]);$("rink").appendChild(ov);
@@ -3135,7 +3152,7 @@ function endGame(w){
   if(G.two){sfx.horn(3);sfx.cheer(1);
     const ov=document.createElement("div");ov.className="over";const rounds=Math.max(G.att.me.length,G.att.opp.length);
     ov.innerHTML=`<div class="kicker">Final · shootout${rounds>5?" · sudden death":""}</div><h2 class="win">${w==="me"?"Player 1":"Player 2"} wins</h2>
-      <p>${G[w].name} take it ${goals(w)}-${goals(other(w))}. Two-player games don't count toward coins or your record.</p>
+      <p>${G[w].name} take it ${goals(w)}-${goals(other(w))}. Two-player games don't count toward earnings or your record.</p>
       <div class="row" style="justify-content:center"><button class="btn primary" id="btnAgain">Rematch</button><button class="btn" id="btnSwap">Swap sides</button><button class="btn" id="btnNext">Menu</button></div>`;
     confetti(ov,80,[G[w].c1,G[w].c2,"#ffb21e","#ffffff"]);$("rink").appendChild(ov);
     const me=G.me.abbr,op=G.opp.abbr;
@@ -3154,7 +3171,7 @@ function endGame(w){
   const sa=G.att.opp.length,ga=goals("opp");
   ov.innerHTML=`<div class="kicker">Final · ${gc?`goalie career · game ${gc.phase==="done"?GC_GAMES:gc.gi} of ${GC_GAMES}`:"shootout"}${rounds>5?" · sudden death":""}${G.diff!=="pro"?" · "+DIFFS[G.diff].name:""}</div><h2 class="${w==="me"?"win":""}">${G[w].name} win</h2>
    <p>${G.me.abbr} ${goals("me")}, ${G.opp.abbr} ${ga} in the shootout. ${gc?`You stopped ${sa-ga} of ${sa} shot${sa===1?"":"s"}${ga===0?", a shutout":""}.`:`Your record vs ${G.opp.abbr} is now ${r.w}-${r.l}.`}</p>
-   <div class="payout">${R.lines.map(([t,n])=>`<div><span>${t}</span><b>+${n}</b></div>`).join("")}${R.unlock.map(a=>`<div class="ach"><span>🏆 ${a.name}</span><b>+${a.coins}</b></div>`).join("")}<div class="tot"><span>Coins earned</span><b>+${R.coins}</b></div></div>
+   <div class="payout">${R.lines.map(([t,n])=>`<div><span>${t}</span><b>+${cash(n)}</b></div>`).join("")}${R.unlock.map(a=>`<div class="ach"><span>🏆 ${a.name}</span><b>+${cash(a.coins)}</b></div>`).join("")}<div class="tot"><span>Earned</span><b>+${cash(R.coins)}</b></div></div>
    ${R.news.length?`<div class="news">${R.news.map(t=>`<div>⬆ ${t}</div>`).join("")}</div>`:""}
    ${G.injNews&&G.injNews.length?`<div class="news inj">${G.injNews.map(([k,t])=>`<div class="${k}">${k==="hurt"?"🩹":"✅"} ${t}</div>`).join("")}</div>`:""}
    ${R.levelUp?`<p class="lvup">Level ${R.level}! Opponents get a little sharper.</p>`:""}
