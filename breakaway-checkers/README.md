@@ -4,6 +4,8 @@ An AHL hockey shootout game against the computer: best of five, then sudden deat
 
 Play it at https://ehoffman66.github.io/games/breakaway-checkers/ (on a phone, Share > Add to Home Screen gives it its own icon and opens it full screen).
 
-Everything is in `index.html` (three.js r149 from jsDelivr). `icons/` and `manifest.webmanifest` give it a home-screen icon. `models/` holds the player and goalie rigs and textures the page loads at startup; if they fail to load, the game falls back to drawn players.
+Everything is in `index.html` (three.js r149 from jsDelivr). `icons/` and `manifest.webmanifest` give it a home-screen icon. `models/` holds the player and goalie rigs and textures the page loads at startup; if they fail to load, the game falls back to drawn players. It also holds the recorded announcer calls (`calls.mp3`) and crowd chants (`chants.mp3`), each with a JSON byte index; the game runs without them if they fail to load.
+
+`tools/` holds the offline tools that record them with Piper text to speech: `tools/announcer` for the play-by-play and `tools/chants` for the "Let's go!" chants.
 
 Online games connect the two phones peer to peer through PeerJS (loaded from jsDelivr only when someone hosts or joins) and its free public signaling server. The host's phone runs the game; the friend's phone sends its controls and draws what the host sends back.

@@ -53,6 +53,14 @@ FIXED={
  "e_thatlldoit":("That'll do it!","x"),"e_whatafinish":("What a finish to this one!","x"),
  # v52: the Cup
  "c_cupchamps":("are Calder Cup champions!","x"),
+ # v63: banner night, rivalry nights, scouting reports and All-Star Skills Night
+ "b_banner":("Before the puck drops, the champions raise their banner to the rafters!",""),
+ "r_rivalry":("It's rivalry night!","x"),"r_dontlike":("These two clubs do not like each other!","x"),"r_bragging":("Bragging rights on the line tonight!","x"),
+ "w_scout":("Right where the scouting report said!","x"),"w_found":("He found the weak spot!","x"),
+ "s_welcome":("Welcome to All-Star Skills Night!","x"),"s_hardest":("First up, the hardest shot competition!",""),
+ "s_accuracy":("Now it's accuracy shooting. Four targets, high and low!",""),
+ "s_rocket":("What a rocket!","x"),"s_fly":("He let that one fly!","x"),"s_missnet":("Oh, he missed the net!",""),
+ "s_allfour":("All four targets down!","x"),"s_target":("Target!","x"),"s_hitit":("He hits it!","x"),"s_wins":("He wins the event!","x"),
 }
 NUMW="zero one two three four five six seven eight nine ten eleven twelve thirteen fourteen fifteen sixteen seventeen eighteen nineteen".split()
 TENS="_ _ twenty thirty forty fifty sixty seventy eighty ninety".split()
