@@ -548,6 +548,7 @@ body.playing .deck:not(.deck2){container-type:inline-size}
 body.rk-retro .rink.d3 #gl{filter:sepia(.42) saturate(.85) contrast(1.04)}
 .diff.on[data-d=rookie]{background:#4cc38a;border-color:#4cc38a}
 .diff.on[data-d=allstar]{background:#ff5a5f;border-color:#ff5a5f;color:#fff}
+.diff.on[data-d=legend]{background:#8b5cf6;border-color:#8b5cf6;color:#fff}
 .diffNote{margin:5px 0 0;font-size:.78rem;color:var(--muted);text-align:center}
 #voiceSel{flex:1;min-width:0;min-height:40px;background:var(--panel-2);color:var(--fg);border:1px solid var(--line);border-radius:6px;padding:6px 8px;font:inherit;font-size:16px}
 .vbox{margin-top:6px}
@@ -777,6 +778,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <button class="diff" data-d="rookie" type="button" role="radio">Rookie</button>
         <button class="diff" data-d="pro" type="button" role="radio">Pro</button>
         <button class="diff" data-d="allstar" type="button" role="radio">All-Star</button>
+        <button class="diff" data-d="legend" type="button" role="radio">Legend</button>
       </div>
       <p class="diffNote" id="diffNote"></p>
     </div>
@@ -892,7 +894,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v63</p>
+    <p class="ver">v64</p>
   </section>
 
   <section id="game" hidden>
@@ -1096,9 +1098,10 @@ function fire(A,aimX,sk){
   A.phase="shot";s.follow=.3;
 }
 // the Michigan's finish: slung off the blade from beside his helmet and tucked in under the bar.
-// It's soft, so a goalie on his feet has time to get a glove on it, but it sails over one who's down
+// It's soft, so a goalie on his feet has time to get a glove on it, but it sails over one who's down. Slung from out in
+// the slot instead of in tight it's a lot less accurate
 function tuck(A,aimN,sk){
-  const s=A.s,p=A.p,aimX=GX+clamp(aimN,-1,1)*(NH-8),far=Math.max(0,Math.hypot(p.x-GX,p.y-GY)-90),ang=Math.atan2(GY-p.y,aimX-p.x)+gauss()*(.03+far*.0006)/sk*A.mods.acc,sp=(500+60*sk)*A.mods.pow;
+  const s=A.s,p=A.p,aimX=GX+clamp(aimN,-1,1)*(NH-8),far=Math.max(0,Math.hypot(p.x-GX,p.y-GY)-90),ang=Math.atan2(GY-p.y,aimX-p.x)+gauss()*(.03+far*.0012)/sk*A.mods.acc,sp=(500+60*sk)*A.mods.pow;
   A.shotInfo={ch:.5,type:"michigan",lax:1,mph:Math.round(40+sp*.058),y0:p.y,z0:LAXZ,zt:rnd(50,62)};
   p.vx=Math.cos(ang)*sp;p.vy=Math.sin(ang)*sp;A.shotInfo.xc=aimAt(p);p.free=true;s.has=false;s.lax=0;s.laxZ=0;s.charging=false;s.charge=0;A.phase="shot";s.follow=.3;
 }
@@ -1199,8 +1202,8 @@ function freePuck(A,dt,after){
     if(A.result==="goal"&&p.y>GY-PR&&Math.abs(p.x-GX)<NH){p.y=GY-PR;p.vy=-Math.abs(p.vy)*.2;}
     if(after)continue;
     const [ax,ay,bx,by]=goalieSeg(g);const d=segDist(p.x,p.y,ax,ay,bx,by);
-    // a Michigan comes in under the bar: it sails over a goalie who's down, and one on his feet has to get his upper body or a glove on it
-    const hi=A.shotInfo&&A.shotInfo.lax&&A.phase==="shot"&&(g.flyT>0||g.downT>0||Math.hypot(d.cx-g.x,d.cy-g.y)>g.L*.8);
+    // a Michigan comes in under the bar: it sails over a goalie who's down, but one on his feet gets a glove or blocker on it
+    const hi=A.shotInfo&&A.shotInfo.lax&&A.phase==="shot"&&(g.flyT>0||g.downT>0);
     // the goalie gets a piece of it: the puck keeps going, and the stop only counts once it's clear of the net
     if(d.d<g.R+PR&&!hi&&!weakThrough(A,p,g)){const nx=(p.x-d.cx)/(d.d||1),ny=(p.y-d.cy)/(d.d||1),dot=p.vx*nx+p.vy*ny;if(dot<0){p.vx=(p.vx-2*dot*nx)*.35+rnd(-40,40);p.vy=(p.vy-2*dot*ny)*.35;
         // goalies steer rebounds out to the slot, so only some deflections still trickle in
@@ -1222,9 +1225,10 @@ function puckCanScore(p){
   const reach=-p.vy*2.8;if(p.y-reach>GY)return false;
   const xc=p.x+p.vx*(GY-p.y)/p.vy;return Math.abs(xc-GX)<NH+PR+5;
 }
-// a scouting report's weak spot: a shot there slips past the goalie's first touch half the time (decided at that touch)
+// a scouting report's weak spot: a shot there sometimes slips past the goalie's first touch (decided at that touch; how
+// often depends on the level)
 function weakThrough(A,p,g){if(!A.weak||!A.shotInfo||A.shotInfo.lax)return false;
-  if(A.weakR==null){A.weakR=shotZone((p.x-g.x)/NH,A.shotInfo.zt/78)===A.weak&&Math.random()<WEAK_P;if(A.weakR)A.weakHit=1;}return A.weakR;}
+  if(A.weakR==null){A.weakR=shotZone((p.x-g.x)/NH,A.shotInfo.zt/78)===A.weak&&Math.random()<curDiff("g").weak;if(A.weakR)A.weakHit=1;}return A.weakR;}
 function goalWhy(A){
   const i=A.shotInfo||{type:"shot"},T=i.type[0].toUpperCase()+i.type.slice(1);
   if(i.lax)return "The Michigan, "+(A.touch?"in off the goalie":A.ping?"off the post and in":"tucked in under the bar");
@@ -1260,25 +1264,31 @@ function goalie(A,dt,gIn,sk,gk){
   }
 }
 function goalieAI(A,dt,gk,vmax){
-  const g=A.g,s=A.s,rd=curDiff("g").read,react=.17/gk+(A.blind>0?.24*rd:0);
+  const D=curDiff("g"),g=A.g,s=A.s,rd=D.read,react=.17*D.re/gk+(A.blind>0?.24*rd:0);
   let h=A.hist[0]||{x:A.p.x,y:A.p.y,vx:0,vy:0,free:false};
   for(let i=A.hist.length-1;i>=0;i--){if(A.hist[i].t<=A.t-react){h=A.hist[i];break;}}
   let tx,ty,fly=false,poke=false,boost=1;
   if(h.free&&h.vy<-120){
     const k=(g.y-h.y)/h.vy;tx=h.x+h.vx*Math.max(0,k);ty=g.y;boost=1;
-    if(!A.aiFly){A.aiFly=1;if(Math.random()<(A.shotInfo&&A.shotInfo.lax?.22:.55)*gk&&Math.abs(tx-g.x)>8)fly=true;}
+    if(!A.aiFly){A.aiFly=1;if(!(A.shotInfo&&A.shotInfo.lax)&&Math.random()<D.fly*gk&&Math.abs(tx-g.x)>8)fly=true;}
   } else {
     // read a hard lateral cut and T-push across with it
     const lat=Math.abs(h.vx)>150&&h.y-GY<220;if(lat)boost=1.3;
-    const ex=h.x+h.vx*react*(lat?1.05:.7),ey=h.y+h.vy*react*.7;const dx=ex-GX,dy=Math.max(4,ey-GY),d=Math.hypot(dx,dy);
-    const depth=clamp((d-60)*.24,11,58);
+    // once he loads up a shot (or has the puck up on his blade, ready to tuck it), stop leading his skating and get set
+    // square to the puck, a step further out
+    const ch=s.has&&(s.charging||s.lax&&s.laxZ>.6),ex=h.x+h.vx*react*(ch?D.lead:lat?1.05:.7),ey=h.y+h.vy*react*.7;const dx=ex-GX,dy=Math.max(4,ey-GY),d=Math.hypot(dx,dy);
+    const depth=clamp((d-60)*D.dep+(ch?6:0),11,62);
     // stand on the bisector of the shooting angle, so tight-in the goalie seals the near post
     ty=GY+dy/d*depth;const ax=ex,ay=GY+dy;
     let lx=GX-NH-ax,ly=GY-ay,rx=GX+NH-ax,ry=GY-ay;const ll=Math.hypot(lx,ly),rl=Math.hypot(rx,ry);
     const bx=lx/ll+rx/rl,by=ly/ll+ry/rl;
-    const bis=clamp(ax+bx*(ty-ay)/(by||-1),GX-NH+8,GX+NH-8),BW=.3;
-    tx=(GX+dx/d*depth)*(1-BW)+bis*BW+(A.bite>0?A.biteDir*28*rd:0);
-    if(s.has&&A.phase==="live"){const pd=Math.hypot(A.p.x-g.x,A.p.y-g.y);if(pd<68&&Math.random()<dt*2.2*gk)poke=true;}
+    const bis=clamp(ax+bx*(ty-ay)/(by||-1),GX-NH+8,GX+NH-8),BW=D.bw;
+    tx=(GX+dx/d*depth)*(1-BW)+bis*BW+(A.bite>0?A.biteDir*28*rd*clamp((250-d)/120,.15,1):0);
+    // the Michigan: with the puck up on his blade, stay on your feet and square to it (a poke can't reach it), and if he
+    // swings down beside the net to tuck it in from a sharp angle, hug the post he's heading for
+    if(s.has&&s.lax){const sd=Math.sign(h.x-GX)||1,wide=clamp((Math.abs(h.x-GX)-NH*.6)/(NH*.6),0,1)*clamp((90-(h.y-GY))/60,0,1);
+      tx+=(GX+sd*(NH-14)-tx)*wide;ty+=(GY+12-ty)*wide;boost=1.25;}
+    else if(s.has&&A.phase==="live"){const pd=Math.hypot(A.p.x-g.x,A.p.y-g.y);if(pd<68&&Math.random()<dt*2.2*gk)poke=true;}
   }
   let vx=(tx-g.x)*9,vy=(ty-g.y)*9;const m=Math.hypot(vx,vy),cap=vmax*boost;if(m>cap){vx*=cap/m;vy*=cap/m;}
   return {vx,vy,fly,poke};
@@ -1286,11 +1296,15 @@ function goalieAI(A,dt,gk,vmax){
 // ---- difficulty: how sharp the computer's goalie and shooters are in 1 Player games
 // gk and sk scale the computer's goalie and shooter ratings, aim is how far its shots stray from the open corner,
 // rel moves where its shooters let it go (further out is easier to stop), read is how long its goalie stays fooled by a deke,
+// re scales how long its goalie takes to react to the puck, dep how far out he comes to cut down the angle, bw how much he
+// plays the angle (toward the near post) rather than the middle, lead how far he still follows a shooter loading a shot, fly how often
+// he drops into the butterfly on a shot, weak how often a shot at his scouted weak spot slips past him,
 // pay scales the coins a game earns
 const DIFFS={
-  rookie:{name:"Rookie",gk:.78,sk:.9,aim:.4,rel:40,read:1.35,pay:.75,desc:"Slower goalies, wilder shooters"},
-  pro:{name:"Pro",gk:1,sk:1,aim:.2,rel:0,read:1,pay:1,desc:"The standard AHL game"},
-  allstar:{name:"All-Star",gk:1.14,sk:1.05,aim:.1,rel:-15,read:.7,pay:1.5,desc:"Quick goalies, sharp snipers"}};
+  rookie:{name:"Rookie",gk:.7,sk:.9,aim:.4,rel:40,read:1.35,re:1.5,dep:.2,bw:.3,lead:.7,fly:.35,weak:.5,pay:.75,desc:"Slower goalies, wilder shooters"},
+  pro:{name:"Pro",gk:1,sk:1,aim:.2,rel:0,read:.8,re:.85,dep:.32,bw:.6,lead:.15,fly:.8,weak:.3,pay:1,desc:"The standard AHL game"},
+  allstar:{name:"All-Star",gk:1.14,sk:1.05,aim:.1,rel:-15,read:.6,re:.75,dep:.34,bw:.6,lead:.15,fly:.9,weak:.2,pay:1.5,desc:"Quick goalies, sharp snipers"},
+  legend:{name:"Legend",gk:1.24,sk:1.1,aim:.05,rel:-25,read:.45,re:.66,dep:.36,bw:.6,lead:.15,fly:.95,weak:.12,pay:2,desc:"Goalies who read everything, shooters who never miss"}};
 // rink themes only change how the game looks (see themeWorld)
 const RINKS={
   arena:{name:"Arena",desc:"The home barn, packed to the rafters"},
@@ -1298,9 +1312,12 @@ const RINKS={
   classic:{name:"Classic",desc:"An outdoor stadium game under the lights, with snow coming down"},
   retro:{name:"Retro",desc:"An old-time barn, leather pads and throwback sweaters"}};
 function rinkSel(){const r=store.get("bc-rink","arena");return RINKS[r]?r:"arena";}
-// the simulator can set the shooter (s) and goalie (g) levels separately
+// the simulator can set the shooter (s) and goalie (g) levels separately, by name or as a set of settings
 let SIMD=null;
-const curDiff=r=>DIFFS[(SIMD?SIMD[r||"s"]:G&&G.diff)||"pro"];
+const curDiff=r=>{const k=SIMD?SIMD[r||"s"]:G&&G.diff;return k&&typeof k==="object"?k:DIFFS[k||"pro"];};
+// the goalie in the shootouts nobody plays (your skaters in a goalie career, the title screen): the older, simpler Pro
+// goalie, so those keep scoring as often as they always have
+const SIM_GK={...DIFFS.pro,read:1,re:1,dep:.24,bw:.3,lead:.7,fly:.55,weak:.5};
 // ---- CPU shooter
 function newPlan(){
   return {amp:rnd(15,90),freq:rnd(1.2,2.8),phase:rnd(0,6.28),lane:GX+rnd(-110,110),
@@ -1439,17 +1456,10 @@ function sndUpdate(A,dt){
   SND.skate.gain.setTargetAtTime(clamp(sp/420,0,1)*.07*stroke,t,.05);
   crwFrame(A,near);
 }
-// ---- the crowd: "Let's go <club>!" with the clapping after it on the beat, applause after goals and saves, and the roar of
-// the wave as it rolls round the bowl. The chants are recorded (models/chants.mp3 + chants.json, one per club, made with
-// tools/chants); the claps and the wave are synthesized. Everything here goes through CRW.g, which ducks under the announcer
-// and while a shooter closes in, and is louder on rivalry nights.
-const CRW={idx:null,raw:null,buf:new Map(),loading:null,fail:false,g:null,clap:null,app:null,until:0,next:0,idle:0,wave:null,ref:null},BEAT=.5;
-function crwLoad(){if(CRW.loading||CRW.fail)return CRW.loading||Promise.resolve();
-  const get=(u,j)=>fetch(u).then(r=>{if(!r.ok)throw new Error(u+" "+r.status);return j?r.json():r.arrayBuffer();});
-  return CRW.loading=Promise.all([get("models/chants.json",1),get("models/chants.mp3")]).then(([i,b])=>{CRW.idx=i;CRW.raw=b;}).catch(e=>{console.warn("chants off",e);CRW.fail=true;});}
-function crwClip(id){if(CRW.buf.has(id))return CRW.buf.get(id);const e=CRW.idx&&CRW.idx[id],c=SND.ctx;if(!e||!c)return Promise.resolve(null);
-  const p=new Promise(res=>{try{c.decodeAudioData(CRW.raw.slice(e[0],e[0]+e[1]),b=>{const d=b.getChannelData(0);let i=0;while(i<d.length&&Math.abs(d[i])<.01)i++;res({b,o:Math.max(0,i/b.sampleRate-.01)});},()=>res(null));}catch(err){res(null);}});
-  CRW.buf.set(id,p);return p;}
+// ---- the crowd: applause after goals and saves, and the roar of the wave as it rolls round the bowl, both synthesized.
+// Everything here goes through CRW.g, which ducks under the announcer and while a shooter closes in, and is louder on
+// rivalry nights.
+const CRW={g:null,app:null,wave:null,ref:null};
 // hand claps rendered once: n claps scattered over the first `spread` seconds of a `len`-second buffer, each a burst of noise
 // through a resonance somewhere between 900 Hz and 2.5 kHz that dies away in under a tenth of a second
 function crwClaps(n,spread,len){const c=SND.ctx,sr=c.sampleRate,b=c.createBuffer(1,Math.ceil(sr*len),sr),d=b.getChannelData(0);
@@ -1458,21 +1468,11 @@ function crwClaps(n,spread,len){const c=SND.ctx,sr=c.sampleRate,b=c.createBuffer
     for(let i=t0;i<d.length&&e>.002;i++){const y=(Math.random()*2-1)*e+a1*y1+a2*y2;y2=y1;y1=y;d[i]+=y;e*=dec;}}
   let m=0;for(let i=0;i<d.length;i++)m=Math.max(m,Math.abs(d[i]));if(m>0)for(let i=0;i<d.length;i++)d[i]/=m;return b;}
 function crwInit(){const c=SND.ctx;if(!c||CRW.g)return;CRW.g=c.createGain();CRW.g.gain.value=0;CRW.g.connect(SND.master);
-  CRW.clap=crwClaps(46,.05,.22);CRW.app=crwClaps(260,3.6,4);}
+  CRW.app=crwClaps(260,3.6,4);}
 function crwPlay(buf,t,gain,rate,off){const c=SND.ctx,s=c.createBufferSource(),g=c.createGain();s.buffer=buf;s.playbackRate.value=rate||1;g.gain.value=gain;s.connect(g).connect(CRW.g);s.start(t,off||0);return {s,g};}
 // applause: claps that thin out over a few seconds
 function crwApplause(amt,len){if(!sndOK()||!CRW.app)return;const c=SND.ctx,t=c.currentTime,L=len||3,x=crwPlay(CRW.app,t,0,.92+Math.random()*.16,Math.random()*.3);
   x.g.gain.setValueAtTime(0,t);x.g.gain.linearRampToValueAtTime(1.1*amt,t+.12);x.g.gain.setTargetAtTime(0,t+L*.45,L*.25);x.s.stop(t+L+.6);}
-// a chant: the recorded line, then "clap, clap, clap-clap-clap" on beats 4, 5, 6, 6½ and 7, and again from beat 8
-function crwChant(reps){if(!sndOK()||!CRW.idx||!G||!G.me)return false;const c=SND.ctx;if(c.currentTime<CRW.until)return false;
-  const id="ch_"+G.me.abbr;if(!CRW.idx[id])return false;CRW.until=c.currentTime+4*BEAT*2*(reps||2);
-  crwClip(id).then(x=>{if(!x||!sndOK())return;let t=c.currentTime+.05;const rate=.97+Math.random()*.06;
-    for(let r=0;r<(reps||2);r++){crwPlay(x.b,t,1,rate,x.o);for(const k of [4,5,6,6.5,7])crwPlay(CRW.clap,t+k*BEAT+(Math.random()-.5)*.02,.5,.94+Math.random()*.12);t+=8*BEAT;}
-    CRW.until=t;CRW.idle=t+(G&&G.rival?12:22)+Math.random()*12;});
-  return true;}
-// ask for a chant `delay` seconds from now, with chance p (a later ask doesn't push back one already waiting)
-function crwCue(delay,p){if(!SND.ctx||Math.random()>p)return;const t=SND.ctx.currentTime+delay;if(!CRW.next||CRW.next<SND.ctx.currentTime||t<CRW.next)CRW.next=t;}
-function crwStart(){if(!SND.ctx)return;crwInit();crwLoad();CRW.until=0;CRW.next=SND.ctx.currentTime+7;CRW.idle=SND.ctx.currentTime+40;}
 // the wave: two vowel-ish bands of noise ("whoaaa") panned to wherever the crest is, louder in front of you
 function crwWave(on,pan,front,k){const c=SND.ctx,t=c.currentTime;
   if(on&&!CRW.wave){const s=sndNoiseSrc(true),g=c.createGain(),f1=c.createBiquadFilter(),f2=c.createBiquadFilter(),p=c.createStereoPanner?c.createStereoPanner():null;
@@ -1487,9 +1487,6 @@ function crwFrame(A,near){const c=SND.ctx;if(!CRW.g)return;const t=c.currentTime
   const talk=t<VOX.until||(window.speechSynthesis&&speechSynthesis.speaking);
   CRW.g.gain.setTargetAtTime(live&&!G.pre?(G.rival?1.3:1)*(talk?.45:1)*(1-.45*near*near):0,t,.15);
   if(!live||G.pre||G.hold)return;
-  const idle=A&&A.phase==="ready"&&!G.over;
-  if(CRW.next&&t>=CRW.next&&(idle||A&&A.result)){if(crwChant(2))CRW.next=0;else if(t>CRW.until)CRW.next=0;}
-  else if(idle&&CRW.idle&&t>CRW.idle&&t>CRW.until)crwChant(G.rival?3:2);
   // the wave's crest: the bowl position the fans' shader stands up, turned into a direction from the camera
   let on=false;if(R3.cam&&R3.wave0!=null&&!G.over){const wv=(G.clockT-R3.wave0)/11;
     if(wv>=0&&wv<=1.12){on=true;const a=2*Math.PI*(((wv%1)+1)%1),P=v3(GX,(H+EXT)/2,0);P.x+=Math.cos(a)*700;P.z+=Math.sin(a)*700;P.y=200;
@@ -1499,8 +1496,8 @@ function crwFrame(A,near){const c=SND.ctx;if(!CRW.g)return;const t=c.currentTime
 // whose crowd is it: the home crowd cheers for you
 function sndResult(A){
   const mine=G.side==="me"||G.two;
-  if(A.result==="goal"){if(mine){sfx.horn();sfx.cheer(1);crwApplause(1,4.5);crwCue(3.4,.75);}else{sfx.groan(1.2);}}
-  else if(A.result==="save"){if(mine){sfx.groan(.6);}else{sfx.cheer(.55);crwApplause(.75,2.6);crwCue(2.6,.35);}}
+  if(A.result==="goal"){if(mine){sfx.horn();sfx.cheer(1);crwApplause(1,4.5);}else{sfx.groan(1.2);}}
+  else if(A.result==="save"){if(mine){sfx.groan(.6);}else{sfx.cheer(.55);crwApplause(.75,2.6);}}
   else if(A.ping){if(mine)sfx.groan(.9);else{sfx.cheer(.5);crwApplause(.5,2);}}
   else if(!mine)sfx.cheer(.3);
 }
@@ -1648,7 +1645,7 @@ const ACH=[
   {id:"toe",name:"Toe drag snipe",desc:"Score right after a toe drag",coins:100},
   {id:"mich",name:"The Michigan",desc:"Score a lacrosse-style Michigan",coins:150},
   {id:"perfect",name:"Perfect five",desc:"Score on all five of your shooters",coins:250},
-  {id:"allstar",name:"All-Star game",desc:"Beat the computer on All-Star",coins:300},
+  {id:"allstar",name:"All-Star game",desc:"Beat the computer on All-Star or Legend",coins:300},
   {id:"gcso",name:"Stonewall",desc:"Post a shutout in goalie career",coins:150},
   {id:"baz",name:"Goalie of the year",desc:"Win the Baz Bastien Award in goalie career",coins:500},
   {id:"self",name:"Making a name",desc:"Score with the player you created",coins:100},
@@ -2114,7 +2111,7 @@ function payout(w){
   else PROF.streak=0;
   const rec=recordFor(G.me.abbr),beaten=Object.values(rec).filter(r=>r.w>0).length;
   const got=id=>{if(!PROF.ach[id]){PROF.ach[id]=Date.now();const a=ACH.find(x=>x.id===id);unlock.push({name:a.name,coins:a.coins});}};
-  if(S.goals>0)got("first");if(G.fight&&G.fight.res==="won")got("fight");if(w==="me"&&G.diff==="allstar")got("allstar");for(const f of S.flags)if(ACH.some(a=>a.id===f))got(f);
+  if(S.goals>0)got("first");if(G.fight&&G.fight.res==="won")got("fight");if(w==="me"&&(G.diff==="allstar"||G.diff==="legend"))got("allstar");for(const f of S.flags)if(ACH.some(a=>a.id===f))got(f);
   if(!G.gc&&G.att.me.length>=5&&G.att.me.slice(0,5).every(Boolean))got("perfect");
   if(beaten>=TEAMS.length-1)got("tourall");
   if(G.season&&PROF.season){const SR=seasonResult(w,G.att.me.length>5);for(const [t,n] of SR.lines){coins+=n;lines.push([t,n]);}}
@@ -2301,9 +2298,9 @@ const LSTYLE={"Sniper":{dk:.3,mv:"cut",tip:"shoots far more than he dekes, and p
   "Dangler":{dk:.75,mv:"toe",tip:"loves to deke, so watch for the toe drag",tips:"love to deke, so watch for the toe drag"},
   "Power forward":{dk:.2,mv:"cut",tip:"winds up and lets it rip",tips:"wind up and let it rip"},"Speedster":{dk:.55,mv:"cut",tip:"comes in fast and cuts across the crease",tips:"come in fast and cut across the crease"},
   "Two-way":{dk:.45,mv:"spin",tip:"mixes it up, spin-o-rama and all",tips:"mix it up, spin-o-rama and all"}};
-// a goalie's weak spot (a shot there gets past his first touch half the time) and his habit
+// a goalie's weak spot (a shot there sometimes gets past his first touch) and his habit
 const WEAK={gh:{n:"Glove high",how:"a full-power shot to his glove side, your right"},bh:{n:"Blocker high",how:"a full-power shot to his blocker side, your left"},
-  gl:{n:"Glove low",how:"a quick, low shot to his glove side, your right"},bl:{n:"Blocker low",how:"a quick, low shot to his blocker side, your left"},fh:{n:"Five-hole",how:"a quick, low shot right between his pads"}},WEAK_P=.5;
+  gl:{n:"Glove low",how:"a quick, low shot to his glove side, your right"},bl:{n:"Blocker low",how:"a quick, low shot to his blocker side, your left"},fh:{n:"Five-hole",how:"a quick, low shot right between his pads"}};
 const GTEND={bite:{n:"Bites on dekes",d:"A toe drag or a spin fools him longer than most",read:1.4},home:{n:"Stays home",d:"He's patient, so dekes don't fool him for long",read:.7},
   poke:{n:"Loves the poke check",d:"He comes out to strip you when you get close",poke:1.3},quick:{n:"Quick post to post",d:"He's hard to beat with a cut across the crease",gspd:1.06}};
 const LEAGUE={};
@@ -2650,7 +2647,7 @@ function gcResult(w){
 }
 // your skaters' attempts play out off screen; the result shows on the scoreboard and on the next banner
 function gcSimShot(n){
-  const A=newAttempt({...NOMODS}),P=newPlan(),keep=SIMD;SIMD={s:"pro",g:G.diff};let t=0;
+  const A=newAttempt({...NOMODS}),P=newPlan(),keep=SIMD;SIMD={s:"pro",g:SIM_GK};let t=0;
   while(A.phase!=="done"&&t<15){step(A,1/120,cpuShooter(A,P,1/120),null,G.sk.me,G.gk.opp);t+=1/120;}
   SIMD=keep;
   const goal=A.result==="goal",num=G.jerseys.me[n%JERSEYS.length],nm=tcase(G.gcNames[n%G.gcNames.length]);
@@ -2803,7 +2800,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
 window.__C={get P(){return PROF},showPre:()=>showPre(),conAdvice:(O,pay)=>conAdvice(O,pay),formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;},
-  clubRoster:a=>clubRoster(a),signBack:i=>signBack(i),unsignedFA:()=>unsignedFA(),nhlCalls:n=>nhlCalls(n),nhlBack:(p,n)=>nhlBack(p,n),rafters:t=>rafters(t),renderTrophies:()=>renderTrophies(),newSeason:c=>newSeason(c),runOffseason:()=>runOffseason(),TEAMS,decided:()=>decided(),nextAttempt:()=>nextAttempt(),shotZone:(x,z)=>shotZone(x,z),netSVG:(a,b,c)=>netSVG(a,b,c),standings:()=>standings(),simGame:(a,b)=>simGame(a,b),recordGame:w=>recordGame(w),gameLineup:(a,b)=>gameLineup(a,b),gameGoalie:p=>gameGoalie(p),startSkills:()=>startSkills(),asgDue:()=>asgDue(),skDone:A=>skDone(A),skResult:A=>skResult(A),crw:{chant:n=>crwChant(n),applause:(a,l)=>crwApplause(a,l),cue:(d,p)=>crwCue(d,p)}};
+  clubRoster:a=>clubRoster(a),signBack:i=>signBack(i),unsignedFA:()=>unsignedFA(),nhlCalls:n=>nhlCalls(n),nhlBack:(p,n)=>nhlBack(p,n),rafters:t=>rafters(t),renderTrophies:()=>renderTrophies(),newSeason:c=>newSeason(c),runOffseason:()=>runOffseason(),TEAMS,decided:()=>decided(),nextAttempt:()=>nextAttempt(),shotZone:(x,z)=>shotZone(x,z),netSVG:(a,b,c)=>netSVG(a,b,c),standings:()=>standings(),simGame:(a,b)=>simGame(a,b),recordGame:w=>recordGame(w),gameLineup:(a,b)=>gameLineup(a,b),gameGoalie:p=>gameGoalie(p),startSkills:()=>startSkills(),asgDue:()=>asgDue(),skDone:A=>skDone(A),skResult:A=>skResult(A),crw:{applause:(a,l)=>crwApplause(a,l)}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
@@ -3405,7 +3402,7 @@ function startGame(me,opp,opts){
   $("setup").hidden=true;$("game").hidden=false;$("btnMenu").hidden=false;document.body.classList.add("playing");
   document.querySelectorAll(".over").forEach(o=>o.remove());
   G.note=sk?"":`Coin toss: ${G[G.first].abbr} shoot first`;
-  sndInit();sfx.organ(CHARGE);cmtIntro();crwStart();
+  sndInit();sfx.organ(CHARGE);cmtIntro();crwInit();
   document.body.classList.toggle("two",G.two&&!G.net);$("deck2").hidden=!(G.two&&!G.net);
   resetWorld();
   if(G.net&&NET.role==="guest"){NET.buf=[];NET.evSeen=0;G.aid=-1;G.side=G.first;G.n=0;G.jersey=G.jerseys[G.side][0];G.A=newAttempt({...NOMODS});netLabels();renderScore();}
@@ -5686,13 +5683,13 @@ function demoFrame(dt){
     if(REAL.ok&&R3.skater&&!R3.skater.real)R3.painted=null;
     if(!still&&!window.__freeze){
       const sIn=cpuShooter(A,g.plan,dt),sk=g.sk[g.side],gk=g.gk[other(g.side)];
-      step(A,dt/2,sIn,null,sk,gk);step(A,dt/2,{...sIn,deke:false},null,sk,gk);
+      SIMD={s:"pro",g:SIM_GK};step(A,dt/2,sIn,null,sk,gk);step(A,dt/2,{...sIn,deke:false},null,sk,gk);
       if(A.result==="goal"&&A.cel==null)A.cel=pickCel();
       if(A.phase==="done"&&A.endT>(A.result==="goal"?celHold(A):sadHold())+.3)demoAttempt();
       g.clockT+=dt;handleEvents(g.A);stepFx(dt);}
     render3D(g.A,null,dt);
   }catch(e){console.warn("title arena off",e);DEMO.dead=true;demoHide();}
-  finally{G=sv;SND.on=svOn;R3.q=svQ;}
+  finally{G=sv;SND.on=svOn;R3.q=svQ;SIMD=null;}
 }
 try{new IntersectionObserver(es=>{DEMO.vis=es[es.length-1].isIntersecting;}).observe($("hero"));}catch(e){}
 window.__DEMO=DEMO;window.__VOX=VOX;
