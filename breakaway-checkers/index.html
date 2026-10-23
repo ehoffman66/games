@@ -664,6 +664,9 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
   .fo-rt{font-size:.72rem}
   .btn.play{min-height:54px;font-size:1.55rem}
 }
+
+.conseg{display:flex;gap:4px;flex:none}.conseg .btn{min-height:36px;padding:6px 10px}.conseg .btn.gone{background:#7a2a2a;border-color:#a33;color:#fff}
+.stbox.fa{border-color:var(--led)}
 </style>
 
 <div class="wrap">
@@ -831,7 +834,7 @@ body.sub:not(.playing) header h1{font-size:clamp(1.9rem,6vw,2.6rem)}
         <div class="trophies" id="trophies"></div>
       </div>
     </div>
-    <p class="ver">v61</p>
+    <p class="ver">v62</p>
   </section>
 
   <section id="game" hidden>
@@ -2117,7 +2120,8 @@ function newSeason(club){
   const div=others.filter(a=>byAbbr[a].div===me.div),rest=others.filter(a=>byAbbr[a].div!==me.div);
   const sched=shuffle([...div,...rest].slice(0,SEASON_GAMES));
   const rec={};for(const t of TEAMS)rec[t.abbr]={w:0,l:0,sdl:0};
-  PROF.season={club,sched,gi:0,rec,phase:"reg",po:null,year:(PROF.season?PROF.season.year:0)+1,log:[]};saveProf();
+  const prev=PROF.season;PROF.season={club,sched,gi:0,rec,phase:"reg",po:null,year:(prev?prev.year:0)+1,log:[]};
+  if(prev&&prev.off&&prev.off.left&&prev.off.left.length)PROF.season.fa=prev.off.left;saveProf();
 }
 const ptsOf=r=>r.w*2+r.sdl;
 function standings(){const S=PROF.season;return TEAMS.map(t=>({abbr:t.abbr,...S.rec[t.abbr],gp:S.rec[t.abbr].w+S.rec[t.abbr].l})).sort((a,b)=>ptsOf(b)-ptsOf(a)||b.w-a.w||a.gp-b.gp||(a.abbr<b.abbr?-1:1));}
@@ -2287,7 +2291,7 @@ function openOffseason(){
   const conHTML=()=>{const L=O.con.filter(c=>findP(c.id)),off=L.filter(c=>advOf(c)&&advOf(c).keep!==c.keep).length;
     return (off?`<button class="btn sm advAll" id="offAdv" type="button">📊 Take the stats team's advice (${off} change${off>1?"s":""})</button>`:L.length?`<p class="stnote advOk">📊 Your choices match the stats team's advice.</p>`:"")+
     L.map(c=>{const a=advOf(c);return `<div class="ofr ofc"><span class="ofn" data-pc="${c.id}" role="button" tabindex="0">${c.n} <i class="chev">›</i><small>${c.g?"Goalie · ":""}age ${c.age} · was ${money(c.was)} · asks ${money(c.ask)} × ${yrsT(c.yrs)}</small>
-      ${a?`<small class="adv ${a.keep?"ak":"ag"}">📊 ${a.keep?"Re-sign":"Let go"}: ${a.why}</small>`:""}</span><button class="btn sm ${c.keep?"primary":""}" data-con="${O.con.indexOf(c)}" type="button">${c.keep?"Re-sign":"Let go"}</button></div>`;}).join("");};
+      ${a?`<small class="adv ${a.keep?"ak":"ag"}">📊 ${a.keep?"Re-sign":"Let go"}: ${a.why}</small>`:""}</span><div class="conseg" role="group" aria-label="${c.n}"><button class="btn sm ${c.keep?"primary":""}" data-con="${O.con.indexOf(c)}" data-k="1" aria-pressed="${c.keep}" type="button">${c.keep?"✓ ":""}Re-sign</button><button class="btn sm ${c.keep?"":"primary gone"}" data-con="${O.con.indexOf(c)}" data-k="0" aria-pressed="${!c.keep}" type="button">${c.keep?"":"✓ "}Let go</button></div></div>`;}).join("");};
   const m=document.createElement("div");m.className="modal";m.id="offmodal";m.setAttribute("role","dialog");m.setAttribute("aria-modal","true");
   const dev=O.dev.map(d=>`<div class="ofr${d.me?" me":""}"><span class="ofn" data-pc="${d.id}" role="button" tabindex="0">${d.n}${d.me?" ★":""} <i class="chev">›</i><small>${d.g?"Goalie · ":""}age ${d.age}</small></span><b>${d.o}</b><em class="${d.d>0?"gu":d.d<0?"gd":""}">${d.d>0?"+":""}${d.d||"="}</em></div>`).join("");
   const ret=O.ret.length?O.ret.map(r=>`<div class="ofr"><span>${r.n}<small>${r.g?"Goalie · ":""}retires at ${r.age} · ${r.line}</small></span></div>`).join(""):`<p class="empty">Nobody retired this year.</p>`;
@@ -2297,18 +2301,19 @@ function openOffseason(){
     <h4>A year older</h4><div class="ofl">${dev}</div>
     <h4>Retirements</h4><div class="ofl">${ret}</div>
     ${O.fa.length?`<p class="stnote">Signed to fill the lineup: ${O.fa.join(", ")}</p>`:""}
-    ${O.con.length?`<h4>Contracts</h4><p class="muted" style="margin:0">These deals are up. Tap a player for his card, and the button to switch between re-signing him and letting him go. Your stats team gives its call under each one.</p><div class="ofl" id="offCon">${conHTML()}</div>`:""}
+    ${O.con.length?`<h4>Contracts</h4><p class="muted" style="margin:0">These deals are up. Choose Re-sign or Let go for each player, or tap his name for his card. Your stats team gives its call under each one.</p><div class="ofl" id="offCon">${conHTML()}</div>`:""}
     <p class="stnote" id="offPay"></p>
     <h4>Draft · pick ${O.pick} of ${TEAMS.length}</h4>
     <p class="muted" style="margin:0">${O.pick<=8?"An early pick: the best prospects are still on the board.":O.pick>=TEAMS.length-4?"Picking late: the top prospects are gone, but there's still talent.":"Pick one prospect. He starts raw, so train him up."}</p>
     <div class="pgrid pros">${O.pros.map(p=>pCard(p,full(p)?"Roster full":`Potential ${p.pot}`)).join("")}</div>
-    <p class="cp-err" id="offErr"></p>
+    <p class="cp-err" id="offErr"></p><p class="stnote" id="offLeave"></p>
     <div class="acts"><button class="btn primary" id="offDraft" disabled>Pick a prospect</button><button class="btn sm" id="offPass" type="button">Pass on the pick</button></div></div>`;
   document.body.appendChild(m);
   let sel=null;const q=x=>m.querySelector(x),close=()=>{offRefresh=null;closePlayer();m.remove();renderSeason();renderCareer();};
-  const payLine=()=>{const n=payNext(sel);q("#offPay").innerHTML=`Payroll next season: <b class="${n>CAP?"gd":""}">${money(n)}</b> of ${money(CAP)} cap${n>CAP?". Let someone go to get under it.":""}`;};payLine();
+  const payLine=()=>{const n=payNext(sel),lv=O.con.filter(c=>!c.keep&&findP(c.id)).map(c=>c.n);q("#offPay").innerHTML=`Payroll next season: <b class="${n>CAP?"gd":""}">${money(n)}</b> of ${money(CAP)} cap${n>CAP?". Let someone go to get under it.":""}`;
+    const L=q("#offLeave");if(L)L.innerHTML=lv.length?`Leaving as free agents when you finish: <b>${lv.join(", ")}</b>`:O.con.length?"Everyone with a contract up is re-signing.":"";};payLine();
   const redo=()=>{q("#offCon").innerHTML=conHTML();wireCon();payLine();};
-  const wireCon=()=>{const E=q("#offCon");if(!E)return;E.querySelectorAll("[data-con]").forEach(b=>b.addEventListener("click",()=>{const c=O.con[+b.dataset.con];c.keep=!c.keep;saveProf();redo();}));
+  const wireCon=()=>{const E=q("#offCon");if(!E)return;E.querySelectorAll("[data-con]").forEach(b=>b.addEventListener("click",()=>{const c=O.con[+b.dataset.con];c.keep=b.dataset.k==="1";saveProf();redo();}));
     const A=q("#offAdv");if(A)A.addEventListener("click",()=>{for(const c of O.con){const a=advOf(c);if(a)c.keep=a.keep;}saveProf();redo();});wirePc(E);};
   const wirePc=E=>E.querySelectorAll("[data-pc]").forEach(b=>{const go=()=>{if(findP(b.dataset.pc))openPlayer(b.dataset.pc);};b.addEventListener("click",go);b.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go();}});});
   wireCon();wirePc(q(".ofl"));offRefresh=()=>{if(m.isConnected&&q("#offCon"))redo();};
@@ -2318,7 +2323,8 @@ function openOffseason(){
     q("#offErr").textContent="";sel=p;m.querySelectorAll(".pros .pcard").forEach(c=>c.classList.toggle("sel",c===b));payLine();
     const d=q("#offDraft");d.disabled=false;d.textContent=`Draft ${p.ini}. ${p.name}`;}));
   const finish=p=>{const n=payNext(p);if(n>CAP+1e-9){q("#offErr").textContent=`That puts you ${money(n-CAP)} over the cap. Let someone go, or pass on the pick.`;return;}
-    for(const c of O.con){const x=findP(c.id);if(!x)continue;if(c.keep){x.sal=c.ask;x.yrs=c.yrs;}else{R.sk=R.sk.filter(y=>y!==x);R.gk=R.gk.filter(y=>y!==x);logTx(`${c.n} left as a free agent`);}}
+    O.left=O.left||[];
+    for(const c of O.con){const x=findP(c.id);if(!x)continue;if(c.keep){x.sal=c.ask;x.yrs=c.yrs;}else{R.sk=R.sk.filter(y=>y!==x);R.gk=R.gk.filter(y=>y!==x);x.ask=c.ask;x.askY=c.yrs;O.left.push(x);logTx(`${c.n} left as a free agent`);}}
     while(R.sk.length<5){const f=newPlayer(R,false,{base:64,spread:2,pot:rnd(72,80),age:[25,31]});f.yrs=1;R.sk.push(f);O.fa.push(`#${f.num} ${f.ini}. ${f.name}`);}
     if(!R.gk.length){const f=newPlayer(R,true,{base:64,spread:2,pot:rnd(72,80),age:[25,31]});f.yrs=1;R.gk.push(f);O.fa.push(`#${f.num} ${f.ini}. ${f.name}`);}
     fixRoster();O.done=true;offRefresh=null;O.took=p?`#${p.num} ${p.ini}. ${p.name}`:null;
@@ -2338,6 +2344,17 @@ function poBracket(S){const P=S.po,R=PO_ROUNDS.length,n0=PO_TEAMS/2,ords=[[0]];
       return `<div class="pox${x.a===S.club||x.b===S.club?" me":""}${r===P.round&&!P.champ?" now":""}">${team(x.a,x.wa,bw)}${team(x.b,x.wb,aw)}</div>`;}).join("")}</div></div>`;}).join("");
   return `<div class="pobr"><div class="row" style="justify-content:space-between"><h3 class="ch">Playoff bracket</h3><span class="muted">Seeded by the regular season standings · best of 3</span></div>
     <div class="potree">${cols}</div>${P.champ?`<p class="muted" style="margin:6px 0 0">🏆 ${byAbbr[P.champ].name} won the Calder Cup</p>`:""}</div>`;}
+// ---- the players you let go in the offseason are still unsigned until your first game of the next season: bring one back at his ask
+function unsignedFA(){const S=PROF.season;if(!S)return [];if(S.phase==="done"&&S.off&&S.off.done)return S.off.left||[];if(S.phase==="reg"&&S.gi===0)return S.fa||[];return [];}
+function signBack(i){const L=unsignedFA(),p=L[i],R=PROF.roster;if(!p)return;
+  if(p.g?R.gk.length>=MAX_GK:R.sk.length>=MAX_SK){toast(`Your roster is full (${p.g?MAX_GK+" goalies":MAX_SK+" skaters"}). Sell or release someone first.`);return;}
+  if(!capOk(p.ask||MIN_SAL)){toast(`Bringing him back at ${money(p.ask)} would put you over the ${money(CAP)} cap.`);return;}
+  if(allP(R).some(o=>o.num===p.num)){const used=new Set(allP(R).map(o=>o.num));p.num=(p.g?GK_NUMS:SK_NUMS).find(n=>!used.has(n))??p.num;}
+  L.splice(i,1);p.sal=p.ask||MIN_SAL;p.yrs=p.askY||1;delete p.ask;delete p.askY;(p.g?R.gk:R.sk).push(p);fixRoster();
+  logTx(`Re-signed #${p.num} ${p.ini}. ${p.name} at ${money(p.sal)} × ${yrsT(p.yrs)}`);saveProf();renderSeason();renderCareer();toast(`${p.ini}. ${p.name} is back with the ${nickOf(byAbbr[PROF.season.club])}`);}
+function faHTML(){const L=unsignedFA();if(!L.length)return "";
+  return `<div class="stbox fa"><h3 class="ch">Changed your mind?</h3><p class="muted" style="margin:0">You let these players go, and they're still unsigned. You can bring one back at his asking price until your first game of the season.</p>
+    <div class="ofl">${L.map((p,i)=>`<div class="ofr"><span>#${p.num} ${p.ini}. ${p.name}<small>${p.g?"Goalie · ":""}age ${p.age} · OVR ${ovr(p)} · asks ${money(p.ask||MIN_SAL)} × ${yrsT(p.askY||1)}</small></span><button class="btn sm" data-fa="${i}" type="button">Sign him back</button></div>`).join("")}</div></div>`;}
 function renderSeason(){renderTiles();
   const el=$("season"),S=PROF.season;if(!el)return;
   const me=selMe.value;
@@ -2346,11 +2363,12 @@ function renderSeason(){renderTiles();
     const offDone=S&&S.off&&S.off.done?`<p class="muted" style="margin:0">Offseason: ${S.off.took?`drafted ${S.off.took}`:"passed on the draft"}${S.off.ret.length?`, ${S.off.ret.length} retired`:""}.</p>`:"";
     el.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="ch">Season mode</h3><span class="muted">${SEASON_GAMES} games, then the top ${PO_TEAMS} make the playoffs</span></div>${last}
       <p class="muted" style="margin:0">Play a schedule against the league, climb the standings and chase the Calder Cup in best-of-3 playoff series.</p>
-      ${S&&S.phase==="done"?awardsHTML(S):""}${offDone}${S&&S.phase==="done"&&S.po&&S.po.champ?poBracket(S):""}
+      ${S&&S.phase==="done"?awardsHTML(S):""}${offDone}${faHTML()}${S&&S.phase==="done"&&S.po&&S.po.champ?poBracket(S):""}
       <div class="row">${offTodo?`<button class="btn primary" id="btnOff">${S.off?"Finish the offseason":"Go to the offseason"}</button>`:`<button class="btn primary" id="btnSeasonNew">Start a season with ${byAbbr[me].abbr}</button>`}${S&&S.ps?`<button class="btn sm" id="btnSeasonStats" type="button">Last season's stats</button>`:""}</div>`;
     if(offTodo)$("btnOff").addEventListener("click",openOffseason);
     else $("btnSeasonNew").addEventListener("click",()=>{newSeason(selMe.value);renderSeason();});
     if($("btnSeasonStats"))$("btnSeasonStats").addEventListener("click",()=>openStats("season"));
+    el.querySelectorAll("[data-fa]").forEach(b=>b.addEventListener("click",()=>signBack(+b.dataset.fa)));
     return;}
   const opp=seasonNext(),st=standings(),club=byAbbr[S.club];
   // the whole league, with a dashed line under the last playoff spot (nickname on phones, full name on wider screens)
@@ -2363,9 +2381,10 @@ function renderSeason(){renderTiles();
   el.innerHTML=`<div class="row" style="justify-content:space-between"><h3 class="ch">Season ${S.year} · ${club.abbr}</h3><span class="muted">${seasonLine()}</span></div>
     <div class="nextgame">${chipHTML(club)}<div><small>${head}</small><b>vs ${byAbbr[opp].name}</b><small>${byAbbr[opp].div} Division · SHT ${byAbbr[opp].sht} · GK ${byAbbr[opp].gk}</small></div>${chipHTML(byAbbr[opp])}</div>
     <div class="row"><button class="btn primary" id="btnSeasonPlay">Play ${S.phase==="po"?"playoff":"season"} game</button><button class="btn sm" id="btnSeasonStats" type="button">Season stats</button><button class="btn sm" id="btnSeasonQuit" type="button">Abandon season</button></div>
-    ${dlLine()?`<p class="muted dl${deadlineDay()?" on":""}" style="margin:0">${dlLine()}</p>`:""}
+    ${dlLine()?`<p class="muted dl${deadlineDay()?" on":""}" style="margin:0">${dlLine()}</p>`:""}${faHTML()}
     ${bracket||`<div class="stbox"><div class="row" style="justify-content:space-between"><h3 class="ch">Standings</h3><span class="muted">Top ${PO_TEAMS} make the playoffs</span></div>${table}</div>`}`;
   $("btnSeasonPlay").addEventListener("click",()=>startGame(S.club,opp,{season:true}));
+  el.querySelectorAll("[data-fa]").forEach(b=>b.addEventListener("click",()=>signBack(+b.dataset.fa)));
   $("btnSeasonStats").addEventListener("click",()=>openStats("season"));
   // two taps to abandon, so a stray tap can't throw away a season
   $("btnSeasonQuit").addEventListener("click",e=>{const b=e.currentTarget;if(!b.dataset.arm){b.dataset.arm=1;b.textContent="Tap again to abandon";setTimeout(()=>{if(b.isConnected){delete b.dataset.arm;b.textContent="Abandon season";}},3000);return;}
@@ -2493,6 +2512,10 @@ function openGcCreator(){
     const seed={hat:"hats",shutout:"shutouts",sd:"sd",bh:"bh",post:"posts",bomb:"bombs",pokesave:"pokes",first:"goals"};
     for(const k in seed)if(a[k])T[seed[k]]=Math.max(T[seed[k]],1);PROF.stats=T;}
   PROF.stats={...STAT0,...PROF.stats};
+  {const S=PROF.season,O=S&&S.phase==="done"&&S.off;if(O&&O.done&&!O.left){O.left=[];
+    for(const c of O.con||[]){if(c.keep||findP(c.id))continue;const d=(O.dev||[]).find(x=>x.id===c.id),m=/^#(\d+) (\w)\. (.+)$/.exec(c.n);if(!d||!m)continue;
+      const q=newPlayer(PROF.roster,!!c.g,{base:d.o,spread:1,age:[c.age,c.age+.5]}),dd=d.o-ovr(q);for(const k in q.r)q.r[k]=clamp(q.r[k]+dd,55,92);Object.assign(q,{id:c.id,num:+m[1],ini:m[2],name:m[3],ask:c.ask,askY:c.yrs});
+      q.pot=Math.max(...Object.values(q.r))+(c.age<=24?6:1);O.left.push(q);}}}
   if(!PROF.tier){PROF.tier={};for(const t of TACH)PROF.tier[t.id]=tierReached(t);}
   saveProf();
 })();
@@ -2540,7 +2563,7 @@ $("btnScoutSk").addEventListener("click",()=>scout(false));$("btnScoutGk").addEv
 // any player card opens his sheet
 $("setup").addEventListener("click",e=>{const c=e.target.closest("[data-pid]");if(c)openPlayer(c.dataset.pid);});
 addEventListener("keydown",e=>{if(e.key==="Escape"){closePlayer();const c=$("cpmodal");if(c)c.remove();}});
-window.__C={get P(){return PROF},conAdvice:(O,pay)=>conAdvice(O,pay),formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
+window.__C={get P(){return PROF},signBack:i=>signBack(i),unsignedFA:()=>unsignedFA(),conAdvice:(O,pay)=>conAdvice(O,pay),formOf:p=>formOf(p),cash:n=>cash(n),salFor:p=>salFor(p),openMktPlayer:i=>openMktPlayer(i),maybeCall:()=>maybeCall(),openCall:()=>openCall(),tradeClosed:()=>tradeClosed(),payroll:()=>payroll(),openOffseason:()=>openOffseason(),market:()=>market(),pVal:p=>pVal(p),openTrade:id=>openTrade(id),tradeOffers:p=>tradeOffers(p),renderSeason:()=>renderSeason(),cupSVG:c=>cupSVG(c),grantAwards:n=>grantAwards(n),cmt:{start:()=>cmtStart(),stakes:()=>cmtStakes(),result:A=>cmtResult(A)},endGame:w=>endGame(w),trackAttempt:A=>trackAttempt(A),renderCareer,lineup,ovr,starterG,seasonNext,seasonLine,payout,byAbbr,setG:v=>{G=v;}};
 selMe.addEventListener("change",()=>{fillSelect(selOpp,selMe.value,selOpp.value);renderSetup();renderSeason();});
 selOpp.addEventListener("change",renderSetup);
 $("btnRandom").addEventListener("click",()=>{const o=TEAMS.filter(t=>t.abbr!==selMe.value&&t.abbr!==selOpp.value);selOpp.value=o[Math.floor(Math.random()*o.length)].abbr;renderSetup();});
